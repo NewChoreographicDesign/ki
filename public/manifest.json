@@ -1,0 +1,18 @@
+{
+  "name": "Woongroep Admin",
+  "short_name": "Woongroep",
+  "description": "Beheeromgeving voor de woongroep",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b0f14",
+  "theme_color": "#0b0f14",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

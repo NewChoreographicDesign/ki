@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-background text-slate-100 antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+* {
+  @apply border-border;
+}
+
+::selection {
+  @apply bg-sky-500/40;
+}
+
+input, textarea, select, button {
+  font: inherit;
+}
+
+/* Larger, iPad-friendly touch targets */
+button, a, [role="button"] {
+  touch-action: manipulation;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-surface2 rounded-full;
+}

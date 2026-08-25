@@ -1,0 +1,242 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Switch provider to "postgresql" for production (Neon.tech / Vercel Postgres).
+
+enum Role {
+  ADMIN
+  COORDINATOR
+  EMPLOYEE
+}
+
+enum ShiftType {
+  MORNING
+  EVENING
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model User {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  birthDate DateTime
+  role      Role      @default(EMPLOYEE)
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  reports          Report[]
+  medicationChecks MedicationCheck[]
+  presences        Presence[]
+  handovers        Handover[]
+  todosCreated     Todo[]             @relation("TodoCreatedBy")
+  todosCompleted   Todo[]             @relation("TodoCompletedBy")
+  appointments     Appointment[]
+  shifts           Shift[]
+  weekPlans        WeekPlan[]
+  documents        Document[]
+
+  @@index([role])
+}
+
+model Client {
+  id          String   @id @default(cuid())
+  firstName   String
+  lastName    String
+  dateOfBirth DateTime?
+  notes       String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  documents    Document[]
+  protocols    Protocol[]
+  reports      Report[]
+  medications  Medication[]
+  weekPlans    WeekPlan[]
+  presences    Presence[]
+  appointments Appointment[]
+
+  @@index([active])
+}
+
+model Document {
+  id           String   @id @default(cuid())
+  title        String
+  url          String
+  clientId     String?
+  client       Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  uploadedById String
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+
+  @@index([clientId])
+}
+
+model Protocol {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  clientId  String?
+  client    Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
+}
+
+model Report {
+  id        String    @id @default(cuid())
+  clientId  String
+  client    Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shift     ShiftType
+  date      DateTime
+  content   String
+  createdAt DateTime  @default(now())
+
+  @@index([clientId, date])
+  @@index([userId])
+}
+
+model Medication {
+  id            String   @id @default(cuid())
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name          String
+  dosage        String
+  instructions  String?
+  times         String
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  checks MedicationCheck[]
+
+  @@index([clientId, active])
+}
+
+// Irreversible audit log: no update/delete allowed at the API layer.
+model MedicationCheck {
+  id           String     @id @default(cuid())
+  medicationId String
+  medication   Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment      String?
+  checkedAt    DateTime   @default(now())
+
+  @@index([medicationId, checkedAt])
+  @@index([userId])
+}
+
+model WeekPlan {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  dayOfWeek Int // 0 = Monday .. 6 = Sunday
+  startTime String // "HH:mm"
+  endTime   String // "HH:mm"
+  activity  String
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId, dayOfWeek])
+}
+
+model Todo {
+  id              String    @id @default(cuid())
+  title           String
+  description     String?
+  priority        Priority  @default(MEDIUM)
+  completed       Boolean   @default(false)
+  completedById   String?
+  completedBy     User?     @relation("TodoCompletedBy", fields: [completedById], references: [id], onDelete: SetNull)
+  completedAt     DateTime?
+  completionNote  String?
+  createdById     String
+  createdBy       User      @relation("TodoCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([completed, priority])
+}
+
+model Presence {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime
+  present   Boolean
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clientId, date])
+  @@index([date])
+}
+
+// Handover notes auto-expire 1 hour after the shift they belong to ends.
+model Handover {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shift     ShiftType
+  content   String
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
+model Appointment {
+  id            String   @id @default(cuid())
+  title         String
+  description   String?
+  clientId      String?
+  client        Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  startAt       DateTime
+  reminderSent  Boolean  @default(false)
+  createdById   String
+  createdBy     User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+
+  @@index([startAt])
+  @@index([reminderSent, startAt])
+}
+
+// Auto-started on login (morning 07:00-15:00 / evening 14:00-23:00 window).
+model Shift {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      ShiftType
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  @@index([userId, startedAt])
+}
+
+// Single source of truth for email addresses and other app-wide config.
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
