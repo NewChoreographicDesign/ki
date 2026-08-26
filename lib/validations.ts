@@ -22,10 +22,21 @@ export const userSchema = z.object({
   active: z.boolean().optional(),
 });
 
-export const settingSchema = z.object({
-  key: z.string().trim().min(1).max(100),
-  value: z.string().trim().min(1).max(500),
-});
+const EMAIL_SETTING_KEYS = new Set(["GENERAL_EMAIL", "COORDINATOR_EMAIL"]);
+
+export const settingSchema = z
+  .object({
+    key: z.string().trim().min(1).max(100),
+    value: z.string().trim().min(1).max(500),
+  })
+  .superRefine((data, ctx) => {
+    // These addresses receive rapportages and medicatie-overzichten — a
+    // malformed value here means sensitive client data silently bounces
+    // or, worse, is misdelivered. Enforce a real email format.
+    if (EMAIL_SETTING_KEYS.has(data.key) && !z.string().email().safeParse(data.value).success) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["value"], message: "Ongeldig e-mailadres" });
+    }
+  });
 
 export const reportSchema = z.object({
   clientId: z.string().min(1),
@@ -84,7 +95,14 @@ export const protocolSchema = z.object({
 
 export const documentSchema = z.object({
   title: z.string().trim().min(1).max(300),
-  url: z.string().trim().url(),
+  // Restrict to http(s): z.url() alone also accepts javascript:/data: URIs,
+  // which would let a stored link execute script when another staff member
+  // (including an admin) clicks it — a stored self-XSS vector.
+  url: z
+    .string()
+    .trim()
+    .url()
+    .refine((value) => /^https?:\/\//i.test(value), "Alleen http(s) links zijn toegestaan"),
   clientId: z.string().optional().or(z.literal("")),
 });
 

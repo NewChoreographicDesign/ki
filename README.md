@@ -23,7 +23,8 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
   géén update/delete op `MedicationCheck` (onomkeerbaar), overdracht wist
   zichzelf (`expiresAt = shiftEinde + 1u`), rolcontrole (alleen
   admin/coördinator zien Backend; alleen admin beheert accounts), HTTPS via
-  Vercel.
+  Vercel. Zie [Security &amp; privacy](#security--privacy) hieronder voor het
+  volledige overzicht van getroffen maatregelen.
 - **UI/UX** — dark mode standaard, sky/emerald accenten, grote touch-targets,
   sidebar + overlay voor iPad, responsive, cards, badges, toasts (sonner).
 - **Prestatie** — server components voor data-ophaling, minimale client JS,
@@ -148,6 +149,66 @@ referentie-implementatie):
    API route, met optimistic UI en `sonner`-toasts.
 3. **API route** (`app/api/.../route.ts`) doet `requireAuth()`, valideert met
    Zod (`lib/validations.ts`) en praat met Prisma.
+
+## Security &amp; privacy
+
+Deze app verwerkt bijzondere persoonsgegevens (medicatie, zorgrapportages) van
+een kwetsbare doelgroep. Naast de punten onder Architectuur gelden de
+volgende, concreet geïmplementeerde maatregelen:
+
+- **Account-lockout tegen brute force.** Inloggen gebeurt zonder wachtwoord
+  (alleen naam + geboortedatum), een ruimte die zonder rate-limiting in
+  minuten is af te lopen. Na 5 mislukte pogingen wordt het account 15 minuten
+  vergrendeld (`User.failedLoginAttempts` / `User.lockedUntil`,
+  `app/api/auth/login/route.ts`). De foutmelding is bewust generiek ("Naam of
+  geboortedatum onjuist") zodat een aanvaller niet kan afleiden of een naam
+  bestaat.
+- **Directe intrekking van toegang.** De 12-uurs JWT-cookie bevat alleen de
+  gebruikers-ID; `getSession()` (`lib/auth.ts`) haalt bij élke request de
+  actuele `active`/`role` op uit de database. Een deactivering of
+  roldegradatie door een admin werkt dus meteen door — een oud token blijft
+  niet nog uren geldig. Voor de Backend-paginaboom staat dit ook expliciet in
+  `app/(app)/backend/layout.tsx`, als extra laag bovenop de
+  middleware-rolcheck (die alleen het JWT-claim kan lezen, niet de database).
+- **Geen placeholder-secrets in productie.** `JWT_SECRET` en `CRON_SECRET`
+  worden bij het opstarten geweigerd wanneer ze exact de voorbeeldwaarde uit
+  `.env.example` bevatten — voorkomt dat een vergeten "verander dit"-stap
+  leidt tot vervalsbare sessies of vrij aanroepbare cron-endpoints (die
+  cliëntgegevens mailen).
+- **Geen self-XSS via documentlinks.** `Document.url` accepteert alleen
+  `http(s)`-links (`lib/validations.ts`); zonder die check zou een
+  `javascript:`-URL als "document" kunnen worden opgeslagen en bij een klik
+  door een andere medewerker of admin script uitvoeren.
+- **E-mailadressen worden gevalideerd.** `GENERAL_EMAIL` en
+  `COORDINATOR_EMAIL` in Instellingen moeten een geldig e-mailformaat hebben,
+  zodat rapportages en medicatie-overzichten niet stilzwijgend naar een
+  verkeerd of onbestaand adres verdwijnen.
+- **HTML-injectie in e-mails.** Alle vrije tekst (rapportage-inhoud, namen,
+  commentaar) wordt geëscaped voordat die in een e-mail-template terechtkomt
+  (`lib/email.ts`), dus gebruikersinvoer kan geen opmaak of scripts in de
+  ontvangen e-mail injecteren.
+- **Browserbeveiligingsheaders** (`next.config.ts`): een strikte
+  Content-Security-Policy, `X-Frame-Options: DENY` (clickjacking-bescherming
+  op de loginpagina), HSTS, `X-Content-Type-Options: nosniff` en een
+  `Permissions-Policy` die camera/microfoon/locatie uitschakelt — niets
+  daarvan is nodig in deze app.
+- **CSRF** wordt afgedekt door de `SameSite=Lax`-cookie: browsers sturen die
+  niet mee bij cross-site `fetch`/`XHR`-requests of bij een cross-site
+  POST-formulier, wat de state-changing API-routes al beschermt zonder een
+  apart CSRF-token.
+- **SQL-injectie** is uitgesloten doordat alle database-toegang via Prisma's
+  parameterized queries loopt — nergens wordt raw SQL met stringconcatenatie
+  gebruikt.
+- **Foutafhandeling lekt niets.** `lib/api.ts` logt onverwachte fouten
+  server-side maar stuurt de client altijd een generieke boodschap; stack
+  traces of databasedetails komen nooit in een API-response terecht.
+
+**Wat nog aandacht verdient bij een echte productie-uitrol:** roteer
+`JWT_SECRET`/`CRON_SECRET` bij vermoeden van lekkage (bestaande sessies
+worden dan ongeldig), overweeg een audit-log-export voor de AVG/GDPR
+verantwoordingsplicht bovenop de bestaande timestamps, en zet — als de
+doelgroep dat vereist — een verwerkersovereenkomst met Resend/Vercel/Neon op
+voor de verwerking van bijzondere persoonsgegevens.
 
 ## Testen
 

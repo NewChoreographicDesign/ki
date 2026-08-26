@@ -10,10 +10,18 @@ export { determineShiftType, shiftEndForStart };
 const COOKIE_NAME = "session";
 const SESSION_DURATION_SECONDS = 12 * 60 * 60; // 12 hours
 
+// Never let this ship: it's the literal value from .env.example, so a
+// deployment that copied the example file without generating a real
+// secret would otherwise sign tokens anyone could forge.
+const PLACEHOLDER_JWT_SECRET = "change-me-to-a-long-random-string-min-32-chars";
+
 function getSecretKey() {
   const secret = process.env.JWT_SECRET;
   if (!secret || secret.length < 32) {
     throw new Error("JWT_SECRET must be set and at least 32 characters long");
+  }
+  if (secret === PLACEHOLDER_JWT_SECRET) {
+    throw new Error("JWT_SECRET is still the placeholder from .env.example — generate a real secret");
   }
   return new TextEncoder().encode(secret);
 }
@@ -62,11 +70,27 @@ export async function clearSessionCookie() {
   cookieStore.delete(COOKIE_NAME);
 }
 
+/**
+ * Verifies the cookie AND re-checks the user's current active/role state in
+ * the database. The JWT is valid for 12 hours, but a deactivation or role
+ * change (e.g. an admin revoking a departing employee, or demoting someone)
+ * must take effect immediately — not whenever that token happens to expire.
+ */
 export async function getSession(): Promise<SessionPayload | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
   if (!token) return null;
-  return verifySession(token);
+
+  const claims = await verifySession(token);
+  if (!claims) return null;
+
+  const user = await db.user.findUnique({
+    where: { id: claims.sub },
+    select: { name: true, role: true, active: true },
+  });
+  if (!user || !user.active) return null;
+
+  return { sub: claims.sub, name: user.name, role: user.role };
 }
 
 export class AuthError extends Error {
