@@ -3,6 +3,10 @@
 Een schone, iPad-first, dark-mode beheeromgeving voor een woongroep, gebouwd met
 Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
 
+> **Niet-technisch en wil je de app gewoon online zetten?** Volg
+> [`INSTALLATIE.md`](./INSTALLATIE.md) — een stap-voor-stap handleiding zonder
+> code of terminal. De rest van dit bestand is bedoeld voor ontwikkelaars.
+
 ## Architectuur
 
 - **Next.js 15 App Router + TypeScript** — server components voor data, client
@@ -79,6 +83,11 @@ Open [http://localhost:3000](http://localhost:3000).
 - `Anna Jansen` / `12-05-1985` (coördinator)
 - `Mark de Vries` / `03-11-1990` (medewerker)
 
+Dit seed-script is alleen voor lokale ontwikkeling. Een productie-deploy
+draait geen seed en bevat dus nooit deze (voorspelbare) accounts — die
+omgeving start leeg en stuurt de eerste bezoeker naar `/setup` om zelf een
+echt beheerdersaccount aan te maken (zie "Productie op Vercel" hieronder).
+
 ## Scripts
 
 ```bash
@@ -94,13 +103,31 @@ npm run db:seed     # seed testdata
 
 ## Productie op Vercel
 
-1. Push naar GitHub.
-2. Importeer het project in Vercel.
-3. Zet environment variables: `DATABASE_URL` (Postgres connection string),
-   `JWT_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `GENERAL_EMAIL`,
-   `COORDINATOR_EMAIL`, `CRON_SECRET`, eventueel `BLOB_READ_WRITE_TOKEN`.
-4. Zet in `prisma/schema.prisma` de datasource `provider` op `"postgresql"`.
-5. Deploy. Vercel regelt HTTPS + edge.
+Voor een stap-voor-stap versie zonder terminal, zie [`INSTALLATIE.md`](./INSTALLATIE.md).
+Kort samengevat voor ontwikkelaars:
+
+1. Push naar GitHub en importeer het project in Vercel.
+2. Koppel een Postgres-database (Vercel Storage → Neon) en, optioneel, een
+   Blob-store aan het project — dit zet `DATABASE_URL` resp.
+   `BLOB_READ_WRITE_TOKEN` automatisch.
+3. Zet de overige environment variables: `JWT_SECRET`, `CRON_SECRET`,
+   `RESEND_API_KEY`, `EMAIL_FROM`. `GENERAL_EMAIL`/`COORDINATOR_EMAIL` hoeven
+   hier niet: die worden bij de allereerste keer opstarten via de
+   `/setup`-wizard in de app zelf ingevuld (zie hieronder).
+4. Deploy. Het `vercel-build`-script (`package.json`) regelt de rest
+   automatisch, in deze volgorde:
+   - `scripts/prepare-datasource.js` zet de Prisma datasource-`provider` om
+     naar `"postgresql"` zodra `DATABASE_URL` daarnaar wijst (lokaal blijft
+     dit `"sqlite"` — er hoeft dus nooit handmatig in `schema.prisma` te
+     worden geknipt).
+   - `prisma db push` synct het schema met de database (alleen additieve
+     wijzigingen; een destructieve wijziging laat de build bewust falen in
+     plaats van stilzwijgend data te verwijderen).
+   - `next build`.
+5. Open de live URL. Zolang er nog geen enkele gebruiker bestaat, stuurt de
+   app je automatisch naar `/setup`: daar maak je eenmalig het eerste
+   (admin-)account aan en vul je de twee e-mailadressen in. Deze pagina kan
+   daarna nooit meer opnieuw gebruikt worden.
 
 ### Cron jobs
 
@@ -117,10 +144,16 @@ pas zo nodig de schema's aan.
 
 ### Uploads (documenten/protocollen)
 
-Het `Document`-model verwacht een URL. Voor productie: gebruik
-[Vercel Blob](https://vercel.com/docs/storage/vercel-blob) om bestanden te
-uploaden en sla de resulterende URL op via Backend → Documenten. De
-`@vercel/blob` dependency staat al klaar in `package.json`.
+Backend → Documenten heeft een ingebouwde upload-knop: een gekozen bestand
+(PDF, Word, Excel, afbeelding, tekst — max 20 MB) gaat via
+`@vercel/blob/client`'s `upload()` rechtstreeks van de browser naar Vercel
+Blob, met een kort-levend token dat `app/api/backend/documents/upload/route.ts`
+uitgeeft (na een `requireAuth([ADMIN, COORDINATOR])`-check en met een
+whitelist van toegestane content-types). Zonder gekoppelde Blob-store
+(`BLOB_READ_WRITE_TOKEN` ontbreekt) geeft die route een `503` met
+`code: "BLOB_NOT_CONFIGURED"` terug; de UI toont dan een duidelijke melding
+en biedt "Ik heb al een link naar een document" als alternatief, dat gewoon
+een URL opslaat zoals voorheen.
 
 ## Gebruiksinstructie (iPad)
 
@@ -202,6 +235,13 @@ volgende, concreet geïmplementeerde maatregelen:
 - **Foutafhandeling lekt niets.** `lib/api.ts` logt onverwachte fouten
   server-side maar stuurt de client altijd een generieke boodschap; stack
   traces of databasedetails komen nooit in een API-response terecht.
+- **Geen standaard productie-accounts.** `/setup` (`app/api/setup/route.ts`)
+  maakt het allereerste account aan en weigert daarna permanent — zodra
+  `db.user.count() > 0` is de route dood. Een productie-deploy bevat dus
+  nooit voorspelbare seed-accounts zoals bij lokale ontwikkeling.
+- **Uploads zijn beperkt.** De uploadroute staat alleen ADMIN/COORDINATOR
+  toe, whitelist't content-types en beperkt de bestandsgrootte tot 20 MB
+  (`app/api/backend/documents/upload/route.ts`).
 
 **Wat nog aandacht verdient bij een echte productie-uitrol:** roteer
 `JWT_SECRET`/`CRON_SECRET` bij vermoeden van lekkage (bestaande sessies

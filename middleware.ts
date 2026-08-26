@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
 const COOKIE_NAME = "session";
-const PUBLIC_PATHS = ["/login"];
+// "/" is public at the middleware layer because the page itself decides
+// where to send an unauthenticated visitor (first-run "/setup" wizard vs.
+// "/login") based on whether any user exists yet — middleware can't do that
+// DB lookup at the edge, so it must let the request through untouched.
+const PUBLIC_PATHS = ["/", "/login", "/setup"];
 const BACKEND_ROLES = new Set(["ADMIN", "COORDINATOR"]);
 
 function getSecretKey() {
@@ -16,6 +20,7 @@ export async function middleware(request: NextRequest) {
 
   if (
     pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/setup") ||
     pathname.startsWith("/api/cron") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||

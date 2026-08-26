@@ -7,6 +7,16 @@ export const loginSchema = z.object({
   birthDate: z.string().regex(ddmmyyyy, "Gebruik het formaat DD-MM-JJJJ"),
 });
 
+// One-time first-run setup: creates the very first (admin) account and the
+// two required email settings. The API route refuses to run this a second
+// time once any user exists, so this never becomes a standing attack surface.
+export const setupSchema = z.object({
+  name: z.string().trim().min(2).max(100),
+  birthDate: z.string().regex(ddmmyyyy, "Gebruik het formaat DD-MM-JJJJ"),
+  generalEmail: z.string().trim().email("Ongeldig e-mailadres"),
+  coordinatorEmail: z.string().trim().email("Ongeldig e-mailadres"),
+});
+
 export const clientSchema = z.object({
   firstName: z.string().trim().min(1).max(100),
   lastName: z.string().trim().min(1).max(100),

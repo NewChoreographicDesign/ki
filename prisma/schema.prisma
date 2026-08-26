@@ -7,7 +7,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Switch provider to "postgresql" for production (Neon.tech / Vercel Postgres).
+// The Vercel build automatically switches this to "postgresql" when
+// DATABASE_URL points at a Postgres database — see scripts/prepare-datasource.js.
+// For local development this stays "sqlite"; no manual edit needed.
 
 enum Role {
   ADMIN

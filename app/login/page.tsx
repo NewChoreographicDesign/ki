@@ -1,12 +1,16 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoginForm } from "./login-form";
 
 export default async function LoginPage() {
   const session = await getSession();
   if (session) redirect("/dashboard");
+
+  const existingUsers = await db.user.count();
+  if (existingUsers === 0) redirect("/setup");
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-4">
