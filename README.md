@@ -135,12 +135,14 @@ Kort samengevat voor ontwikkelaars:
 
 - `/api/cron/monthly-med` — maandelijks medicatie-overzicht (1e van de maand)
 - `/api/cron/monthly-todos` — maandelijks to-do overzicht naar coördinator (1e van de maand)
-- `/api/cron/agenda-reminders` — uurlijks, verstuurt herinneringen voor afspraken binnen 24 uur
+- `/api/cron/agenda-reminders` — dagelijks om 07:00 UTC, verstuurt herinneringen voor
+  afspraken binnen 24 uur
 
 Alle cron-routes vereisen de header `Authorization: Bearer <CRON_SECRET>`
 (Vercel Cron stuurt dit automatisch mee wanneer `CRON_SECRET` is ingesteld).
-Let op: het gratis Hobby-plan van Vercel staat mogelijk niet elk interval toe —
-pas zo nodig de schema's aan.
+Let op: het gratis Hobby-plan van Vercel staat alleen dagelijkse cron jobs toe
+(vaker dan 1x per dag geeft een mislukte deploy) — vandaar dat alle drie hier
+maximaal 1x per dag draaien.
 
 ### Uploads (documenten/protocollen)
 
