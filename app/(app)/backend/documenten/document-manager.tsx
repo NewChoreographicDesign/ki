@@ -68,16 +68,14 @@ export function DocumentManager({
         handleUploadUrl: "/api/backend/documents/upload",
       });
       blobUrl = blob.url;
-    } catch {
-      // The upload() helper collapses every non-2xx response from our own
-      // /api/backend/documents/upload route into one generic error, so we
-      // can't distinguish "not configured" from other failures here — this
-      // message covers the most likely cause (Vercel Blob not set up yet)
-      // while staying accurate for the rest ("try again").
+    } catch (error) {
+      // @vercel/blob's upload() throws a typed BlobError (or a plain Error
+      // relaying our own route's message) with a real, specific .message —
+      // show it directly instead of guessing at a single root cause.
       toast.error(
-        "Uploaden lukt niet: bestandsopslag (Vercel Blob) is nog niet gekoppeld aan dit project. " +
-          "Ga in Vercel naar je project → Storage → maak een Blob store aan en koppel die " +
-          "(zie INSTALLATIE.md, stap 4), of probeer het opnieuw als dit al is gedaan."
+        error instanceof Error
+          ? `Uploaden lukt niet: ${error.message}`
+          : "Uploaden lukt niet. Probeer het opnieuw."
       );
       setUploading(false);
       return;
