@@ -62,23 +62,32 @@ export function DocumentManager({
     if (!file) return;
     setUploading(true);
     let blobUrl: string;
+    const timeoutController = new AbortController();
+    const timeoutId = setTimeout(() => timeoutController.abort(), 60_000);
     try {
       const blob = await upload(file.name, file, {
         access: "public",
         handleUploadUrl: "/api/backend/documents/upload",
+        abortSignal: timeoutController.signal,
       });
       blobUrl = blob.url;
     } catch (error) {
       // @vercel/blob's upload() throws a typed BlobError (or a plain Error
       // relaying our own route's message) with a real, specific .message —
-      // show it directly instead of guessing at a single root cause.
+      // show it directly instead of guessing at a single root cause. An
+      // abort from our own 60s timeout surfaces as a generic error here too,
+      // so it gets its own explicit message instead of a confusing one.
       toast.error(
-        error instanceof Error
-          ? `Uploaden lukt niet: ${error.message}`
-          : "Uploaden lukt niet. Probeer het opnieuw."
+        timeoutController.signal.aborted
+          ? "Uploaden duurde te lang en is afgebroken. Controleer je internetverbinding of probeer een kleiner bestand."
+          : error instanceof Error
+            ? `Uploaden lukt niet: ${error.message}`
+            : "Uploaden lukt niet. Probeer het opnieuw."
       );
       setUploading(false);
       return;
+    } finally {
+      clearTimeout(timeoutId);
     }
 
     try {
@@ -146,16 +155,28 @@ export function DocumentManager({
                   type="file"
                   accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.txt"
                   onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
-                  className="block w-full rounded-xl border border-border bg-surface2 px-3 py-2.5 text-sm text-slate-100 file:mr-3 file:rounded-lg file:border-0 file:bg-sky-500 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white"
+                  disabled={uploading}
+                  className="block w-full rounded-xl border border-border bg-surface2 px-3 py-2.5 text-sm text-slate-100 file:mr-3 file:rounded-lg file:border-0 file:bg-sky-500 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white disabled:opacity-60"
                 />
               </div>
               <div>
                 <Label htmlFor="title">Titel</Label>
-                <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  disabled={uploading}
+                  required
+                />
               </div>
               <div>
                 <Label htmlFor="client">Cliënt (optioneel)</Label>
-                <Select id="client" value={clientId} onChange={(e) => setClientId(e.target.value)}>
+                <Select
+                  id="client"
+                  value={clientId}
+                  onChange={(e) => setClientId(e.target.value)}
+                  disabled={uploading}
+                >
                   <option value="">Algemeen</option>
                   {clients.map((c) => (
                     <option key={c.id} value={c.id}>

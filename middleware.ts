@@ -28,8 +28,9 @@ function buildCspHeader(nonce: string): string {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self' data:",
-    // Document uploads go straight from the browser to Vercel Blob storage.
-    "connect-src 'self' https://*.public.blob.vercel-storage.com",
+    // Document uploads go through Vercel's Blob API (vercel.com/api/blob)
+    // and the resulting files are served from *.public.blob.vercel-storage.com.
+    "connect-src 'self' https://vercel.com https://*.public.blob.vercel-storage.com",
     "object-src 'none'",
     "frame-ancestors 'none'",
     "base-uri 'self'",
