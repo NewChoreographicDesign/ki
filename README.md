@@ -222,11 +222,17 @@ volgende, concreet geïmplementeerde maatregelen:
   commentaar) wordt geëscaped voordat die in een e-mail-template terechtkomt
   (`lib/email.ts`), dus gebruikersinvoer kan geen opmaak of scripts in de
   ontvangen e-mail injecteren.
-- **Browserbeveiligingsheaders** (`next.config.ts`): een strikte
-  Content-Security-Policy, `X-Frame-Options: DENY` (clickjacking-bescherming
-  op de loginpagina), HSTS, `X-Content-Type-Options: nosniff` en een
-  `Permissions-Policy` die camera/microfoon/locatie uitschakelt — niets
-  daarvan is nodig in deze app.
+- **Browserbeveiligingsheaders**: `X-Frame-Options: DENY`
+  (clickjacking-bescherming op de loginpagina), HSTS, `X-Content-Type-Options:
+  nosniff` en een `Permissions-Policy` die camera/microfoon/locatie
+  uitschakelt staan statisch in `next.config.ts` — niets daarvan is nodig in
+  deze app. De **Content-Security-Policy** zit bewust in `middleware.ts` in
+  plaats van `next.config.ts`: die genereert per request een nonce zodat
+  `script-src` strikt op `'self'` kan blijven staan terwijl Next.js' eigen
+  inline hydration/streaming-scripts toch mogen draaien. Een statische CSP
+  zonder nonce laat de eerste HTML nog prima zien, maar blokkeert die
+  scripts alsnog — de pagina toont dan kort de inhoud en wordt daarna blanco
+  zodra React probeert te hydrateren.
 - **CSRF** wordt afgedekt door de `SameSite=Lax`-cookie: browsers sturen die
   niet mee bij cross-site `fetch`/`XHR`-requests of bij een cross-site
   POST-formulier, wat de state-changing API-routes al beschermt zonder een
