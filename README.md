@@ -26,10 +26,12 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
   om te wijzigen (Backend → Instellingen).
 - **Security** — Zod-validatie op elke input, `requireAuth()` op alle API's,
   géén update/delete op `MedicationCheck` (onomkeerbaar), overdracht wist
-  zichzelf (`expiresAt = shiftEinde + 1u`), rolcontrole (alleen
-  admin/coördinator zien Backend; alleen admin beheert accounts), HTTPS via
-  Vercel. Zie [Security &amp; privacy](#security--privacy) hieronder voor het
-  volledige overzicht van getroffen maatregelen.
+  zichzelf (`expiresAt = shiftEinde + 1u`), rolcontrole (alleen admin ziet
+  Backend en beheert accounts; Documenten en Protocollen staan in het
+  hoofdmenu voor iedereen, verwijderen daar blijft voorbehouden aan
+  admin/coördinator), HTTPS via Vercel. Zie
+  [Security &amp; privacy](#security--privacy) hieronder voor het volledige
+  overzicht van getroffen maatregelen.
 - **UI/UX** — dark mode standaard, sky/emerald accenten, grote touch-targets,
   sidebar + overlay voor iPad, responsive, cards, badges, toasts (sonner).
 - **Prestatie** — server components voor data-ophaling, minimale client JS,
@@ -46,7 +48,9 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
 | Overdracht | `/overdracht` | Notities die 1 uur na diensteinde verlopen |
 | To-Do's | `/todos` | Taken met prioriteit, afronden + commentaar |
 | Agenda | `/agenda` | Afspraken + automatische herinnering per e-mail |
-| Backend | `/backend` | Cliënten, medewerkers, documenten, protocollen, medicatie beheer, weekplanning, instellingen (alleen admin/coördinator) |
+| Documenten | `/documenten` | Algemeen, per cliënt en "Nieuwe medewerker" — upload met voortgangsbalk, voor iedereen |
+| Protocollen | `/protocollen` | Algemene en cliëntspecifieke protocollen, voor iedereen |
+| Backend | `/backend` | Cliënten, medewerkers, medicatie beheer, weekplanning, instellingen (alleen admin) |
 
 ## Vereisten
 
@@ -162,16 +166,26 @@ maximaal 1x per dag draaien.
 
 ### Uploads (documenten/protocollen)
 
-Backend → Documenten heeft een ingebouwde upload-knop: een gekozen bestand
-(PDF, Word, Excel, afbeelding, tekst — max 20 MB) gaat via
-`@vercel/blob/client`'s `upload()` rechtstreeks van de browser naar Vercel
-Blob, met een kort-levend token dat `app/api/backend/documents/upload/route.ts`
-uitgeeft (na een `requireAuth([ADMIN, COORDINATOR])`-check en met een
-whitelist van toegestane content-types). Zonder gekoppelde Blob-store
-(`BLOB_READ_WRITE_TOKEN` ontbreekt) geeft die route een `503` met
-`code: "BLOB_NOT_CONFIGURED"` terug; de UI toont dan een duidelijke melding
-en biedt "Ik heb al een link naar een document" als alternatief, dat gewoon
-een URL opslaat zoals voorheen.
+Documenten (`/documenten`, in het hoofdmenu voor iedereen) heeft een
+ingebouwde upload-knop met voortgangsbalk: een gekozen bestand (PDF, Word,
+Excel, afbeelding, tekst — max 20 MB) gaat via `@vercel/blob/client`'s
+`upload()` rechtstreeks van de browser naar Vercel Blob, met een kort-levend
+token dat `app/api/documents/upload/route.ts` uitgeeft (na een
+`requireAuth()`-check — elke ingelogde rol mag uploaden; verwijderen blijft
+`requireAuth([ADMIN, COORDINATOR])`, zie `app/api/documents/[id]/route.ts`,
+en met een whitelist van toegestane content-types). De upload breekt na 60s
+automatisch af met een duidelijke melding als de verbinding vastloopt.
+Zonder gekoppelde Blob-store (`BLOB_READ_WRITE_TOKEN` ontbreekt) geeft die
+route een `503` met `code: "BLOB_NOT_CONFIGURED"` terug; de UI toont dan een
+duidelijke melding en biedt "Ik heb al een link naar een document" als
+alternatief, dat gewoon een URL opslaat zoals voorheen.
+
+Documenten zonder gekoppelde cliënt horen bij een van twee "threads",
+gekozen via het veld "Hoort bij": **Algemeen** of **Nieuwe medewerker**
+(opgeslagen als `Document.category`, enum `GENERAL`/`ONBOARDING`). Een
+document met een gekoppelde cliënt hoort altijd bij die cliënt, ongeacht
+category. De documentenpagina toont deze als tabbladen (Algemeen, Nieuwe
+medewerker, per cliënt) die de zichtbare lijst client-side filteren.
 
 ## Gebruiksinstructie (iPad)
 
@@ -184,8 +198,10 @@ een URL opslaat zoals voorheen.
 7. **Overdracht** → typ notitie → wordt 1 uur na diensteinde automatisch gewist.
 8. **To-Do's** → toevoegen, prioriteit, afronden + commentaar. Maandelijks overzicht naar coördinator.
 9. **Agenda** → afspraak toevoegen; herinnering gaat automatisch naar e-mail binnen 24 uur voor de afspraak.
-10. **Backend** (alleen admin/coördinator) → cliënten, medewerkers, documenten, protocollen, instellingen, medicatie, weekplanning. Eén wijziging = overal doorgevoerd.
-11. Uitloggen rechtsonder in de zijbalk.
+10. **Documenten** → upload of link toevoegen, kies "Hoort bij" (Algemeen, Nieuwe medewerker of een cliënt); tabbladen filteren de lijst. Voor iedereen; verwijderen alleen voor admin/coördinator.
+11. **Protocollen** → algemeen of per cliënt. Voor iedereen; verwijderen alleen voor admin/coördinator.
+12. **Backend** (alleen admin) → cliënten, medewerkers, instellingen, medicatie, weekplanning. Eén wijziging = overal doorgevoerd.
+13. Uitloggen rechtsonder in de zijbalk.
 
 Diensttijd wordt automatisch bijgehouden bij login.
 
@@ -263,9 +279,11 @@ volgende, concreet geïmplementeerde maatregelen:
   maakt het allereerste account aan en weigert daarna permanent — zodra
   `db.user.count() > 0` is de route dood. Een productie-deploy bevat dus
   nooit voorspelbare seed-accounts zoals bij lokale ontwikkeling.
-- **Uploads zijn beperkt.** De uploadroute staat alleen ADMIN/COORDINATOR
-  toe, whitelist't content-types en beperkt de bestandsgrootte tot 20 MB
-  (`app/api/backend/documents/upload/route.ts`).
+- **Uploads zijn beperkt.** De uploadroute staat elke ingelogde rol toe
+  (Documenten is een hoofdmenu-onderdeel), maar whitelist't content-types en
+  beperkt de bestandsgrootte tot 20 MB (`app/api/documents/upload/route.ts`);
+  verwijderen van een document blijft voorbehouden aan ADMIN/COORDINATOR
+  (`app/api/documents/[id]/route.ts`).
 
 **Wat nog aandacht verdient bij een echte productie-uitrol:** roteer
 `JWT_SECRET`/`CRON_SECRET` bij vermoeden van lekkage (bestaande sessies

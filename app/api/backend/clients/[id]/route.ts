@@ -9,7 +9,7 @@ const patchSchema = z.object({ active: z.boolean() });
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth([Role.ADMIN, Role.COORDINATOR]);
+    await requireAuth([Role.ADMIN]);
     const { id } = await params;
     const { active } = patchSchema.parse(await request.json());
 

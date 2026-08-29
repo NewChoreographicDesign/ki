@@ -7,7 +7,7 @@ const COOKIE_NAME = "session";
 // "/login") based on whether any user exists yet — middleware can't do that
 // DB lookup at the edge, so it must let the request through untouched.
 const PUBLIC_PATHS = ["/", "/login", "/setup"];
-const BACKEND_ROLES = new Set(["ADMIN", "COORDINATOR"]);
+const BACKEND_ROLES = new Set(["ADMIN"]);
 
 function getSecretKey() {
   const secret = process.env.JWT_SECRET;

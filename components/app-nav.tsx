@@ -11,6 +11,8 @@ import {
   ArrowLeftRight,
   CheckSquare,
   Calendar,
+  FolderOpen,
+  ShieldCheck,
   Settings,
   Menu,
   X,
@@ -35,6 +37,8 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/overdracht", label: "Overdracht", icon: ArrowLeftRight },
   { href: "/todos", label: "To-Do's", icon: CheckSquare },
   { href: "/agenda", label: "Agenda", icon: Calendar },
+  { href: "/documenten", label: "Documenten", icon: FolderOpen },
+  { href: "/protocollen", label: "Protocollen", icon: ShieldCheck },
   { href: "/backend", label: "Backend", icon: Settings, backendOnly: true },
 ];
 

@@ -21,9 +21,11 @@ export type ProtocolRow = {
 export function ProtocolManager({
   protocols,
   clients,
+  canDelete,
 }: {
   protocols: ProtocolRow[];
   clients: { id: string; name: string }[];
+  canDelete: boolean;
 }) {
   const router = useRouter();
   const [title, setTitle] = React.useState("");
@@ -35,7 +37,7 @@ export function ProtocolManager({
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch("/api/backend/protocols", {
+      const res = await fetch("/api/protocols", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, content, clientId }),
@@ -59,7 +61,7 @@ export function ProtocolManager({
 
   async function handleDelete(id: string) {
     try {
-      const res = await fetch(`/api/backend/protocols/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/protocols/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
       toast.success("Protocol verwijderd");
       router.refresh();
@@ -112,9 +114,11 @@ export function ProtocolManager({
                 <span className="font-medium text-slate-100">
                   {p.title} {p.clientName && <span className="text-sm text-slate-500">({p.clientName})</span>}
                 </span>
-                <Button size="icon" variant="ghost" onClick={() => handleDelete(p.id)} aria-label="Verwijderen">
-                  <Trash2 className="h-5 w-5 text-red-400" />
-                </Button>
+                {canDelete && (
+                  <Button size="icon" variant="ghost" onClick={() => handleDelete(p.id)} aria-label="Verwijderen">
+                    <Trash2 className="h-5 w-5 text-red-400" />
+                  </Button>
+                )}
               </div>
               <p className="whitespace-pre-wrap text-sm text-slate-400">{p.content}</p>
             </CardContent>

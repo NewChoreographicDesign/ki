@@ -8,7 +8,7 @@ import { parseDDMMYYYY } from "@/lib/utils";
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAuth([Role.ADMIN, Role.COORDINATOR]);
+    await requireAuth([Role.ADMIN]);
     const body = await request.json();
     const data = clientSchema.parse(body);
 

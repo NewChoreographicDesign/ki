@@ -112,7 +112,7 @@ export async function requireAuth(roles?: Role[]): Promise<SessionPayload> {
 }
 
 export function canAccessBackend(role: Role): boolean {
-  return role === Role.ADMIN || role === Role.COORDINATOR;
+  return role === Role.ADMIN;
 }
 
 /** Ends any dangling open shift for the user and starts a fresh one for the current login. */

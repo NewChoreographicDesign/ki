@@ -1,13 +1,16 @@
+import { Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { fullName } from "@/lib/utils";
+import { getSession } from "@/lib/auth";
 import { ProtocolManager } from "./protocol-manager";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProtocollenPage() {
-  const [protocols, clients] = await Promise.all([
+  const [protocols, clients, session] = await Promise.all([
     db.protocol.findMany({ include: { client: true }, orderBy: { createdAt: "desc" } }),
     db.client.findMany({ where: { active: true }, orderBy: { firstName: "asc" } }),
+    getSession(),
   ]);
 
   return (
@@ -24,6 +27,7 @@ export default async function ProtocollenPage() {
           clientName: p.client ? fullName(p.client) : null,
         }))}
         clients={clients.map((c) => ({ id: c.id, name: fullName(c) }))}
+        canDelete={session?.role === Role.ADMIN || session?.role === Role.COORDINATOR}
       />
     </div>
   );

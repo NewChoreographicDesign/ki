@@ -114,6 +114,7 @@ export const documentSchema = z.object({
     .url()
     .refine((value) => /^https?:\/\//i.test(value), "Alleen http(s) links zijn toegestaan"),
   clientId: z.string().optional().or(z.literal("")),
+  category: z.enum(["GENERAL", "ONBOARDING"]).optional(),
 });
 
 export const weekPlanSchema = z.object({

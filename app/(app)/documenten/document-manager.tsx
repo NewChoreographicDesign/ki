@@ -10,35 +10,67 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 export type DocumentRow = {
   id: string;
   title: string;
   url: string;
+  clientId: string | null;
   clientName: string | null;
+  category: "GENERAL" | "ONBOARDING";
 };
+
+const ONBOARDING_VALUE = "__onboarding__";
+const GENERAL_VALUE = "";
 
 function titleFromFileName(fileName: string): string {
   const withoutExtension = fileName.replace(/\.[^./]+$/, "");
   return withoutExtension || fileName;
 }
 
+type Thread = { key: string; label: string };
+
 export function DocumentManager({
   documents,
   clients,
+  canDelete,
 }: {
   documents: DocumentRow[];
   clients: { id: string; name: string }[];
+  canDelete: boolean;
 }) {
   const router = useRouter();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [file, setFile] = React.useState<File | null>(null);
   const [title, setTitle] = React.useState("");
-  const [clientId, setClientId] = React.useState("");
+  const [destination, setDestination] = React.useState(GENERAL_VALUE);
   const [uploading, setUploading] = React.useState(false);
+  const [progress, setProgress] = React.useState(0);
   const [showLinkOption, setShowLinkOption] = React.useState(false);
   const [url, setUrl] = React.useState("");
   const [linkLoading, setLinkLoading] = React.useState(false);
+
+  const threads: Thread[] = React.useMemo(
+    () => [
+      { key: GENERAL_VALUE, label: "Algemeen" },
+      { key: ONBOARDING_VALUE, label: "Nieuwe medewerker" },
+      ...clients.map((c) => ({ key: c.id, label: c.name })),
+    ],
+    [clients]
+  );
+  const [activeThread, setActiveThread] = React.useState(GENERAL_VALUE);
+
+  const visibleDocuments = documents.filter((d) => {
+    if (activeThread === ONBOARDING_VALUE) return !d.clientId && d.category === "ONBOARDING";
+    if (activeThread === GENERAL_VALUE) return !d.clientId && d.category === "GENERAL";
+    return d.clientId === activeThread;
+  });
+
+  function destinationToFields(value: string): { clientId: string; category: "GENERAL" | "ONBOARDING" } {
+    if (value === ONBOARDING_VALUE) return { clientId: "", category: "ONBOARDING" };
+    return { clientId: value, category: "GENERAL" };
+  }
 
   function handleFileChange(selected: File | null) {
     setFile(selected);
@@ -48,10 +80,11 @@ export function DocumentManager({
   }
 
   async function persistDocument(finalUrl: string) {
-    const res = await fetch("/api/backend/documents", {
+    const { clientId, category } = destinationToFields(destination);
+    const res = await fetch("/api/documents", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, url: finalUrl, clientId }),
+      body: JSON.stringify({ title, url: finalUrl, clientId, category }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Opslaan mislukt");
@@ -61,14 +94,16 @@ export function DocumentManager({
     e.preventDefault();
     if (!file) return;
     setUploading(true);
+    setProgress(0);
     let blobUrl: string;
     const timeoutController = new AbortController();
     const timeoutId = setTimeout(() => timeoutController.abort(), 60_000);
     try {
       const blob = await upload(file.name, file, {
         access: "public",
-        handleUploadUrl: "/api/backend/documents/upload",
+        handleUploadUrl: "/api/documents/upload",
         abortSignal: timeoutController.signal,
+        onUploadProgress: ({ percentage }) => setProgress(percentage),
       });
       blobUrl = blob.url;
     } catch (error) {
@@ -95,7 +130,7 @@ export function DocumentManager({
       toast.success("Document geüpload");
       setFile(null);
       setTitle("");
-      setClientId("");
+      setDestination(GENERAL_VALUE);
       if (fileInputRef.current) fileInputRef.current.value = "";
       router.refresh();
     } catch (error) {
@@ -103,6 +138,7 @@ export function DocumentManager({
       toast.error(error instanceof Error ? error.message : "Opslaan mislukt");
     } finally {
       setUploading(false);
+      setProgress(0);
     }
   }
 
@@ -114,7 +150,7 @@ export function DocumentManager({
       toast.success("Document toegevoegd");
       setTitle("");
       setUrl("");
-      setClientId("");
+      setDestination(GENERAL_VALUE);
       router.refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Toevoegen mislukt");
@@ -125,7 +161,7 @@ export function DocumentManager({
 
   async function handleDelete(id: string) {
     try {
-      const res = await fetch(`/api/backend/documents/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/documents/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
       toast.success("Document verwijderd");
       router.refresh();
@@ -170,14 +206,15 @@ export function DocumentManager({
                 />
               </div>
               <div>
-                <Label htmlFor="client">Cliënt (optioneel)</Label>
+                <Label htmlFor="destination">Hoort bij</Label>
                 <Select
-                  id="client"
-                  value={clientId}
-                  onChange={(e) => setClientId(e.target.value)}
+                  id="destination"
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
                   disabled={uploading}
                 >
-                  <option value="">Algemeen</option>
+                  <option value={GENERAL_VALUE}>Algemeen</option>
+                  <option value={ONBOARDING_VALUE}>Nieuwe medewerker</option>
                   {clients.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -186,6 +223,17 @@ export function DocumentManager({
                 </Select>
               </div>
             </div>
+            {uploading && (
+              <div className="flex flex-col gap-1">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-surface2">
+                  <div
+                    className="h-full rounded-full bg-sky-500 transition-all"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <span className="text-xs text-slate-500">{Math.round(progress)}%</span>
+              </div>
+            )}
             <Button type="submit" disabled={uploading || !file || !title} className="self-start">
               <UploadCloud className="h-5 w-5" /> {uploading ? "Bezig met uploaden..." : "Uploaden"}
             </Button>
@@ -218,9 +266,14 @@ export function DocumentManager({
                   />
                 </div>
                 <div>
-                  <Label htmlFor="link-client">Cliënt (optioneel)</Label>
-                  <Select id="link-client" value={clientId} onChange={(e) => setClientId(e.target.value)}>
-                    <option value="">Algemeen</option>
+                  <Label htmlFor="link-destination">Hoort bij</Label>
+                  <Select
+                    id="link-destination"
+                    value={destination}
+                    onChange={(e) => setDestination(e.target.value)}
+                  >
+                    <option value={GENERAL_VALUE}>Algemeen</option>
+                    <option value={ONBOARDING_VALUE}>Nieuwe medewerker</option>
                     {clients.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
@@ -242,8 +295,29 @@ export function DocumentManager({
         </CardContent>
       </Card>
 
+      <div className="flex flex-wrap gap-2 border-b border-border pb-3">
+        {threads.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setActiveThread(t.key)}
+            className={cn(
+              "rounded-full px-4 py-2 text-sm font-medium transition-colors",
+              activeThread === t.key
+                ? "bg-sky-500/15 text-sky-400"
+                : "text-slate-400 hover:bg-surface2 hover:text-slate-100"
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       <div className="flex flex-col gap-3">
-        {documents.map((d) => (
+        {visibleDocuments.length === 0 && (
+          <p className="text-sm text-slate-500">Nog geen documenten in dit onderdeel.</p>
+        )}
+        {visibleDocuments.map((d) => (
           <Card key={d.id}>
             <CardContent className="flex items-center justify-between gap-3 p-5">
               <a
@@ -254,11 +328,12 @@ export function DocumentManager({
               >
                 <FileText className="h-5 w-5" />
                 <span>{d.title}</span>
-                {d.clientName && <span className="text-sm text-slate-500">({d.clientName})</span>}
               </a>
-              <Button size="icon" variant="ghost" onClick={() => handleDelete(d.id)} aria-label="Verwijderen">
-                <Trash2 className="h-5 w-5 text-red-400" />
-              </Button>
+              {canDelete && (
+                <Button size="icon" variant="ghost" onClick={() => handleDelete(d.id)} aria-label="Verwijderen">
+                  <Trash2 className="h-5 w-5 text-red-400" />
+                </Button>
+              )}
             </CardContent>
           </Card>
         ))}

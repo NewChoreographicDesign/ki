@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { handleApiError } from "@/lib/api";
@@ -7,7 +6,9 @@ import { protocolSchema } from "@/lib/validations";
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAuth([Role.ADMIN, Role.COORDINATOR]);
+    // Protocols live in the main menu now, open to every logged-in role —
+    // only deleting (see [id]/route.ts) stays restricted.
+    await requireAuth();
     const body = await request.json();
     const data = protocolSchema.parse(body);
 

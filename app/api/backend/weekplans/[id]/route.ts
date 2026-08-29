@@ -6,7 +6,7 @@ import { handleApiError } from "@/lib/api";
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth([Role.ADMIN, Role.COORDINATOR]);
+    await requireAuth([Role.ADMIN]);
     const { id } = await params;
     await db.weekPlan.delete({ where: { id } });
     return NextResponse.json({ ok: true });

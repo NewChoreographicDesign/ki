@@ -235,18 +235,21 @@ eventuele collega's toe via **Backend → Medewerkers**.
 Dit is de eenvoudigste stap van allemaal, zodra stap 4 hierboven (Blob
 opslag koppelen) is gedaan:
 
-1. Log in en ga naar **Backend → Documenten**.
+1. Log in en ga naar **Documenten** in het hoofdmenu (niet in Backend — dit
+   onderdeel staat voor iedereen met een account in het hoofdmenu).
 2. Klik bij **Bestand** op **Bestand kiezen** en selecteer het document van
    je computer (PDF, Word, Excel of een foto — tot 20 MB per bestand).
 3. De **Titel** wordt automatisch overgenomen van de bestandsnaam; pas hem
    aan als je wilt.
-4. Kies eventueel een **Cliënt** waar het document bij hoort, of laat op
-   "Algemeen" staan.
-5. Klik op **Uploaden**. Klaar — het document staat direct in de lijst en
-   iedereen met een account kan het openen.
+4. Kies bij **Hoort bij** waar het document bij hoort: "Algemeen", "Nieuwe
+   medewerker" (voor onboarding-documenten), of een specifieke cliënt.
+5. Klik op **Uploaden** — een voortgangsbalk laat zien hoe ver de upload is.
+   Klaar — het document staat direct in het bijbehorende tabblad en
+   iedereen met een account kan het openen. Verwijderen kan alleen door een
+   admin of coördinator.
 
 Protocollen werken net zo, maar dan als tekst in plaats van een bestand: ga
-naar **Backend → Protocollen**, typ de titel en inhoud, en klik op
+naar **Protocollen** in het hoofdmenu, typ de titel en inhoud, en klik op
 **Toevoegen**.
 
 > **Zie je de melding "Uploaden lukt niet"?** Dan is stap 4 (Blob opslag
@@ -260,13 +263,17 @@ naar **Backend → Protocollen**, typ de titel en inhoud, en klik op
 
 ## Wat kun je hierna doen in de app?
 
-- **Backend → Cliënten**: bewoners/cliënten toevoegen.
-- **Backend → Medewerkers**: collega's toevoegen (naam + geboortedatum +
-  rol: medewerker, coördinator of admin). Alleen een admin kan dit doen.
-- **Backend → Medicatie beheer**: medicatie per cliënt instellen, met
-  tijden en instructies.
-- **Backend → Weekplanning**: het weekschema per cliënt instellen.
-- **Backend → Instellingen**: e-mailadressen later aanpassen.
+- **Backend** is alleen zichtbaar en toegankelijk voor een admin-account —
+  medewerkers en coördinatoren zien dit onderdeel niet in het menu.
+  - **Backend → Cliënten**: bewoners/cliënten toevoegen.
+  - **Backend → Medewerkers**: collega's toevoegen (naam + geboortedatum +
+    rol: medewerker, coördinator of admin).
+  - **Backend → Medicatie beheer**: medicatie per cliënt instellen, met
+    tijden en instructies.
+  - **Backend → Weekplanning**: het weekschema per cliënt instellen.
+  - **Backend → Instellingen**: e-mailadressen later aanpassen.
+- **Documenten** en **Protocollen** staan in het hoofdmenu voor iedereen —
+  zie hierboven.
 - De overige menu's (Rapportage, Medicatie, Aanwezigheid, Overdracht,
   To-Do's, Agenda) gebruikt iedereen dagelijks — zie ook `README.md` voor
   een korte beschrijving van elk onderdeel.

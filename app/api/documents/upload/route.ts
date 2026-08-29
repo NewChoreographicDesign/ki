@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { BlobError } from "@vercel/blob";
-import { Role } from "@prisma/client";
 import { requireAuth } from "@/lib/auth";
 import { handleApiError } from "@/lib/api";
 
@@ -19,7 +18,7 @@ const MAX_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
 
 export async function POST(request: Request) {
   try {
-    await requireAuth([Role.ADMIN, Role.COORDINATOR]);
+    await requireAuth();
     const body = (await request.json()) as HandleUploadBody;
 
     const jsonResponse = await handleUpload({
@@ -31,7 +30,7 @@ export async function POST(request: Request) {
         addRandomSuffix: true,
       }),
       onUploadCompleted: async () => {
-        // The frontend saves the Document row itself (via POST /api/backend/documents)
+        // The frontend saves the Document row itself (via POST /api/documents)
         // once upload() resolves, so nothing to do here.
       },
     });

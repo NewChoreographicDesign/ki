@@ -7,7 +7,7 @@ import { settingSchema } from "@/lib/validations";
 
 export async function PATCH(request: NextRequest) {
   try {
-    await requireAuth([Role.ADMIN, Role.COORDINATOR]);
+    await requireAuth([Role.ADMIN]);
     const body = await request.json();
     const { key, value } = settingSchema.parse(body);
 
