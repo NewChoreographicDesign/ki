@@ -15,8 +15,9 @@ werkende versie van de app online staan, die je zelf kunt bijhouden.
 2. De app daar "importeren" vanuit GitHub (de code staat daar al klaar).
 3. Twee gratis opslagdiensten koppelen: één voor de **database** (waar alle
    gegevens in komen) en één voor **documenten/bestanden**.
-4. Een gratis account bij **Resend** voor het versturen van e-mails
-   (rapportages, medicatie-overzichten).
+4. E-mail regelen voor rapportages en medicatie-overzichten: via een gratis
+   account bij **Resend**, of — als je geen toegang hebt tot een eigen
+   domein — via een gewoon **Gmail-account** dat je al hebt.
 5. De app voor het eerst openen en je eigen beheerdersaccount aanmaken.
 6. Klaar — vanaf nu werkt alles via de app zelf.
 
@@ -88,11 +89,15 @@ Word-bestanden, foto's) kunt uploaden.
 
 ---
 
-## Stap 5 — Account bij Resend (voor e-mails)
+## Stap 5 — E-mail regelen (Resend óf Gmail)
 
 De app verstuurt automatisch e-mails: rapportages, maandelijkse
-medicatie-overzichten en herinneringen voor afspraken. Daarvoor gebruikt de
-app de dienst Resend (gratis tot 3.000 e-mails per maand — ruim voldoende).
+medicatie-overzichten en herinneringen voor afspraken. Kies **één** van de
+twee opties hieronder — je hebt er maar één nodig.
+
+### Optie A — Resend (aan te raden als je een eigen domein hebt)
+
+Resend is gratis tot 3.000 e-mails per maand — ruim voldoende.
 
 1. Ga naar resend.com en maak een gratis account aan.
 2. Bevestig je e-mailadres via de mail die je ontvangt.
@@ -107,8 +112,32 @@ app de dienst Resend (gratis tot 3.000 e-mails per maand — ruim voldoende).
 > waarmee je bij Resend bent ingelogd. Voor echt gebruik met meerdere
 > ontvangers (het algemene adres, de coördinator) is het toevoegen van een
 > eigen domein bij Resend (**Domains** → **Add Domain**, met hulp van
-> wie je website/domein beheert) aan te raden. Tot die tijd kun je alles
-> prima testen met je eigen e-mailadres.
+> wie je website/domein beheert) noodzakelijk. Heb je geen toegang tot
+> DNS-instellingen van een domein (bijvoorbeeld omdat dit bij een
+> organisatie ligt waar je zelf niet bij kunt)? Gebruik dan Optie B
+> hieronder — daar heb je geen domein voor nodig.
+
+### Optie B — Gmail (geen eigen domein nodig)
+
+Heb je geen toegang tot DNS-instellingen van een domein? Dan kun je e-mails
+laten versturen via een gewoon Gmail-account (van jezelf of speciaal voor de
+app aangemaakt). Dit werkt volledig zelfstandig — je hebt hier geen
+beheerder of IT-afdeling voor nodig.
+
+1. Zorg dat het Gmail-account **2-staps-verificatie** aan heeft staan: ga naar
+   [myaccount.google.com/security](https://myaccount.google.com/security) en
+   zet die aan als dat nog niet zo is (nodig via je telefoon).
+2. Ga daarna naar
+   [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords).
+3. Geef een naam op (bijvoorbeeld "Woongroep Admin") en klik op **Aanmaken**.
+4. Er verschijnt een code van 16 tekens (bijv. `abcd efgh ijkl mnop`). Kopieer
+   deze — zonder spaties — en bewaar hem tijdelijk, want die heb je in de
+   volgende stap nodig. Dit is **niet** het gewone Gmail-wachtwoord.
+
+> Met deze methode worden e-mails verstuurd namens dat Gmail-adres (de
+> ontvanger ziet dit adres als afzender, tenzij je hieronder bij `EMAIL_FROM`
+> iets anders instelt). Gmail staat maximaal 500 verzonden e-mails per dag
+> toe — voor deze app ruim voldoende.
 
 ---
 
@@ -123,8 +152,26 @@ Voor elke regel: vul de **Name** (naam) en **Value** (waarde) in en klik op
 |---|---|---|
 | `JWT_SECRET` | een lange, willekeurige tekst van minstens 40 tekens | Zie hieronder hoe je dit maakt |
 | `CRON_SECRET` | ook een lange, willekeurige tekst | Beveiligt de automatische maandelijkse e-mails |
+
+Vul daarnaast **óf** de Resend-rij, **óf** de vier Gmail/SMTP-rijen in, al
+naar gelang welke optie je in stap 5 hebt gekozen:
+
+**Bij Optie A (Resend):**
+
+| Naam | Waarde | Uitleg |
+|---|---|---|
 | `RESEND_API_KEY` | de code die begint met `re_` uit stap 5 | Voor het versturen van e-mail |
 | `EMAIL_FROM` | bijv. `Woongroep Admin <onboarding@resend.dev>` | Het afzenderadres; met een eigen Resend-domein wordt dit je eigen adres |
+
+**Bij Optie B (Gmail):**
+
+| Naam | Waarde | Uitleg |
+|---|---|---|
+| `SMTP_HOST` | `smtp.gmail.com` | Vast adres van Gmail's verstuurserver |
+| `SMTP_PORT` | `465` | Vaste poort |
+| `SMTP_USER` | je volledige Gmail-adres | Het account waarmee verstuurd wordt |
+| `SMTP_PASSWORD` | de 16-tekens app-wachtwoord uit stap 5 (zonder spaties) | **Niet** je gewone Gmail-wachtwoord |
+| `EMAIL_FROM` | bijv. `Woongroep Admin <jouw-adres@gmail.com>` | Het afzenderadres; gebruik hetzelfde adres als bij `SMTP_USER` |
 
 **Hoe maak je zo'n willekeurige tekst voor `JWT_SECRET` en `CRON_SECRET`?**
 Deze twee moeten uniek en onvoorspelbaar zijn (het zijn digitale "sloten"
@@ -250,10 +297,14 @@ account weer op actief te zetten — dit is de enige stap in deze hele
 handleiding die (in het uiterste noodgeval) technische hulp vraagt.
 
 **Ik krijg geen e-mails binnen.**
-Controleer bij Resend (tabblad **Logs**) of de mail daadwerkelijk is
-verstuurd. Zonder eigen domein bij Resend (zie stap 5) komen mails alleen
-aan bij het e-mailadres waarmee jij bij Resend bent ingelogd — dit is een
-beperking van het gratis proefaccount, niet van de app.
+Gebruik je Resend (Optie A)? Controleer bij Resend (tabblad **Logs**) of de
+mail daadwerkelijk is verstuurd. Zonder eigen domein bij Resend (zie stap 5)
+komen mails alleen aan bij het e-mailadres waarmee jij bij Resend bent
+ingelogd — dit is een beperking van het gratis proefaccount, niet van de app.
+Gebruik je Gmail (Optie B)? Controleer of `SMTP_USER` en `SMTP_PASSWORD`
+kloppen (het moet het 16-tekens app-wachtwoord zijn, niet je gewone
+Gmail-wachtwoord) en of 2-staps-verificatie nog steeds aanstaat op dat
+Google-account.
 
 **Ik wil een eigen domeinnaam (bijv. `admin.mijnwoongroep.nl`) in plaats
 van het `.vercel.app`-adres.**
@@ -274,7 +325,8 @@ Alle onderstaande waarden vind je terug (en kun je aanpassen) via
 | `BLOB_READ_WRITE_TOKEN` | automatisch, via stap 4 | Voor documenten uploaden |
 | `JWT_SECRET` | zelf een lange willekeurige tekst | Ja |
 | `CRON_SECRET` | zelf een lange willekeurige tekst | Voor de maandelijkse e-mails |
-| `RESEND_API_KEY` | uit je Resend-account, stap 5 | Voor e-mail |
+| `RESEND_API_KEY` | uit je Resend-account, stap 5 (Optie A) | Voor e-mail (kies A of B) |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` | uit je Gmail-account, stap 5 (Optie B) | Voor e-mail (kies A of B) |
 | `EMAIL_FROM` | zelf gekozen afzenderadres | Voor e-mail |
 | `GENERAL_EMAIL` / `COORDINATOR_EMAIL` | ingevuld tijdens het eerste opstarten (stap 8), daarna aanpasbaar in de app zelf | Nee, via de app zelf |
 

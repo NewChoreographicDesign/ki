@@ -19,7 +19,8 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
 - **Auth** — alleen naam + geboortedatum (`DD-MM-JJJJ`), geen wachtwoorden.
   JWT in een `httpOnly`, `secure` cookie (12 uur geldig). Bij inloggen wordt
   automatisch een dienst gestart (ochtend 07:00-15:00 / avond 14:00-23:00).
-- **E-mail** — [Resend](https://resend.com) voor rapportages, maandelijkse
+- **E-mail** — [Resend](https://resend.com) *of* gewone SMTP (bv. een
+  Gmail-account met een "App-wachtwoord") voor rapportages, maandelijkse
   medicatie-overzichten, maandelijkse to-do overzichten naar de coördinator en
   agenda-herinneringen. Alle adressen staan in de `Setting`-tabel — één plek
   om te wijzigen (Backend → Instellingen).
@@ -53,7 +54,10 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
 2. Een Vercel-account (hosting)
 3. Database: lokaal SQLite (al geconfigureerd) → productie Neon.tech of Vercel
    Postgres (gratis tier)
-4. Resend (gratis tier) voor e-mails
+4. E-mail: [Resend](https://resend.com) (gratis tier, vereist een geverifieerd
+   eigen domein om naar willekeurige ontvangers te mailen) **of** SMTP via een
+   bestaande mailbox, bv. Gmail met een "App-wachtwoord" — geen domein/DNS
+   nodig. Zie de e-mail-sectie hieronder voor de afweging.
 5. (Optioneel) Vercel Blob voor documenten/protocollen
 6. Eigen domein (aanbevolen voor e-mail + PWA)
 
@@ -65,7 +69,7 @@ npm install
 
 # 2. Environment
 cp .env.example .env
-# Vul .env in: JWT_SECRET (min. 32 tekens), later RESEND_API_KEY, GENERAL_EMAIL, COORDINATOR_EMAIL, CRON_SECRET
+# Vul .env in: JWT_SECRET (min. 32 tekens), later RESEND_API_KEY of SMTP_*, GENERAL_EMAIL, COORDINATOR_EMAIL, CRON_SECRET
 
 # 3. Database
 npx prisma db push
@@ -111,9 +115,21 @@ Kort samengevat voor ontwikkelaars:
    Blob-store aan het project — dit zet `DATABASE_URL` resp.
    `BLOB_READ_WRITE_TOKEN` automatisch.
 3. Zet de overige environment variables: `JWT_SECRET`, `CRON_SECRET`,
-   `RESEND_API_KEY`, `EMAIL_FROM`. `GENERAL_EMAIL`/`COORDINATOR_EMAIL` hoeven
-   hier niet: die worden bij de allereerste keer opstarten via de
-   `/setup`-wizard in de app zelf ingevuld (zie hieronder).
+   `EMAIL_FROM`, en voor e-mail **één van beide**:
+   - `RESEND_API_KEY` — vereist een geverifieerd eigen domein bij Resend om
+     naar willekeurige ontvangers te mailen (zonder domein levert Resend
+     alleen af op het e-mailadres waarmee je bij Resend bent ingelogd); of
+   - `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` — stuurt via
+     een bestaande mailbox, bv. Gmail. Vereist geen domein/DNS-toegang: alleen
+     een Google-account met 2-staps-verificatie aan en een "App-wachtwoord"
+     via [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+     (`SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`,
+     `SMTP_USER=<gmail-adres>`, `SMTP_PASSWORD=<16-tekens app-wachtwoord>`).
+     Is `SMTP_HOST` gezet, dan heeft SMTP voorrang boven Resend.
+
+   `GENERAL_EMAIL`/`COORDINATOR_EMAIL` hoeven hier niet: die worden bij de
+   allereerste keer opstarten via de `/setup`-wizard in de app zelf ingevuld
+   (zie hieronder).
 4. Deploy. Het `vercel-build`-script (`package.json`) regelt de rest
    automatisch, in deze volgorde:
    - `scripts/prepare-datasource.js` zet de Prisma datasource-`provider` om

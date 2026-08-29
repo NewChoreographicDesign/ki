@@ -1,5 +1,6 @@
 import "server-only";
 import { Resend } from "resend";
+import nodemailer, { type Transporter } from "nodemailer";
 import { db } from "@/lib/db";
 import { formatDate, formatDateTime, fullName } from "@/lib/utils";
 
@@ -12,6 +13,29 @@ function getResend(): Resend | null {
   return resendClient;
 }
 
+let smtpTransporter: Transporter | null = null;
+
+/**
+ * SMTP (e.g. a Gmail account with an App Password) is an alternative to
+ * Resend for organizations that can't verify a domain there — no DNS access
+ * needed, only a mailbox you can log into. Configured via SMTP_HOST/PORT/
+ * USER/PASSWORD; when present it takes priority over Resend.
+ */
+function getSmtpTransporter(): Transporter | null {
+  const { SMTP_HOST, SMTP_USER, SMTP_PASSWORD } = process.env;
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASSWORD) return null;
+  if (!smtpTransporter) {
+    const port = Number(process.env.SMTP_PORT) || 465;
+    smtpTransporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port,
+      secure: port === 465, // STARTTLS is used automatically on 587
+      auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
+    });
+  }
+  return smtpTransporter;
+}
+
 /** Settings table is the single source of truth; env vars are the fallback for first boot. */
 export async function getSetting(key: string, fallback = ""): Promise<string> {
   const setting = await db.setting.findUnique({ where: { key } });
@@ -20,12 +44,23 @@ export async function getSetting(key: string, fallback = ""): Promise<string> {
 }
 
 async function sendEmail(opts: { to: string | string[]; subject: string; html: string }) {
+  const from = process.env.EMAIL_FROM || "Woongroep Admin <noreply@example.com>";
+
+  const smtp = getSmtpTransporter();
+  if (smtp) {
+    try {
+      return await smtp.sendMail({ from, to: opts.to, subject: opts.subject, html: opts.html });
+    } catch (error) {
+      console.error("[email] SMTP send failed", error);
+      return { error };
+    }
+  }
+
   const resend = getResend();
   if (!resend) {
-    console.warn(`[email] RESEND_API_KEY not set, skipping email: "${opts.subject}"`);
+    console.warn(`[email] No SMTP or RESEND_API_KEY configured, skipping email: "${opts.subject}"`);
     return { skipped: true };
   }
-  const from = process.env.EMAIL_FROM || "Woongroep Admin <noreply@example.com>";
   try {
     return await resend.emails.send({ from, to: opts.to, subject: opts.subject, html: opts.html });
   } catch (error) {
