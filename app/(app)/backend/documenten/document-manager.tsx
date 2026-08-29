@@ -75,7 +75,9 @@ export function DocumentManager({
       // message covers the most likely cause (Vercel Blob not set up yet)
       // while staying accurate for the rest ("try again").
       toast.error(
-        "Uploaden lukt niet. Vraag de beheerder om bestandsopslag in te stellen (zie INSTALLATIE.md) of probeer het opnieuw."
+        "Uploaden lukt niet: bestandsopslag (Vercel Blob) is nog niet gekoppeld aan dit project. " +
+          "Ga in Vercel naar je project → Storage → maak een Blob store aan en koppel die " +
+          "(zie INSTALLATIE.md, stap 4), of probeer het opnieuw als dit al is gedaan."
       );
       setUploading(false);
       return;
