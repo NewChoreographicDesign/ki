@@ -5,6 +5,17 @@ let configured = false;
 
 function ensureConfigured() {
   if (configured) return;
+
+  // Cloudinary's dashboard offers a single combined connection string
+  // (cloudinary://<api_key>:<api_secret>@<cloud_name>) as an alternative to
+  // three separate values — the SDK parses it itself when config(true)
+  // forces a reload from env, so prefer it when set.
+  if (process.env.CLOUDINARY_URL) {
+    cloudinary.config(true);
+    configured = true;
+    return;
+  }
+
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
   const apiKey = process.env.CLOUDINARY_API_KEY;
   const apiSecret = process.env.CLOUDINARY_API_SECRET;

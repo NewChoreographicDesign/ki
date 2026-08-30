@@ -77,17 +77,19 @@ koppelt.
 Dit zorgt ervoor dat je straks in de app met één klik documenten (PDF's,
 Word-bestanden, foto's) kunt uploaden. Dit gebeurt via een aparte, gratis
 dienst genaamd **Cloudinary** (niet via Vercel zelf) — je maakt hier een
-account aan en kopieert drie codes over naar Vercel, in stap 6 hieronder.
+account aan en kopieert één code over naar Vercel, in stap 6 hieronder.
 
 1. Ga naar [cloudinary.com](https://cloudinary.com) en maak een gratis
    account aan ("Sign up for free").
 2. Bevestig je e-mailadres via de mail die je ontvangt.
 3. Op het dashboard (de eerste pagina na inloggen) zie je een blok met
-   **"Product Environment Credentials"** of vergelijkbaar, met drie
-   waarden: **Cloud name**, **API Key** en **API Secret**. Klik bij "API
-   Secret" op het oogicoontje om deze zichtbaar te maken.
-4. Bewaar deze drie waarden tijdelijk (bijvoorbeeld in een kladblok) — je
-   vult ze zo dadelijk in bij stap 6.
+   **"API Environment variable"** of **"Product Environment Credentials"**,
+   met daarin een regel die begint met `CLOUDINARY_URL=cloudinary://...`.
+   Klik op het kopieer-icoontje om de hele regel te kopiëren (of, als je
+   liever losse velden ziet: **Cloud name**, **API Key** en **API Secret**
+   apart, met een oogicoontje om "API Secret" zichtbaar te maken).
+4. Bewaar dit tijdelijk (bijvoorbeeld in een kladblok) — je vult het zo
+   dadelijk in bij stap 6.
 
 > Sla je deze stap over? Dan werkt de rest van de app gewoon, alleen het
 > uploaden van documenten nog niet. Je kunt dit later altijd alsnog doen.
@@ -179,8 +181,17 @@ naar gelang welke optie je in stap 5 hebt gekozen:
 | `EMAIL_FROM` | bijv. `Woongroep Admin <jouw-adres@gmail.com>` | Het afzenderadres; gebruik hetzelfde adres als bij `SMTP_USER` |
 
 **Voor documenten/protocollen uploaden** (optioneel, sla stap 4 over als je
-dit niet wilt): de drie waarden die je in stap 4 bij Cloudinary hebt
-bewaard.
+dit niet wilt): wat je in stap 4 bij Cloudinary hebt bewaard. Heb je de hele
+`CLOUDINARY_URL=cloudinary://...`-regel gekopieerd? Vul dan **alleen** deze
+ene rij in — plak de hele waarde (inclusief `cloudinary://` maar zonder het
+stuk `CLOUDINARY_URL=` ervoor) bij "Value":
+
+| Naam | Waarde | Uitleg |
+|---|---|---|
+| `CLOUDINARY_URL` | de gekopieerde regel, bijv. `cloudinary://123456789:AbCdEf@jouwcloud` | Alle Cloudinary-gegevens in één keer |
+
+Heb je in plaats daarvan de losse velden (Cloud name/API Key/API Secret)
+bewaard? Vul dan **in plaats van** de rij hierboven deze drie rijen in:
 
 | Naam | Waarde | Uitleg |
 |---|---|---|
@@ -349,7 +360,7 @@ Alle onderstaande waarden vind je terug (en kun je aanpassen) via
 | Naam | Waar komt dit vandaan | Verplicht? |
 |---|---|---|
 | `DATABASE_URL` | automatisch, via stap 3 | Ja |
-| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | uit je Cloudinary-account, stap 4 | Voor documenten uploaden |
+| `CLOUDINARY_URL` (of los: `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET`) | uit je Cloudinary-account, stap 4 | Voor documenten uploaden |
 | `JWT_SECRET` | zelf een lange willekeurige tekst | Ja |
 | `CRON_SECRET` | zelf een lange willekeurige tekst | Voor de maandelijkse e-mails |
 | `RESEND_API_KEY` | uit je Resend-account, stap 5 (Optie A) | Voor e-mail (kies A of B) |
