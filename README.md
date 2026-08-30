@@ -70,7 +70,8 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
    eigen domein om naar willekeurige ontvangers te mailen) **of** SMTP via een
    bestaande mailbox, bv. Gmail met een "App-wachtwoord" — geen domein/DNS
    nodig. Zie de e-mail-sectie hieronder voor de afweging.
-5. (Optioneel) Vercel Blob voor documenten/protocollen
+5. (Optioneel) Een gratis [Cloudinary](https://cloudinary.com)-account voor
+   documenten/protocollen uploaden
 6. Eigen domein (aanbevolen voor e-mail + PWA)
 
 ## Lokaal installeren
@@ -123,11 +124,12 @@ Voor een stap-voor-stap versie zonder terminal, zie [`INSTALLATIE.md`](./INSTALL
 Kort samengevat voor ontwikkelaars:
 
 1. Push naar GitHub en importeer het project in Vercel.
-2. Koppel een Postgres-database (Vercel Storage → Neon) en, optioneel, een
-   Blob-store aan het project — dit zet `DATABASE_URL` resp.
-   `BLOB_READ_WRITE_TOKEN` automatisch.
+2. Koppel een Postgres-database (Vercel Storage → Neon) aan het project —
+   dit zet `DATABASE_URL` automatisch.
 3. Zet de overige environment variables: `JWT_SECRET`, `CRON_SECRET`,
-   `EMAIL_FROM`, en voor e-mail **één van beide**:
+   `EMAIL_FROM`, optioneel `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` /
+   `CLOUDINARY_API_SECRET` (documenten/protocollen uploaden — zie de
+   "Uploads"-sectie hieronder), en voor e-mail **één van beide**:
    - `RESEND_API_KEY` — vereist een geverifieerd eigen domein bij Resend om
      naar willekeurige ontvangers te mailen (zonder domein levert Resend
      alleen af op het e-mailadres waarmee je bij Resend bent ingelogd); of
@@ -180,26 +182,37 @@ gate zorgt hiervoor) en heeft een ingebouwde upload-knop met voortgangsbalk:
 een gekozen bestand (PDF, Word, Excel, afbeelding, tekst — max 4 MB) gaat
 als `multipart/form-data` naar `app/api/documents/upload/route.ts` (dezelfde
 origin, na een `requireAuth([ADMIN])`-check en een whitelist van toegestane
-content-types uit `lib/blob-upload.ts`), die op de server zelf `put()`
-aanroept om het bestand in Vercel Blob te zetten. Voortgang wordt bijgehouden
-via een `XMLHttpRequest`-helper (`lib/client-upload.ts`) omdat `fetch()` geen
-upload-voortgang kan rapporteren.
-Dit is bewust *niet* de rechtstreekse browser-naar-Vercel-Blob upload die
-`@vercel/blob/client`'s `upload()` normaal gesproken doet: die cross-origin
-PUT naar Vercel's eigen Blob-API gaf in dit project consistent een `400`
-terug — ook tegen een volledig nieuw aangemaakte store — zonder dat de
-browser de echte foutmelding kon tonen (CORS verbergt die body). Uploaden via
-onze eigen server elimineert die cross-origin call volledig; de prijs
-daarvoor is de kleinere bestandslimiet (4 MB in plaats van 20 MB), omdat het
-bestand nu door één Serverless Function-request moet passen — Vercel's harde
-platformlimiet daarvoor is 4,5 MB.
+content-types uit `lib/file-upload.ts`), die op de server zelf het bestand
+naar [Cloudinary](https://cloudinary.com) stuurt (`lib/cloudinary.ts`).
+Voortgang wordt bijgehouden via een `XMLHttpRequest`-helper
+(`lib/client-upload.ts`) omdat `fetch()` geen upload-voortgang kan
+rapporteren.
+
+Dit project gebruikte eerst Vercel Blob, zowel de rechtstreekse
+browser-naar-Vercel-upload (`@vercel/blob/client`'s `upload()`) als een
+server-bemiddelde variant (`put()`) — beide gaven in productie consistent
+een onleesbare `400` terug van Vercel's eigen Blob-API, ook tegen een
+volledig nieuw aangemaakte store, zonder duidelijke oorzaak. Overgestapt op
+Cloudinary via onze eigen server lost dit op. Bestanden gaan nog steeds via
+onze server (niet rechtstreeks van de browser naar Cloudinary), dus de
+bestandslimiet blijft 4 MB — dat is Vercel's harde platformlimiet voor het
+request-body van één Serverless Function, ongeacht welke opslagdienst
+daarachter zit.
+
+> **Let op bij Cloudinary-instellingen:** een nieuw Cloudinary-account staat
+> standaard geen publieke aflevering van PDF/ZIP-bestanden toe (beveiliging
+> tegen misbruik). Krijg je een `401` bij het openen van een geüpload
+> PDF-document? Zet dan **Settings → Security → "Allow delivery of PDF and
+> ZIP files"** aan in het Cloudinary-dashboard.
+
 De hoofdmenu-pagina `/documenten` deelt dezelfde `DocumentManager`-component
 maar met `canUpload={false}` en `canDelete={false}` — puur bekijken/openen,
 voor elke ingelogde rol. De upload breekt na 60s automatisch af met een
-duidelijke melding als de verbinding vastloopt. Zonder gekoppelde Blob-store
-(`BLOB_READ_WRITE_TOKEN` ontbreekt) geeft die route een `503` met
-`code: "BLOB_NOT_CONFIGURED"` terug; de UI toont dan een duidelijke melding
-en biedt "Ik heb al een link naar een document" als alternatief, dat gewoon
+duidelijke melding als de verbinding vastloopt. Zonder Cloudinary-configuratie
+(`CLOUDINARY_CLOUD_NAME`/`CLOUDINARY_API_KEY`/`CLOUDINARY_API_SECRET`
+ontbreken) geeft die route een `503` met `code: "STORAGE_NOT_CONFIGURED"`
+terug; de UI toont dan een duidelijke melding en biedt "Ik heb al een link
+naar een document" als alternatief, dat gewoon
 een URL opslaat.
 
 Documenten zonder gekoppelde cliënt horen bij een van twee "threads",
@@ -312,9 +325,9 @@ volgende, concreet geïmplementeerde maatregelen:
   protocollen uploaden mag elke ingelogde rol
   (`app/api/protocols/upload/route.ts`), verwijderen blijft ADMIN/COORDINATOR.
   Beide whitelist't content-types en beperkt de bestandsgrootte tot 4 MB
-  (`lib/blob-upload.ts`) — bewust laag omdat uploads via onze eigen server
-  lopen (`put()`), niet rechtstreeks van de browser naar Vercel Blob; zie
-  de "Uploads"-sectie hierboven voor waarom.
+  (`lib/file-upload.ts`) — bewust laag omdat uploads via onze eigen server
+  naar Cloudinary lopen, niet rechtstreeks van de browser naar externe
+  opslag; zie de "Uploads"-sectie hierboven voor waarom.
 
 **Wat nog aandacht verdient bij een echte productie-uitrol:** roteer
 `JWT_SECRET`/`CRON_SECRET` bij vermoeden van lekkage (bestaande sessies

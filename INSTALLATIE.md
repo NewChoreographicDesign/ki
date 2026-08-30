@@ -75,14 +75,19 @@ koppelt.
 ## Stap 4 — Bestandsopslag toevoegen (voor documenten/protocollen)
 
 Dit zorgt ervoor dat je straks in de app met één klik documenten (PDF's,
-Word-bestanden, foto's) kunt uploaden.
+Word-bestanden, foto's) kunt uploaden. Dit gebeurt via een aparte, gratis
+dienst genaamd **Cloudinary** (niet via Vercel zelf) — je maakt hier een
+account aan en kopieert drie codes over naar Vercel, in stap 6 hieronder.
 
-1. Blijf op het tabblad **Storage** en klik nogmaals op **Create Database**.
-2. Kies deze keer **Blob**.
-3. Geef ook deze een naam (bijvoorbeeld `woongroep-documenten`) en klik op
-   **Create**.
-4. Klik op **Connect Project** en kies weer je project. Ook dit koppelt
-   Vercel automatisch (`BLOB_READ_WRITE_TOKEN`) — geen kopieerwerk nodig.
+1. Ga naar [cloudinary.com](https://cloudinary.com) en maak een gratis
+   account aan ("Sign up for free").
+2. Bevestig je e-mailadres via de mail die je ontvangt.
+3. Op het dashboard (de eerste pagina na inloggen) zie je een blok met
+   **"Product Environment Credentials"** of vergelijkbaar, met drie
+   waarden: **Cloud name**, **API Key** en **API Secret**. Klik bij "API
+   Secret" op het oogicoontje om deze zichtbaar te maken.
+4. Bewaar deze drie waarden tijdelijk (bijvoorbeeld in een kladblok) — je
+   vult ze zo dadelijk in bij stap 6.
 
 > Sla je deze stap over? Dan werkt de rest van de app gewoon, alleen het
 > uploaden van documenten nog niet. Je kunt dit later altijd alsnog doen.
@@ -173,6 +178,16 @@ naar gelang welke optie je in stap 5 hebt gekozen:
 | `SMTP_PASSWORD` | de 16-tekens app-wachtwoord uit stap 5 (zonder spaties) | **Niet** je gewone Gmail-wachtwoord |
 | `EMAIL_FROM` | bijv. `Woongroep Admin <jouw-adres@gmail.com>` | Het afzenderadres; gebruik hetzelfde adres als bij `SMTP_USER` |
 
+**Voor documenten/protocollen uploaden** (optioneel, sla stap 4 over als je
+dit niet wilt): de drie waarden die je in stap 4 bij Cloudinary hebt
+bewaard.
+
+| Naam | Waarde | Uitleg |
+|---|---|---|
+| `CLOUDINARY_CLOUD_NAME` | "Cloud name" uit stap 4 | Identificeert je Cloudinary-account |
+| `CLOUDINARY_API_KEY` | "API Key" uit stap 4 | Voor het versturen van bestanden |
+| `CLOUDINARY_API_SECRET` | "API Secret" uit stap 4 | Geheime sleutel, hou deze privé |
+
 **Hoe maak je zo'n willekeurige tekst voor `JWT_SECRET` en `CRON_SECRET`?**
 Deze twee moeten uniek en onvoorspelbaar zijn (het zijn digitale "sloten"
 voor de app) — gebruik voor elk van de twee een andere tekst.
@@ -232,8 +247,9 @@ eventuele collega's toe via **Backend → Medewerkers**.
 
 ## Documenten en protocollen in de app krijgen
 
-Dit is de eenvoudigste stap van allemaal, zodra stap 4 hierboven (Blob
-opslag koppelen) is gedaan:
+Dit is de eenvoudigste stap van allemaal, zodra stap 4 en 6 hierboven
+(Cloudinary-account + de drie waarden invullen bij Environment Variables)
+zijn gedaan:
 
 1. Log in als admin en ga naar **Backend → Documenten** (alleen een admin
    ziet en gebruikt dit; iedereen met een account kan de documenten
@@ -253,10 +269,11 @@ Protocollen werken net zo, maar staan gewoon in het hoofdmenu voor iedereen
 inhoud als tekst, en/of upload een bestand — minstens één van de twee is
 verplicht — en klik op **Toevoegen**.
 
-> **Zie je de melding "Uploaden lukt niet"?** Dan is stap 4 (Blob opslag
-> koppelen) hierboven waarschijnlijk nog niet gedaan, of de koppeling is nog
-> niet actief geworden. Doorloop stap 4 en 7 nogmaals (koppelen + opnieuw
-> deployen) en probeer het daarna nogmaals. Je kunt ondertussen ook gewoon
+> **Zie je de melding "Uploaden lukt niet"?** Dan zijn de drie
+> `CLOUDINARY_*`-waarden uit stap 4/6 hierboven waarschijnlijk nog niet
+> (goed) ingevuld, of de laatste deploy dateert van vóór het invullen.
+> Controleer de waarden en doorloop stap 7 nogmaals (opnieuw deployen) en
+> probeer het daarna nogmaals. Je kunt ondertussen ook gewoon
 > een link naar een bestand toevoegen via **"Ik heb al een link naar een
 > document"** onder de uploadknop.
 
@@ -332,7 +349,7 @@ Alle onderstaande waarden vind je terug (en kun je aanpassen) via
 | Naam | Waar komt dit vandaan | Verplicht? |
 |---|---|---|
 | `DATABASE_URL` | automatisch, via stap 3 | Ja |
-| `BLOB_READ_WRITE_TOKEN` | automatisch, via stap 4 | Voor documenten uploaden |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | uit je Cloudinary-account, stap 4 | Voor documenten uploaden |
 | `JWT_SECRET` | zelf een lange willekeurige tekst | Ja |
 | `CRON_SECRET` | zelf een lange willekeurige tekst | Voor de maandelijkse e-mails |
 | `RESEND_API_KEY` | uit je Resend-account, stap 5 (Optie A) | Voor e-mail (kies A of B) |

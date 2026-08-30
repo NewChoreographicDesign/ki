@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { put, BlobError } from "@vercel/blob";
 import { requireAuth } from "@/lib/auth";
 import { handleApiError } from "@/lib/api";
-import { ALLOWED_CONTENT_TYPES, MAX_SIZE_BYTES } from "@/lib/blob-upload";
+import { ALLOWED_CONTENT_TYPES, MAX_SIZE_BYTES } from "@/lib/file-upload";
+import { uploadFileToCloudinary } from "@/lib/cloudinary";
 
 // See app/api/documents/upload/route.ts for why this uploads through our
-// own server (put()) instead of a direct browser-to-Vercel-Blob PUT.
+// own server to Cloudinary instead of a direct browser-to-storage request.
 export async function POST(request: NextRequest) {
   try {
     // Protocols are open to every logged-in role (same as creating one via
@@ -27,19 +27,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const blob = await put(file.name, file, {
-      access: "public",
-      addRandomSuffix: true,
-      contentType: file.type,
-    });
-
-    return NextResponse.json({ url: blob.url });
+    const url = await uploadFileToCloudinary(file);
+    return NextResponse.json({ url });
   } catch (error) {
-    if (error instanceof BlobError) {
+    if (error instanceof Error && error.message === "CLOUDINARY_NOT_CONFIGURED") {
       return NextResponse.json(
         {
           error: "Bestanden uploaden is nog niet ingesteld.",
-          code: "BLOB_NOT_CONFIGURED",
+          code: "STORAGE_NOT_CONFIGURED",
         },
         { status: 503 }
       );
