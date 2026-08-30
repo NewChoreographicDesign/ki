@@ -14,10 +14,21 @@ let configured = false;
  * entire build — not just this feature. Clearing an invalid value before
  * ever importing the package turns that into a graceful "not configured"
  * instead.
+ *
+ * Also trims whitespace: copy-pasting a credential (especially on mobile)
+ * very easily introduces a leading/trailing space or newline that looks
+ * identical to the real value but breaks signature verification outright —
+ * this project has hit that exact failure mode repeatedly with other env
+ * vars, so guard against it here too rather than requiring a byte-perfect
+ * paste.
  */
 function sanitizeCloudinaryUrl() {
-  const url = process.env.CLOUDINARY_URL;
-  if (url && !url.toLowerCase().startsWith("cloudinary://")) {
+  const raw = process.env.CLOUDINARY_URL;
+  if (raw === undefined) return;
+  const trimmed = raw.trim();
+  if (trimmed.toLowerCase().startsWith("cloudinary://")) {
+    process.env.CLOUDINARY_URL = trimmed;
+  } else {
     delete process.env.CLOUDINARY_URL;
   }
 }
@@ -39,9 +50,9 @@ async function ensureConfigured(): Promise<typeof CloudinaryV2> {
     return cloudinary;
   }
 
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-  const apiKey = process.env.CLOUDINARY_API_KEY;
-  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim();
+  const apiKey = process.env.CLOUDINARY_API_KEY?.trim();
+  const apiSecret = process.env.CLOUDINARY_API_SECRET?.trim();
   if (!cloudName || !apiKey || !apiSecret) {
     throw new Error("CLOUDINARY_NOT_CONFIGURED");
   }
