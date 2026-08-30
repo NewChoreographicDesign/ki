@@ -68,17 +68,19 @@ async function ensureConfigured(): Promise<typeof CloudinaryV2> {
  * clear "not set up yet" message instead of a generic failure.
  *
  * resource_type: "auto" makes Cloudinary pick image/video/raw correctly for
- * everything we accept (PDF, Word, Excel, images, text). Note: a Cloudinary
- * account has "Allow delivery of PDF and ZIP files" off by default for
- * unsigned/public URLs — if uploaded PDFs 401 when opened, that setting
- * (Settings → Security) needs to be enabled once.
+ * everything we accept (PDF, Word, Excel, images, text). access_mode:
+ * "public" is set explicitly because new Cloudinary accounts default
+ * non-image resources (PDF, Word, Excel, text) to "authenticated" delivery
+ * as an anti-abuse measure — without this, the returned secure_url 401s for
+ * anyone who isn't the account owner, which defeats the point of storing a
+ * link everyone with an account can open.
  */
 export async function uploadFileToCloudinary(file: File): Promise<string> {
   const cloudinary = await ensureConfigured();
   const buffer = Buffer.from(await file.arrayBuffer());
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
-      { resource_type: "auto", folder: "woongroep-admin" },
+      { resource_type: "auto", folder: "woongroep-admin", access_mode: "public" },
       (error, result) => {
         if (error || !result) {
           // Cloudinary's callback error is a plain object ({message,
