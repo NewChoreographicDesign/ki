@@ -58,6 +58,7 @@ model Client {
   firstName   String
   lastName    String
   dateOfBirth DateTime?
+  room        String?
   notes       String?
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())

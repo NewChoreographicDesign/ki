@@ -49,7 +49,7 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
 
 | Module | Route | Omschrijving |
 | --- | --- | --- |
-| Overzicht | `/dashboard` | Stats + snelle acties |
+| Overzicht | `/dashboard` | "Vandaag per kamer" (weekplanning + agenda-afspraken van vandaag, gegroepeerd per cliëntkamer) bovenaan, daaronder stats + snelle acties |
 | Rapportage | `/rapportage` | Rapportage per cliënt/dienst, e-mail naar algemeen adres. "Recente rapportages" toont alleen sinds de laatste donderdag |
 | Medicatie | `/medicatie` | Medicatie afvinken per cliënt (onomkeerbaar) |
 | Aanwezigheid | `/aanwezigheid` | Aanwezig/afwezig per cliënt per dag, gedeeld tussen alle accounts (geen per-sessie state) |
@@ -199,11 +199,18 @@ bestandslimiet blijft 4 MB — dat is Vercel's harde platformlimiet voor het
 request-body van één Serverless Function, ongeacht welke opslagdienst
 daarachter zit.
 
-> **Let op bij Cloudinary-instellingen:** een nieuw Cloudinary-account staat
-> standaard geen publieke aflevering van PDF/ZIP-bestanden toe (beveiliging
-> tegen misbruik). Krijg je een `401` bij het openen van een geüpload
-> PDF-document? Zet dan **Settings → Security → "Allow delivery of PDF and
-> ZIP files"** aan in het Cloudinary-dashboard.
+Elke upload zet expliciet `access_mode: "public"` mee (in
+`lib/cloudinary.ts`): een nieuw Cloudinary-account levert niet-afbeeldingen
+(PDF, Word, Excel, tekst) standaard af als `"authenticated"`, wat een `401`
+oplevert voor iedereen behalve de accounteigenaar zelf zodra die link wordt
+geopend. Dit voorkomt dat.
+
+> **Let op bij Cloudinary-instellingen:** los van bovenstaande blokkeert een
+> nieuw Cloudinary-account soms ook de aflevering van PDF/ZIP-bestanden
+> volledig (een apart, account-breed beveiligingsschakelaartje). Krijg je
+> alsnog een `401` bij het openen van een geüpload PDF-document? Zet dan
+> **Settings → Security → "Allow delivery of PDF and ZIP files"** aan in het
+> Cloudinary-dashboard.
 
 De hoofdmenu-pagina `/documenten` deelt dezelfde `DocumentManager`-component
 maar met `canUpload={false}` en `canDelete={false}` — puur bekijken/openen,
@@ -228,11 +235,21 @@ allebei optioneel, zolang er minimaal één is ingevuld (afgedwongen door een
 `.refine()` op `protocolSchema`). Een geüpload bestand gebruikt dezelfde
 upload-flow als documenten, via `app/api/protocols/upload/route.ts`.
 
+**Cliënten** hebben een optioneel "Kamer"-veld (`Client.room`), instelbaar
+bij aanmaken en direct in de lijst te wijzigen (Backend → Cliënten). Het
+dashboard gebruikt dit veld om de "Vandaag per kamer"-sectie te groeperen:
+per kamer wordt getoond welke weekplanning-activiteiten en agenda-afspraken
+voor vandaag gepland staan, zodat wie inlogt in één oogopslag ziet wat er per
+kamer speelt. Cliënten zonder kamer verschijnen onder "Geen kamer";
+afspraken zonder gekoppelde cliënt onder "Algemeen". "Vandaag" en de
+dag-van-de-week-berekening zijn Europe/Amsterdam-bewust (zie
+`todayDayOfWeek()` in `lib/utils.ts`), net als de rest van de app.
+
 ## Gebruiksinstructie (iPad)
 
 1. Open de app in Safari → "Zet op beginscherm" voor een app-gevoel (PWA-metadata is al geconfigureerd).
 2. Log in met naam + geboortedatum.
-3. Dashboard toont stats + snelle knoppen.
+3. Dashboard toont bovenaan "Vandaag per kamer" (weekplanning + afspraken van vandaag, per cliëntkamer), daaronder stats + snelle knoppen.
 4. **Rapportage** → kies cliënt + dienst + datum → typ → verstuur (gaat naar het algemene e-mailadres, bevat je naam). "Recente rapportages" toont alleen wat sinds afgelopen donderdag is toegevoegd.
 5. **Medicatie** → open cliënt → vink af (kan niet ongedaan worden gemaakt). Einde maand → overzicht naar e-mail.
 6. **Aanwezigheid** → tik Aanwezig/Afwezig (met optioneel commentaar). Gedeeld tussen iedereen die inlogt, blijft de hele dag staan totdat iemand het aanpast.
@@ -241,7 +258,7 @@ upload-flow als documenten, via `app/api/protocols/upload/route.ts`.
 9. **Agenda** → aankomende afspraken bovenaan, formulier voor een nieuwe afspraak eronder; herinnering gaat automatisch naar e-mail binnen 24 uur voor de afspraak.
 10. **Documenten** → upload of link toevoegen, kies "Hoort bij" (Algemeen, Nieuwe medewerker of een cliënt); tabbladen filteren de lijst. Voor iedereen; verwijderen alleen voor admin/coördinator.
 11. **Protocollen** → algemeen of per cliënt. Voor iedereen; verwijderen alleen voor admin/coördinator.
-12. **Backend** (alleen admin) → cliënten, medewerkers, instellingen, medicatie, weekplanning. Eén wijziging = overal doorgevoerd.
+12. **Backend** (alleen admin) → cliënten (incl. kamer), medewerkers, instellingen, medicatie, weekplanning. Eén wijziging = overal doorgevoerd.
 13. Uitloggen rechtsonder in de zijbalk.
 
 Diensttijd wordt automatisch bijgehouden bij login.

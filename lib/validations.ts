@@ -21,6 +21,7 @@ export const clientSchema = z.object({
   firstName: z.string().trim().min(1).max(100),
   lastName: z.string().trim().min(1).max(100),
   dateOfBirth: z.string().regex(ddmmyyyy).optional().or(z.literal("")),
+  room: z.string().trim().max(100).optional().or(z.literal("")),
   notes: z.string().trim().max(2000).optional().or(z.literal("")),
   active: z.boolean().optional(),
 });

@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
         firstName: data.firstName,
         lastName: data.lastName,
         dateOfBirth: data.dateOfBirth ? parseDDMMYYYY(data.dateOfBirth) : null,
+        room: data.room || null,
         notes: data.notes || null,
       },
     });

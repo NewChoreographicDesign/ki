@@ -124,6 +124,19 @@ export function startOfToday(): Date {
   return amsterdamDate(p.year, p.month, p.day);
 }
 
+/**
+ * Today's weekday in Europe/Amsterdam, in WeekPlan.dayOfWeek's convention
+ * (0 = Monday .. 6 = Sunday) — NOT JavaScript's native getDay() convention
+ * (0 = Sunday .. 6 = Saturday).
+ */
+export function todayDayOfWeek(now: Date = new Date()): number {
+  const p = getZonedParts(now, AMSTERDAM_TZ);
+  // Noon UTC (not midnight) purely to read the weekday safely, away from any
+  // DST-transition edge case — same trick as mostRecentThursdayStart below.
+  const weekday = new Date(Date.UTC(p.year, p.month - 1, p.day, 12)).getUTCDay(); // 0=Sun..6=Sat
+  return (weekday + 6) % 7;
+}
+
 /** Midnight of the most recent Thursday (Amsterdam calendar; today counts if it's Thursday). */
 export function mostRecentThursdayStart(now: Date = new Date()): Date {
   const p = getZonedParts(now, AMSTERDAM_TZ);

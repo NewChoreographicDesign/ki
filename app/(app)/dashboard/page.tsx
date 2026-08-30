@@ -8,13 +8,74 @@ import {
   Calendar,
   Users,
   Clock,
+  DoorOpen,
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { startOfToday, formatDateTime } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { startOfToday, todayDayOfWeek, formatDateTime, formatTime, fullName } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+
+// A single scheduled item for the "today per room" overview — either a
+// weekplan block or an agenda appointment, normalized to one shape so both
+// can be sorted together on a single timeline per room.
+type RoomEntry = { sortMinutes: number; time: string; label: string; clientName: string };
+
+function parseHHMM(value: string): number {
+  const [h, m] = value.split(":").map(Number);
+  return h * 60 + m;
+}
+
+async function getTodayByRoom() {
+  const today = startOfToday();
+  const tomorrow = new Date(today.getTime() + 24 * 3_600_000);
+  const dayOfWeek = todayDayOfWeek();
+
+  const [weekPlans, appointments] = await Promise.all([
+    db.weekPlan.findMany({
+      where: { dayOfWeek, client: { active: true } },
+      include: { client: true },
+    }),
+    db.appointment.findMany({
+      where: { startAt: { gte: today, lt: tomorrow } },
+      include: { client: true },
+    }),
+  ]);
+
+  const rooms = new Map<string, RoomEntry[]>();
+  const addEntry = (room: string, entry: RoomEntry) => {
+    const list = rooms.get(room);
+    if (list) list.push(entry);
+    else rooms.set(room, [entry]);
+  };
+
+  for (const wp of weekPlans) {
+    addEntry(wp.client.room || "Geen kamer", {
+      sortMinutes: parseHHMM(wp.startTime),
+      time: `${wp.startTime}-${wp.endTime}`,
+      label: wp.activity,
+      clientName: fullName(wp.client),
+    });
+  }
+  for (const appt of appointments) {
+    const time = formatTime(appt.startAt);
+    addEntry(appt.client ? appt.client.room || "Geen kamer" : "Algemeen", {
+      sortMinutes: parseHHMM(time),
+      time,
+      label: `Afspraak: ${appt.title}`,
+      clientName: appt.client ? fullName(appt.client) : "",
+    });
+  }
+
+  // Real rooms first (alphabetically), then clients without a room, then
+  // appointments with no client at all.
+  const rank = (room: string) => (room === "Algemeen" ? 2 : room === "Geen kamer" ? 1 : 0);
+  return Array.from(rooms.entries())
+    .map(([room, entries]) => ({ room, entries: entries.sort((a, b) => a.sortMinutes - b.sortMinutes) }))
+    .sort((a, b) => rank(a.room) - rank(b.room) || a.room.localeCompare(b.room));
+}
 
 async function getStats() {
   const today = startOfToday();
@@ -46,19 +107,53 @@ const QUICK_ACTIONS = [
 
 export default async function DashboardPage() {
   const session = await getSession();
-  const stats = await getStats();
-  const recentHandovers = await db.handover.findMany({
-    where: { expiresAt: { gt: new Date() } },
-    include: { user: true },
-    orderBy: { createdAt: "desc" },
-    take: 3,
-  });
+  const [stats, roomsToday, recentHandovers] = await Promise.all([
+    getStats(),
+    getTodayByRoom(),
+    db.handover.findMany({
+      where: { expiresAt: { gt: new Date() } },
+      include: { user: true },
+      orderBy: { createdAt: "desc" },
+      take: 3,
+    }),
+  ]);
 
   return (
     <div className="flex flex-col gap-8">
       <div>
         <h1 className="text-2xl font-semibold text-slate-50">Welkom, {session?.name}</h1>
         <p className="mt-1 text-slate-400">Hier is het overzicht van vandaag.</p>
+      </div>
+
+      <div>
+        <h2 className="mb-3 text-lg font-semibold text-slate-100">Vandaag per kamer</h2>
+        {roomsToday.length === 0 ? (
+          <p className="text-slate-500">Geen weekplanning of afspraken voor vandaag.</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {roomsToday.map(({ room, entries }) => (
+              <Card key={room}>
+                <CardHeader className="flex-row items-center gap-2 space-y-0 pb-2">
+                  <DoorOpen className="h-5 w-5 text-slate-500" />
+                  <CardTitle className="text-base font-semibold text-slate-100">{room}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-2">
+                  {entries.map((entry, i) => (
+                    <div key={i} className="flex items-start gap-2 text-sm">
+                      <Badge variant="slate" className="shrink-0">
+                        {entry.time}
+                      </Badge>
+                      <div>
+                        <p className="text-slate-200">{entry.label}</p>
+                        {entry.clientName && <p className="text-slate-500">{entry.clientName}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
