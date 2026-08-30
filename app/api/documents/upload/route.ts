@@ -1,32 +1,44 @@
-import { NextResponse } from "next/server";
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
-import { BlobError } from "@vercel/blob";
+import { NextRequest, NextResponse } from "next/server";
+import { put, BlobError } from "@vercel/blob";
 import { Role } from "@prisma/client";
 import { requireAuth } from "@/lib/auth";
 import { handleApiError } from "@/lib/api";
 import { ALLOWED_CONTENT_TYPES, MAX_SIZE_BYTES } from "@/lib/blob-upload";
 
-export async function POST(request: Request) {
+// The file is uploaded here (same-origin, multipart/form-data) rather than
+// going straight from the browser to Vercel Blob with a client token. The
+// direct-to-Vercel approach consistently returned a 400 from Vercel's own
+// Blob API in production for this project, even against a freshly created
+// store, with no way to see the real error body (CORS hides it). Uploading
+// through our own server first and calling put() here — a normal
+// server-to-server call, no CORS involved — sidesteps that entirely.
+export async function POST(request: NextRequest) {
   try {
     // Uploading a document is admin-only (managed via Backend → Documenten).
     await requireAuth([Role.ADMIN]);
-    const body = (await request.json()) as HandleUploadBody;
 
-    const jsonResponse = await handleUpload({
-      body,
-      request,
-      onBeforeGenerateToken: async () => ({
-        allowedContentTypes: ALLOWED_CONTENT_TYPES,
-        maximumSizeInBytes: MAX_SIZE_BYTES,
-        addRandomSuffix: true,
-      }),
-      onUploadCompleted: async () => {
-        // The frontend saves the Document row itself (via POST /api/documents)
-        // once upload() resolves, so nothing to do here.
-      },
+    const formData = await request.formData();
+    const file = formData.get("file");
+    if (!(file instanceof File)) {
+      return NextResponse.json({ error: "Geen bestand ontvangen" }, { status: 400 });
+    }
+    if (!ALLOWED_CONTENT_TYPES.includes(file.type)) {
+      return NextResponse.json({ error: "Dit bestandstype is niet toegestaan" }, { status: 400 });
+    }
+    if (file.size > MAX_SIZE_BYTES) {
+      return NextResponse.json(
+        { error: `Bestand is te groot (max ${Math.floor(MAX_SIZE_BYTES / (1024 * 1024))} MB)` },
+        { status: 400 }
+      );
+    }
+
+    const blob = await put(file.name, file, {
+      access: "public",
+      addRandomSuffix: true,
+      contentType: file.type,
     });
 
-    return NextResponse.json(jsonResponse);
+    return NextResponse.json({ url: blob.url });
   } catch (error) {
     // Surface a distinct, actionable code when Vercel Blob itself isn't set
     // up yet (missing/invalid BLOB_READ_WRITE_TOKEN) — this is expected on

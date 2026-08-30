@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { upload } from "@vercel/blob/client";
 import { toast } from "sonner";
 import { Trash2, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { uploadFileWithProgress } from "@/lib/client-upload";
 
 export type ProtocolRow = {
   id: string;
@@ -48,13 +48,13 @@ export function ProtocolManager({
       const timeoutController = new AbortController();
       const timeoutId = setTimeout(() => timeoutController.abort(), 60_000);
       try {
-        const blob = await upload(file.name, file, {
-          access: "public",
-          handleUploadUrl: "/api/protocols/upload",
-          abortSignal: timeoutController.signal,
-          onUploadProgress: ({ percentage }) => setProgress(percentage),
-        });
-        fileUrl = blob.url;
+        const result = await uploadFileWithProgress(
+          "/api/protocols/upload",
+          file,
+          setProgress,
+          timeoutController.signal
+        );
+        fileUrl = result.url;
       } catch (error) {
         toast.error(
           timeoutController.signal.aborted

@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { upload } from "@vercel/blob/client";
 import { toast } from "sonner";
 import { Trash2, FileText, UploadCloud } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { uploadFileWithProgress } from "@/lib/client-upload";
 
 export type DocumentRow = {
   id: string;
@@ -101,19 +101,18 @@ export function DocumentManager({
     const timeoutController = new AbortController();
     const timeoutId = setTimeout(() => timeoutController.abort(), 60_000);
     try {
-      const blob = await upload(file.name, file, {
-        access: "public",
-        handleUploadUrl: "/api/documents/upload",
-        abortSignal: timeoutController.signal,
-        onUploadProgress: ({ percentage }) => setProgress(percentage),
-      });
-      blobUrl = blob.url;
+      const result = await uploadFileWithProgress(
+        "/api/documents/upload",
+        file,
+        setProgress,
+        timeoutController.signal
+      );
+      blobUrl = result.url;
     } catch (error) {
-      // @vercel/blob's upload() throws a typed BlobError (or a plain Error
-      // relaying our own route's message) with a real, specific .message —
-      // show it directly instead of guessing at a single root cause. An
-      // abort from our own 60s timeout surfaces as a generic error here too,
-      // so it gets its own explicit message instead of a confusing one.
+      // The upload route relays a real, specific error message — show it
+      // directly instead of guessing at a single root cause. An abort from
+      // our own 60s timeout surfaces as a generic error here too, so it
+      // gets its own explicit message instead of a confusing one.
       toast.error(
         timeoutController.signal.aborted
           ? "Uploaden duurde te lang en is afgebroken. Controleer je internetverbinding of probeer een kleiner bestand."

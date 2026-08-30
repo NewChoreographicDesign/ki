@@ -12,4 +12,8 @@ export const ALLOWED_CONTENT_TYPES = [
   "text/plain",
 ];
 
-export const MAX_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
+// Files now go through our own server (put() server-side, not a direct
+// browser-to-Vercel-Blob PUT — see the upload routes for why), so the file
+// has to fit in a single Serverless Function request body. Vercel's hard
+// platform limit there is 4.5 MB; 4 MB leaves margin for multipart overhead.
+export const MAX_SIZE_BYTES = 4 * 1024 * 1024; // 4 MB

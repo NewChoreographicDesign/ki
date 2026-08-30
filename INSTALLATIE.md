@@ -239,7 +239,7 @@ opslag koppelen) is gedaan:
    ziet en gebruikt dit; iedereen met een account kan de documenten
    daarna wél gewoon bekijken en openen via **Documenten** in het hoofdmenu).
 2. Klik bij **Bestand** op **Bestand kiezen** en selecteer het document van
-   je computer (PDF, Word, Excel of een foto — tot 20 MB per bestand).
+   je computer (PDF, Word, Excel of een foto — tot 4 MB per bestand).
 3. De **Titel** wordt automatisch overgenomen van de bestandsnaam; pas hem
    aan als je wilt.
 4. Kies bij **Hoort bij** waar het document bij hoort: "Algemeen", "Nieuwe

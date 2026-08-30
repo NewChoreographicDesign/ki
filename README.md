@@ -177,11 +177,22 @@ maximaal 1x per dag draaien.
 Documenten uploaden gebeurt alleen via **Backend → Documenten**
 (`app/(app)/backend/documenten/page.tsx`, admin-only — de backend-layout
 gate zorgt hiervoor) en heeft een ingebouwde upload-knop met voortgangsbalk:
-een gekozen bestand (PDF, Word, Excel, afbeelding, tekst — max 20 MB) gaat
-via `@vercel/blob/client`'s `upload()` rechtstreeks van de browser naar
-Vercel Blob, met een kort-levend token dat `app/api/documents/upload/route.ts`
-uitgeeft (na een `requireAuth([ADMIN])`-check en met een whitelist van
-toegestane content-types, gedeeld met protocollen via `lib/blob-upload.ts`).
+een gekozen bestand (PDF, Word, Excel, afbeelding, tekst — max 4 MB) gaat
+als `multipart/form-data` naar `app/api/documents/upload/route.ts` (dezelfde
+origin, na een `requireAuth([ADMIN])`-check en een whitelist van toegestane
+content-types uit `lib/blob-upload.ts`), die op de server zelf `put()`
+aanroept om het bestand in Vercel Blob te zetten. Voortgang wordt bijgehouden
+via een `XMLHttpRequest`-helper (`lib/client-upload.ts`) omdat `fetch()` geen
+upload-voortgang kan rapporteren.
+Dit is bewust *niet* de rechtstreekse browser-naar-Vercel-Blob upload die
+`@vercel/blob/client`'s `upload()` normaal gesproken doet: die cross-origin
+PUT naar Vercel's eigen Blob-API gaf in dit project consistent een `400`
+terug — ook tegen een volledig nieuw aangemaakte store — zonder dat de
+browser de echte foutmelding kon tonen (CORS verbergt die body). Uploaden via
+onze eigen server elimineert die cross-origin call volledig; de prijs
+daarvoor is de kleinere bestandslimiet (4 MB in plaats van 20 MB), omdat het
+bestand nu door één Serverless Function-request moet passen — Vercel's harde
+platformlimiet daarvoor is 4,5 MB.
 De hoofdmenu-pagina `/documenten` deelt dezelfde `DocumentManager`-component
 maar met `canUpload={false}` en `canDelete={false}` — puur bekijken/openen,
 voor elke ingelogde rol. De upload breekt na 60s automatisch af met een
@@ -300,8 +311,10 @@ volgende, concreet geïmplementeerde maatregelen:
   (`app/api/documents/upload/route.ts`, `app/api/documents/[id]/route.ts`);
   protocollen uploaden mag elke ingelogde rol
   (`app/api/protocols/upload/route.ts`), verwijderen blijft ADMIN/COORDINATOR.
-  Beide whitelist't content-types en beperkt de bestandsgrootte tot 20 MB
-  (`lib/blob-upload.ts`).
+  Beide whitelist't content-types en beperkt de bestandsgrootte tot 4 MB
+  (`lib/blob-upload.ts`) — bewust laag omdat uploads via onze eigen server
+  lopen (`put()`), niet rechtstreeks van de browser naar Vercel Blob; zie
+  de "Uploads"-sectie hierboven voor waarom.
 
 **Wat nog aandacht verdient bij een echte productie-uitrol:** roteer
 `JWT_SECRET`/`CRON_SECRET` bij vermoeden van lekkage (bestaande sessies
