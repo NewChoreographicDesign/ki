@@ -35,7 +35,14 @@ export async function uploadFileToCloudinary(file: File): Promise<string> {
       { resource_type: "auto", folder: "woongroep-admin" },
       (error, result) => {
         if (error || !result) {
-          reject(error instanceof Error ? error : new Error("Cloudinary-upload mislukt"));
+          // Cloudinary's callback error is a plain object ({message,
+          // http_code, ...}), not an Error instance — carry its real
+          // message through instead of discarding it behind a generic one.
+          const message =
+            error && typeof error === "object" && "message" in error
+              ? String((error as { message: unknown }).message)
+              : "Cloudinary-upload mislukt";
+          reject(new Error(message));
           return;
         }
         resolve(result.secure_url);

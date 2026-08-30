@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
-import { handleApiError } from "@/lib/api";
-import { ALLOWED_CONTENT_TYPES, MAX_SIZE_BYTES } from "@/lib/file-upload";
+import { ALLOWED_CONTENT_TYPES, MAX_SIZE_BYTES, handleUploadError } from "@/lib/file-upload";
 import { uploadFileToCloudinary } from "@/lib/cloudinary";
 
 // See app/api/documents/upload/route.ts for why this uploads through our
@@ -30,15 +29,6 @@ export async function POST(request: NextRequest) {
     const url = await uploadFileToCloudinary(file);
     return NextResponse.json({ url });
   } catch (error) {
-    if (error instanceof Error && error.message === "CLOUDINARY_NOT_CONFIGURED") {
-      return NextResponse.json(
-        {
-          error: "Bestanden uploaden is nog niet ingesteld.",
-          code: "STORAGE_NOT_CONFIGURED",
-        },
-        { status: 503 }
-      );
-    }
-    return handleApiError(error);
+    return handleUploadError(error);
   }
 }
