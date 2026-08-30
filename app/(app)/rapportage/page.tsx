@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { determineShiftType } from "@/lib/auth";
-import { fullName, formatDateTime } from "@/lib/utils";
+import { fullName, formatDateTime, mostRecentThursdayStart } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ReportForm } from "./report-form";
@@ -8,12 +8,18 @@ import { ReportForm } from "./report-form";
 export const dynamic = "force-dynamic";
 
 export default async function RapportagePage() {
+  // "Recente rapportages" resets every Thursday: only reports from the most
+  // recent Thursday onward are shown here. Nothing is deleted — this is a
+  // display window, not a retention policy — so older reports stay in the
+  // database and in whatever was already emailed out.
+  const since = mostRecentThursdayStart();
+
   const [clients, reports] = await Promise.all([
     db.client.findMany({ where: { active: true }, orderBy: { firstName: "asc" } }),
     db.report.findMany({
+      where: { createdAt: { gte: since } },
       include: { client: true, user: true },
       orderBy: { createdAt: "desc" },
-      take: 10,
     }),
   ]);
 
@@ -36,9 +42,11 @@ export default async function RapportagePage() {
       </Card>
 
       <div>
-        <h2 className="mb-3 text-lg font-semibold text-slate-100">Recente rapportages</h2>
+        <h2 className="mb-3 text-lg font-semibold text-slate-100">
+          Recente rapportages <span className="font-normal text-slate-500">(sinds donderdag)</span>
+        </h2>
         {reports.length === 0 ? (
-          <p className="text-slate-500">Nog geen rapportages.</p>
+          <p className="text-slate-500">Nog geen rapportages sinds afgelopen donderdag.</p>
         ) : (
           <div className="flex flex-col gap-3">
             {reports.map((r) => (

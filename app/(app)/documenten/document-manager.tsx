@@ -34,10 +34,12 @@ type Thread = { key: string; label: string };
 export function DocumentManager({
   documents,
   clients,
+  canUpload,
   canDelete,
 }: {
   documents: DocumentRow[];
   clients: { id: string; name: string }[];
+  canUpload: boolean;
   canDelete: boolean;
 }) {
   const router = useRouter();
@@ -172,6 +174,12 @@ export function DocumentManager({
 
   return (
     <div className="flex flex-col gap-6">
+      {!canUpload && (
+        <p className="text-sm text-slate-500">
+          Documenten toevoegen kan alleen door een admin, via Backend → Documenten.
+        </p>
+      )}
+      {canUpload && (
       <Card>
         <CardHeader>
           <CardTitle>Document uploaden</CardTitle>
@@ -294,6 +302,7 @@ export function DocumentManager({
           )}
         </CardContent>
       </Card>
+      )}
 
       <div className="flex flex-wrap gap-2 border-b border-border pb-3">
         {threads.map((t) => (

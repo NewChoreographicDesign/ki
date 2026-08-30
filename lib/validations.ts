@@ -97,11 +97,24 @@ export const appointmentSchema = z.object({
   startAt: z.string().min(1), // ISO datetime-local string
 });
 
-export const protocolSchema = z.object({
-  title: z.string().trim().min(1).max(300),
-  content: z.string().trim().min(1).max(10000),
-  clientId: z.string().optional().or(z.literal("")),
-});
+export const protocolSchema = z
+  .object({
+    title: z.string().trim().min(1).max(300),
+    content: z.string().trim().max(10000).optional().or(z.literal("")),
+    // Same http(s)-only restriction as documentSchema.url — see there for why.
+    url: z
+      .string()
+      .trim()
+      .url()
+      .refine((value) => /^https?:\/\//i.test(value), "Alleen http(s) links zijn toegestaan")
+      .optional()
+      .or(z.literal("")),
+    clientId: z.string().optional().or(z.literal("")),
+  })
+  .refine((data) => !!data.content || !!data.url, {
+    message: "Vul tekst in of upload een bestand",
+    path: ["content"],
+  });
 
 export const documentSchema = z.object({
   title: z.string().trim().min(1).max(300),

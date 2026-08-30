@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { BlobError } from "@vercel/blob";
-import { Role } from "@prisma/client";
 import { requireAuth } from "@/lib/auth";
 import { handleApiError } from "@/lib/api";
 import { ALLOWED_CONTENT_TYPES, MAX_SIZE_BYTES } from "@/lib/blob-upload";
 
 export async function POST(request: Request) {
   try {
-    // Uploading a document is admin-only (managed via Backend → Documenten).
-    await requireAuth([Role.ADMIN]);
+    // Protocols are open to every logged-in role (same as creating one via
+    // POST /api/protocols) — only deleting stays admin/coordinator-only.
+    await requireAuth();
     const body = (await request.json()) as HandleUploadBody;
 
     const jsonResponse = await handleUpload({
@@ -21,17 +21,13 @@ export async function POST(request: Request) {
         addRandomSuffix: true,
       }),
       onUploadCompleted: async () => {
-        // The frontend saves the Document row itself (via POST /api/documents)
+        // The frontend saves the Protocol row itself (via POST /api/protocols)
         // once upload() resolves, so nothing to do here.
       },
     });
 
     return NextResponse.json(jsonResponse);
   } catch (error) {
-    // Surface a distinct, actionable code when Vercel Blob itself isn't set
-    // up yet (missing/invalid BLOB_READ_WRITE_TOKEN) — this is expected on
-    // an installation that hasn't finished setup, not an application bug,
-    // so the UI can show real guidance instead of "something went wrong".
     if (error instanceof BlobError) {
       return NextResponse.json(
         {

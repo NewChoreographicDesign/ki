@@ -235,8 +235,9 @@ eventuele collega's toe via **Backend → Medewerkers**.
 Dit is de eenvoudigste stap van allemaal, zodra stap 4 hierboven (Blob
 opslag koppelen) is gedaan:
 
-1. Log in en ga naar **Documenten** in het hoofdmenu (niet in Backend — dit
-   onderdeel staat voor iedereen met een account in het hoofdmenu).
+1. Log in als admin en ga naar **Backend → Documenten** (alleen een admin
+   ziet en gebruikt dit; iedereen met een account kan de documenten
+   daarna wél gewoon bekijken en openen via **Documenten** in het hoofdmenu).
 2. Klik bij **Bestand** op **Bestand kiezen** en selecteer het document van
    je computer (PDF, Word, Excel of een foto — tot 20 MB per bestand).
 3. De **Titel** wordt automatisch overgenomen van de bestandsnaam; pas hem
@@ -244,13 +245,13 @@ opslag koppelen) is gedaan:
 4. Kies bij **Hoort bij** waar het document bij hoort: "Algemeen", "Nieuwe
    medewerker" (voor onboarding-documenten), of een specifieke cliënt.
 5. Klik op **Uploaden** — een voortgangsbalk laat zien hoe ver de upload is.
-   Klaar — het document staat direct in het bijbehorende tabblad en
-   iedereen met een account kan het openen. Verwijderen kan alleen door een
-   admin of coördinator.
+   Klaar — het document staat direct in het bijbehorende tabblad. Verwijderen
+   kan ook alleen via Backend → Documenten, door een admin.
 
-Protocollen werken net zo, maar dan als tekst in plaats van een bestand: ga
-naar **Protocollen** in het hoofdmenu, typ de titel en inhoud, en klik op
-**Toevoegen**.
+Protocollen werken net zo, maar staan gewoon in het hoofdmenu voor iedereen
+(geen Backend nodig): ga naar **Protocollen**, typ de titel en eventueel
+inhoud als tekst, en/of upload een bestand — minstens één van de twee is
+verplicht — en klik op **Toevoegen**.
 
 > **Zie je de melding "Uploaden lukt niet"?** Dan is stap 4 (Blob opslag
 > koppelen) hierboven waarschijnlijk nog niet gedaan, of de koppeling is nog
@@ -268,12 +269,14 @@ naar **Protocollen** in het hoofdmenu, typ de titel en inhoud, en klik op
   - **Backend → Cliënten**: bewoners/cliënten toevoegen.
   - **Backend → Medewerkers**: collega's toevoegen (naam + geboortedatum +
     rol: medewerker, coördinator of admin).
+  - **Backend → Documenten**: documenten uploaden en verwijderen (zie
+    hierboven).
   - **Backend → Medicatie beheer**: medicatie per cliënt instellen, met
     tijden en instructies.
   - **Backend → Weekplanning**: het weekschema per cliënt instellen.
   - **Backend → Instellingen**: e-mailadressen later aanpassen.
-- **Documenten** en **Protocollen** staan in het hoofdmenu voor iedereen —
-  zie hierboven.
+- **Documenten** (bekijken/openen, niet uploaden) en **Protocollen**
+  (toevoegen mag wel) staan in het hoofdmenu voor iedereen — zie hierboven.
 - De overige menu's (Rapportage, Medicatie, Aanwezigheid, Overdracht,
   To-Do's, Agenda) gebruikt iedereen dagelijks — zie ook `README.md` voor
   een korte beschrijving van elk onderdeel.

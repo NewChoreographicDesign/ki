@@ -6,6 +6,8 @@ import {
   fullName,
   determineShiftType,
   shiftEndForStart,
+  amsterdamDate,
+  mostRecentThursdayStart,
 } from "@/lib/utils";
 import { ShiftType } from "@prisma/client";
 
@@ -53,42 +55,62 @@ describe("fullName", () => {
   });
 });
 
+// All times below are Europe/Amsterdam wall-clock via amsterdamDate(), not
+// server-local time — determineShiftType/shiftEndForStart convert through
+// that same timezone, so tests must too (Jan 1, 2026 is CET, UTC+1).
 describe("determineShiftType", () => {
   it("returns MORNING between 07:00 and 15:00", () => {
-    expect(determineShiftType(new Date(2026, 0, 1, 7, 0))).toBe(ShiftType.MORNING);
-    expect(determineShiftType(new Date(2026, 0, 1, 14, 59))).toBe(ShiftType.MORNING);
+    expect(determineShiftType(amsterdamDate(2026, 1, 1, 7, 0))).toBe(ShiftType.MORNING);
+    expect(determineShiftType(amsterdamDate(2026, 1, 1, 14, 59))).toBe(ShiftType.MORNING);
   });
 
   it("returns EVENING between 15:00 and 23:00", () => {
-    expect(determineShiftType(new Date(2026, 0, 1, 15, 0))).toBe(ShiftType.EVENING);
-    expect(determineShiftType(new Date(2026, 0, 1, 22, 59))).toBe(ShiftType.EVENING);
+    expect(determineShiftType(amsterdamDate(2026, 1, 1, 15, 0))).toBe(ShiftType.EVENING);
+    expect(determineShiftType(amsterdamDate(2026, 1, 1, 22, 59))).toBe(ShiftType.EVENING);
   });
 
   it("treats night hours as evening continuation", () => {
-    expect(determineShiftType(new Date(2026, 0, 1, 2, 0))).toBe(ShiftType.EVENING);
-    expect(determineShiftType(new Date(2026, 0, 1, 23, 30))).toBe(ShiftType.EVENING);
+    expect(determineShiftType(amsterdamDate(2026, 1, 1, 2, 0))).toBe(ShiftType.EVENING);
+    expect(determineShiftType(amsterdamDate(2026, 1, 1, 23, 30))).toBe(ShiftType.EVENING);
   });
 });
 
 describe("shiftEndForStart", () => {
   it("ends the morning shift at 15:00 the same day", () => {
-    const start = new Date(2026, 0, 1, 8, 0);
+    const start = amsterdamDate(2026, 1, 1, 8, 0);
     const end = shiftEndForStart(ShiftType.MORNING, start);
-    expect(end.getHours()).toBe(15);
-    expect(end.getDate()).toBe(1);
+    expect(end.getTime()).toBe(amsterdamDate(2026, 1, 1, 15, 0).getTime());
   });
 
   it("ends the evening shift at 23:00 the same day", () => {
-    const start = new Date(2026, 0, 1, 15, 0);
+    const start = amsterdamDate(2026, 1, 1, 15, 0);
     const end = shiftEndForStart(ShiftType.EVENING, start);
-    expect(end.getHours()).toBe(23);
-    expect(end.getDate()).toBe(1);
+    expect(end.getTime()).toBe(amsterdamDate(2026, 1, 1, 23, 0).getTime());
   });
 
   it("rolls over to the next day for a late-night start", () => {
-    const start = new Date(2026, 0, 1, 23, 30);
+    const start = amsterdamDate(2026, 1, 1, 23, 30);
     const end = shiftEndForStart(ShiftType.EVENING, start);
-    expect(end.getDate()).toBe(2);
-    expect(end.getHours()).toBe(23);
+    expect(end.getTime()).toBe(amsterdamDate(2026, 1, 2, 23, 0).getTime());
+  });
+
+  it("handles the summer-time (CEST, UTC+2) offset correctly", () => {
+    const start = amsterdamDate(2026, 7, 1, 8, 0);
+    const end = shiftEndForStart(ShiftType.MORNING, start);
+    expect(end.getTime()).toBe(amsterdamDate(2026, 7, 1, 15, 0).getTime());
+  });
+});
+
+describe("mostRecentThursdayStart", () => {
+  it("returns the same day when today is Thursday", () => {
+    // 2026-01-01 is a Thursday.
+    const now = amsterdamDate(2026, 1, 1, 10, 0);
+    expect(mostRecentThursdayStart(now).getTime()).toBe(amsterdamDate(2026, 1, 1).getTime());
+  });
+
+  it("returns the previous Thursday for a later day in the week", () => {
+    // 2026-01-04 is a Sunday; the preceding Thursday is 2026-01-01.
+    const now = amsterdamDate(2026, 1, 4, 10, 0);
+    expect(mostRecentThursdayStart(now).getTime()).toBe(amsterdamDate(2026, 1, 1).getTime());
   });
 });

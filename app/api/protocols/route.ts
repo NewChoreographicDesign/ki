@@ -13,7 +13,12 @@ export async function POST(request: NextRequest) {
     const data = protocolSchema.parse(body);
 
     const protocol = await db.protocol.create({
-      data: { title: data.title, content: data.content, clientId: data.clientId || null },
+      data: {
+        title: data.title,
+        content: data.content || null,
+        url: data.url || null,
+        clientId: data.clientId || null,
+      },
     });
 
     return NextResponse.json({ ok: true, protocol });

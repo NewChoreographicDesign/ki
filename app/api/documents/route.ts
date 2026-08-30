@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { handleApiError } from "@/lib/api";
@@ -6,9 +7,10 @@ import { documentSchema } from "@/lib/validations";
 
 export async function POST(request: NextRequest) {
   try {
-    // Documents live in the main menu now, open to every logged-in role —
-    // only deleting (see [id]/route.ts) stays restricted.
-    const session = await requireAuth();
+    // Uploading/adding a document is admin-only (managed via Backend →
+    // Documenten); everyone with an account can still view/open documents
+    // via the main-menu page, which never calls this route.
+    const session = await requireAuth([Role.ADMIN]);
     const body = await request.json();
     const data = documentSchema.parse(body);
     const clientId = data.clientId || null;

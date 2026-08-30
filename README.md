@@ -18,7 +18,14 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
   werkt overal door.
 - **Auth** — alleen naam + geboortedatum (`DD-MM-JJJJ`), geen wachtwoorden.
   JWT in een `httpOnly`, `secure` cookie (12 uur geldig). Bij inloggen wordt
-  automatisch een dienst gestart (ochtend 07:00-15:00 / avond 14:00-23:00).
+  automatisch een dienst gestart (ochtend 07:00-15:00 / avond 14:00-23:00,
+  Europe/Amsterdam-tijd) — zie hieronder.
+- **Tijdzone: Europe/Amsterdam overal.** Vercel's servers draaien in UTC, dus
+  elke "wall clock"-berekening (welke dienst nu loopt, wanneer een dienst
+  eindigt, wat "vandaag" is voor aanwezigheid, de wekelijkse
+  rapportage-reset) converteert expliciet via `Europe/Amsterdam`
+  (`lib/utils.ts`) in plaats van op de servertijd te vertrouwen — anders
+  schuiven diensten en daggrenzen 1-2 uur op (DST-afhankelijk).
 - **E-mail** — [Resend](https://resend.com) *of* gewone SMTP (bv. een
   Gmail-account met een "App-wachtwoord") voor rapportages, maandelijkse
   medicatie-overzichten, maandelijkse to-do overzichten naar de coördinator en
@@ -27,9 +34,10 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
 - **Security** — Zod-validatie op elke input, `requireAuth()` op alle API's,
   géén update/delete op `MedicationCheck` (onomkeerbaar), overdracht wist
   zichzelf (`expiresAt = shiftEinde + 1u`), rolcontrole (alleen admin ziet
-  Backend en beheert accounts; Documenten en Protocollen staan in het
-  hoofdmenu voor iedereen, verwijderen daar blijft voorbehouden aan
-  admin/coördinator), HTTPS via Vercel. Zie
+  Backend en beheert accounts; Documenten uploaden/verwijderen is ook
+  admin-only, via Backend → Documenten, maar iedereen met een account ziet en
+  opent ze via het hoofdmenu; Protocollen toevoegen mag iedereen,
+  verwijderen blijft admin/coördinator), HTTPS via Vercel. Zie
   [Security &amp; privacy](#security--privacy) hieronder voor het volledige
   overzicht van getroffen maatregelen.
 - **UI/UX** — dark mode standaard, sky/emerald accenten, grote touch-targets,
@@ -42,15 +50,15 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
 | Module | Route | Omschrijving |
 | --- | --- | --- |
 | Overzicht | `/dashboard` | Stats + snelle acties |
-| Rapportage | `/rapportage` | Rapportage per cliënt/dienst, e-mail naar algemeen adres |
+| Rapportage | `/rapportage` | Rapportage per cliënt/dienst, e-mail naar algemeen adres. "Recente rapportages" toont alleen sinds de laatste donderdag |
 | Medicatie | `/medicatie` | Medicatie afvinken per cliënt (onomkeerbaar) |
-| Aanwezigheid | `/aanwezigheid` | Aanwezig/afwezig per cliënt per dag |
+| Aanwezigheid | `/aanwezigheid` | Aanwezig/afwezig per cliënt per dag, gedeeld tussen alle accounts (geen per-sessie state) |
 | Overdracht | `/overdracht` | Notities die 1 uur na diensteinde verlopen |
-| To-Do's | `/todos` | Taken met prioriteit, afronden + commentaar |
-| Agenda | `/agenda` | Afspraken + automatische herinnering per e-mail |
-| Documenten | `/documenten` | Algemeen, per cliënt en "Nieuwe medewerker" — upload met voortgangsbalk, voor iedereen |
-| Protocollen | `/protocollen` | Algemene en cliëntspecifieke protocollen, voor iedereen |
-| Backend | `/backend` | Cliënten, medewerkers, medicatie beheer, weekplanning, instellingen (alleen admin) |
+| To-Do's | `/todos` | Openstaande taken bovenaan, daaronder het formulier voor een nieuwe taak. Voor iedereen zichtbaar |
+| Agenda | `/agenda` | Aankomende afspraken bovenaan, daaronder het formulier voor een nieuwe afspraak |
+| Documenten | `/documenten` | Algemeen, per cliënt en "Nieuwe medewerker", voor iedereen zichtbaar. Uploaden/verwijderen alleen via Backend (admin) |
+| Protocollen | `/protocollen` | Algemene en cliëntspecifieke protocollen, als tekst en/of geüpload bestand, voor iedereen |
+| Backend | `/backend` | Cliënten, medewerkers, documenten (upload/verwijderen), medicatie beheer, weekplanning, instellingen (alleen admin) |
 
 ## Vereisten
 
@@ -166,19 +174,22 @@ maximaal 1x per dag draaien.
 
 ### Uploads (documenten/protocollen)
 
-Documenten (`/documenten`, in het hoofdmenu voor iedereen) heeft een
-ingebouwde upload-knop met voortgangsbalk: een gekozen bestand (PDF, Word,
-Excel, afbeelding, tekst — max 20 MB) gaat via `@vercel/blob/client`'s
-`upload()` rechtstreeks van de browser naar Vercel Blob, met een kort-levend
-token dat `app/api/documents/upload/route.ts` uitgeeft (na een
-`requireAuth()`-check — elke ingelogde rol mag uploaden; verwijderen blijft
-`requireAuth([ADMIN, COORDINATOR])`, zie `app/api/documents/[id]/route.ts`,
-en met een whitelist van toegestane content-types). De upload breekt na 60s
-automatisch af met een duidelijke melding als de verbinding vastloopt.
-Zonder gekoppelde Blob-store (`BLOB_READ_WRITE_TOKEN` ontbreekt) geeft die
-route een `503` met `code: "BLOB_NOT_CONFIGURED"` terug; de UI toont dan een
-duidelijke melding en biedt "Ik heb al een link naar een document" als
-alternatief, dat gewoon een URL opslaat zoals voorheen.
+Documenten uploaden gebeurt alleen via **Backend → Documenten**
+(`app/(app)/backend/documenten/page.tsx`, admin-only — de backend-layout
+gate zorgt hiervoor) en heeft een ingebouwde upload-knop met voortgangsbalk:
+een gekozen bestand (PDF, Word, Excel, afbeelding, tekst — max 20 MB) gaat
+via `@vercel/blob/client`'s `upload()` rechtstreeks van de browser naar
+Vercel Blob, met een kort-levend token dat `app/api/documents/upload/route.ts`
+uitgeeft (na een `requireAuth([ADMIN])`-check en met een whitelist van
+toegestane content-types, gedeeld met protocollen via `lib/blob-upload.ts`).
+De hoofdmenu-pagina `/documenten` deelt dezelfde `DocumentManager`-component
+maar met `canUpload={false}` en `canDelete={false}` — puur bekijken/openen,
+voor elke ingelogde rol. De upload breekt na 60s automatisch af met een
+duidelijke melding als de verbinding vastloopt. Zonder gekoppelde Blob-store
+(`BLOB_READ_WRITE_TOKEN` ontbreekt) geeft die route een `503` met
+`code: "BLOB_NOT_CONFIGURED"` terug; de UI toont dan een duidelijke melding
+en biedt "Ik heb al een link naar een document" als alternatief, dat gewoon
+een URL opslaat.
 
 Documenten zonder gekoppelde cliënt horen bij een van twee "threads",
 gekozen via het veld "Hoort bij": **Algemeen** of **Nieuwe medewerker**
@@ -187,17 +198,23 @@ document met een gekoppelde cliënt hoort altijd bij die cliënt, ongeacht
 category. De documentenpagina toont deze als tabbladen (Algemeen, Nieuwe
 medewerker, per cliënt) die de zichtbare lijst client-side filteren.
 
+**Protocollen** (`/protocollen`, hoofdmenu, elke rol mag toevoegen) staan
+niet meer verplicht als tekst: `Protocol.content` en `Protocol.url` zijn
+allebei optioneel, zolang er minimaal één is ingevuld (afgedwongen door een
+`.refine()` op `protocolSchema`). Een geüpload bestand gebruikt dezelfde
+upload-flow als documenten, via `app/api/protocols/upload/route.ts`.
+
 ## Gebruiksinstructie (iPad)
 
 1. Open de app in Safari → "Zet op beginscherm" voor een app-gevoel (PWA-metadata is al geconfigureerd).
 2. Log in met naam + geboortedatum.
 3. Dashboard toont stats + snelle knoppen.
-4. **Rapportage** → kies cliënt + dienst + datum → typ → verstuur (gaat naar het algemene e-mailadres, bevat je naam).
+4. **Rapportage** → kies cliënt + dienst + datum → typ → verstuur (gaat naar het algemene e-mailadres, bevat je naam). "Recente rapportages" toont alleen wat sinds afgelopen donderdag is toegevoegd.
 5. **Medicatie** → open cliënt → vink af (kan niet ongedaan worden gemaakt). Einde maand → overzicht naar e-mail.
-6. **Aanwezigheid** → tik Aanwezig/Afwezig (met optioneel commentaar).
+6. **Aanwezigheid** → tik Aanwezig/Afwezig (met optioneel commentaar). Gedeeld tussen iedereen die inlogt, blijft de hele dag staan totdat iemand het aanpast.
 7. **Overdracht** → typ notitie → wordt 1 uur na diensteinde automatisch gewist.
-8. **To-Do's** → toevoegen, prioriteit, afronden + commentaar. Maandelijks overzicht naar coördinator.
-9. **Agenda** → afspraak toevoegen; herinnering gaat automatisch naar e-mail binnen 24 uur voor de afspraak.
+8. **To-Do's** → openstaande taken bovenaan, formulier voor een nieuwe taak eronder. Voor iedereen zichtbaar. Maandelijks overzicht naar coördinator.
+9. **Agenda** → aankomende afspraken bovenaan, formulier voor een nieuwe afspraak eronder; herinnering gaat automatisch naar e-mail binnen 24 uur voor de afspraak.
 10. **Documenten** → upload of link toevoegen, kies "Hoort bij" (Algemeen, Nieuwe medewerker of een cliënt); tabbladen filteren de lijst. Voor iedereen; verwijderen alleen voor admin/coördinator.
 11. **Protocollen** → algemeen of per cliënt. Voor iedereen; verwijderen alleen voor admin/coördinator.
 12. **Backend** (alleen admin) → cliënten, medewerkers, instellingen, medicatie, weekplanning. Eén wijziging = overal doorgevoerd.
@@ -279,11 +296,12 @@ volgende, concreet geïmplementeerde maatregelen:
   maakt het allereerste account aan en weigert daarna permanent — zodra
   `db.user.count() > 0` is de route dood. Een productie-deploy bevat dus
   nooit voorspelbare seed-accounts zoals bij lokale ontwikkeling.
-- **Uploads zijn beperkt.** De uploadroute staat elke ingelogde rol toe
-  (Documenten is een hoofdmenu-onderdeel), maar whitelist't content-types en
-  beperkt de bestandsgrootte tot 20 MB (`app/api/documents/upload/route.ts`);
-  verwijderen van een document blijft voorbehouden aan ADMIN/COORDINATOR
-  (`app/api/documents/[id]/route.ts`).
+- **Uploads zijn beperkt.** Documenten uploaden/verwijderen is admin-only
+  (`app/api/documents/upload/route.ts`, `app/api/documents/[id]/route.ts`);
+  protocollen uploaden mag elke ingelogde rol
+  (`app/api/protocols/upload/route.ts`), verwijderen blijft ADMIN/COORDINATOR.
+  Beide whitelist't content-types en beperkt de bestandsgrootte tot 20 MB
+  (`lib/blob-upload.ts`).
 
 **Wat nog aandacht verdient bij een echte productie-uitrol:** roteer
 `JWT_SECRET`/`CRON_SECRET` bij vermoeden van lekkage (bestaande sessies

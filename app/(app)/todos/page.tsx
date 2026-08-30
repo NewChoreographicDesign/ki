@@ -55,15 +55,6 @@ export default async function TodosPage() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Nieuwe taak</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <TodoForm />
-        </CardContent>
-      </Card>
-
       <div>
         <h2 className="mb-3 text-lg font-semibold text-slate-100">Openstaand ({open.length})</h2>
         {open.length === 0 ? (
@@ -76,6 +67,15 @@ export default async function TodosPage() {
           </div>
         )}
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Nieuwe taak</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TodoForm />
+        </CardContent>
+      </Card>
 
       <div>
         <h2 className="mb-3 text-lg font-semibold text-slate-100">Recent afgerond</h2>

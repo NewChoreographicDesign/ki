@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { Users, UserCog, Settings, Pill, CalendarRange } from "lucide-react";
+import { Users, UserCog, FileText, Settings, Pill, CalendarRange } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 const SECTIONS = [
   { href: "/backend/clients", label: "Cliënten", description: "Beheer cliëntgegevens", icon: Users },
   { href: "/backend/medewerkers", label: "Medewerkers", description: "Beheer accounts en rollen", icon: UserCog },
+  { href: "/backend/documenten", label: "Documenten", description: "Uploaden en verwijderen (alleen admin)", icon: FileText },
   { href: "/backend/medicatie", label: "Medicatie beheer", description: "Medicatie toevoegen per cliënt", icon: Pill },
   { href: "/backend/weekplanning", label: "Weekplanning", description: "Weekschema per cliënt", icon: CalendarRange },
   { href: "/backend/instellingen", label: "Instellingen", description: "E-mailadressen en organisatie", icon: Settings },

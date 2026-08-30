@@ -24,6 +24,7 @@ export default async function ProtocollenPage() {
           id: p.id,
           title: p.title,
           content: p.content,
+          url: p.url,
           clientName: p.client ? fullName(p.client) : null,
         }))}
         clients={clients.map((c) => ({ id: c.id, name: fullName(c) }))}

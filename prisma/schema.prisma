@@ -99,7 +99,10 @@ model Document {
 model Protocol {
   id        String   @id @default(cuid())
   title     String
-  content   String
+  // Either typed text, an uploaded file's URL, or both — see protocolSchema
+  // in lib/validations.ts, which requires at least one.
+  content   String?
+  url       String?
   clientId  String?
   client    Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
