@@ -153,6 +153,22 @@ export function mostRecentThursdayStart(now: Date = new Date()): Date {
   );
 }
 
+/** Midnight of the most recent Monday (Amsterdam calendar; today counts if it's Monday). */
+export function mostRecentMondayStart(now: Date = new Date()): Date {
+  const p = getZonedParts(now, AMSTERDAM_TZ);
+  // Use UTC noon (not midnight) purely to compute the weekday number safely,
+  // away from any DST-transition edge case.
+  const noonUtc = new Date(Date.UTC(p.year, p.month - 1, p.day, 12));
+  const weekday = noonUtc.getUTCDay(); // 0=Sun .. 6=Sat
+  const daysSinceMonday = (weekday - 1 + 7) % 7; // Monday = 1
+  const mondayNoonUtc = new Date(noonUtc.getTime() - daysSinceMonday * 86_400_000);
+  return amsterdamDate(
+    mondayNoonUtc.getUTCFullYear(),
+    mondayNoonUtc.getUTCMonth() + 1,
+    mondayNoonUtc.getUTCDate()
+  );
+}
+
 export function fullName(client: { firstName: string; lastName: string }): string {
   return `${client.firstName} ${client.lastName}`;
 }

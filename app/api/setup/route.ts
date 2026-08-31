@@ -33,13 +33,7 @@ export async function POST(request: NextRequest) {
       data: { name: data.name, birthDate, role: Role.ADMIN },
     });
 
-    await db.setting.createMany({
-      data: [
-        { key: "GENERAL_EMAIL", value: data.generalEmail },
-        { key: "COORDINATOR_EMAIL", value: data.coordinatorEmail },
-        { key: "ORG_NAME", value: "Woongroep" },
-      ],
-    });
+    await db.setting.create({ data: { key: "ORG_NAME", value: "Woongroep" } });
 
     await createSessionCookie({ sub: user.id, name: user.name, role: user.role });
     await startShiftForLogin(user.id);

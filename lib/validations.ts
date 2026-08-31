@@ -13,8 +13,6 @@ export const loginSchema = z.object({
 export const setupSchema = z.object({
   name: z.string().trim().min(2).max(100),
   birthDate: z.string().regex(ddmmyyyy, "Gebruik het formaat DD-MM-JJJJ"),
-  generalEmail: z.string().trim().email("Ongeldig e-mailadres"),
-  coordinatorEmail: z.string().trim().email("Ongeldig e-mailadres"),
 });
 
 export const clientSchema = z.object({
@@ -33,19 +31,16 @@ export const userSchema = z.object({
   active: z.boolean().optional(),
 });
 
-const EMAIL_SETTING_KEYS = new Set(["GENERAL_EMAIL", "COORDINATOR_EMAIL"]);
-
 export const settingSchema = z
   .object({
     key: z.string().trim().min(1).max(100),
-    value: z.string().trim().min(1).max(500),
+    value: z.string().trim().max(2000),
   })
   .superRefine((data, ctx) => {
-    // These addresses receive rapportages and medicatie-overzichten — a
-    // malformed value here means sensitive client data silently bounces
-    // or, worse, is misdelivered. Enforce a real email format.
-    if (EMAIL_SETTING_KEYS.has(data.key) && !z.string().email().safeParse(data.value).success) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["value"], message: "Ongeldig e-mailadres" });
+    // A typo'd "true"/"false" here would silently disable (or worse, never
+    // enable) network restriction, so enforce the exact literal values.
+    if (data.key === "NETWORK_RESTRICTION_ENABLED" && !["true", "false"].includes(data.value)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["value"], message: "Moet 'true' of 'false' zijn" });
     }
   });
 

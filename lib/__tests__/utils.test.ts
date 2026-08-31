@@ -8,6 +8,8 @@ import {
   shiftEndForStart,
   amsterdamDate,
   mostRecentThursdayStart,
+  mostRecentMondayStart,
+  todayDayOfWeek,
 } from "@/lib/utils";
 import { ShiftType } from "@prisma/client";
 
@@ -112,5 +114,27 @@ describe("mostRecentThursdayStart", () => {
     // 2026-01-04 is a Sunday; the preceding Thursday is 2026-01-01.
     const now = amsterdamDate(2026, 1, 4, 10, 0);
     expect(mostRecentThursdayStart(now).getTime()).toBe(amsterdamDate(2026, 1, 1).getTime());
+  });
+});
+
+describe("mostRecentMondayStart", () => {
+  it("returns the same day when today is Monday", () => {
+    // 2026-01-05 is a Monday.
+    const now = amsterdamDate(2026, 1, 5, 10, 0);
+    expect(mostRecentMondayStart(now).getTime()).toBe(amsterdamDate(2026, 1, 5).getTime());
+  });
+
+  it("returns the previous Monday for a later day in the week", () => {
+    // 2026-01-08 is a Thursday; the preceding Monday is 2026-01-05.
+    const now = amsterdamDate(2026, 1, 8, 10, 0);
+    expect(mostRecentMondayStart(now).getTime()).toBe(amsterdamDate(2026, 1, 5).getTime());
+  });
+});
+
+describe("todayDayOfWeek", () => {
+  it("returns 0 for Monday and 6 for Sunday (not JS's native convention)", () => {
+    // 2026-01-05 is a Monday, 2026-01-11 is the following Sunday.
+    expect(todayDayOfWeek(amsterdamDate(2026, 1, 5, 12))).toBe(0);
+    expect(todayDayOfWeek(amsterdamDate(2026, 1, 11, 12))).toBe(6);
   });
 });

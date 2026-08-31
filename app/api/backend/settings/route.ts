@@ -4,10 +4,11 @@ import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { handleApiError } from "@/lib/api";
 import { settingSchema } from "@/lib/validations";
+import { logAudit } from "@/lib/audit";
 
 export async function PATCH(request: NextRequest) {
   try {
-    await requireAuth([Role.ADMIN]);
+    const session = await requireAuth([Role.ADMIN]);
     const body = await request.json();
     const { key, value } = settingSchema.parse(body);
 
@@ -16,6 +17,7 @@ export async function PATCH(request: NextRequest) {
       update: { value },
       create: { key, value },
     });
+    await logAudit({ userId: session.sub, action: "setting.update", targetType: "Setting", targetId: key });
 
     return NextResponse.json({ ok: true, setting });
   } catch (error) {

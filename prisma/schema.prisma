@@ -49,6 +49,7 @@ model User {
   shifts           Shift[]
   weekPlans        WeekPlan[]
   documents        Document[]
+  auditLogs        AuditLog[]
 
   @@index([role])
 }
@@ -250,10 +251,31 @@ model Shift {
   @@index([userId, startedAt])
 }
 
-// Single source of truth for email addresses and other app-wide config.
+// Single source of truth for app-wide config (organization name, network
+// restriction toggle, etc).
 model Setting {
   id        String   @id @default(cuid())
   key       String   @unique
   value     String
   updatedAt DateTime @updatedAt
+}
+
+// Accountability trail for sensitive actions (AVG Art. 5(2)). Deliberately
+// scoped to writes/logins, not every page view — logging every read would
+// add a DB write to every request for comparatively little investigative
+// value. userId is nullable because a failed-login attempt (wrong name) may
+// not resolve to a real user, and SetOnDelete keeps history after a user is
+// removed.
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  targetType String?
+  targetId   String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([targetType, targetId])
+  @@index([createdAt])
 }

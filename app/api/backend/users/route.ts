@@ -5,10 +5,11 @@ import { requireAuth } from "@/lib/auth";
 import { handleApiError } from "@/lib/api";
 import { userSchema } from "@/lib/validations";
 import { parseDDMMYYYY } from "@/lib/utils";
+import { logAudit } from "@/lib/audit";
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAuth([Role.ADMIN]);
+    const session = await requireAuth([Role.ADMIN]);
     const body = await request.json();
     const data = userSchema.parse(body);
 
@@ -25,6 +26,7 @@ export async function POST(request: NextRequest) {
     const user = await db.user.create({
       data: { name: data.name, birthDate, role: data.role },
     });
+    await logAudit({ userId: session.sub, action: "user.create", targetType: "User", targetId: user.id });
 
     return NextResponse.json({ ok: true, user });
   } catch (error) {

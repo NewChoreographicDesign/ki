@@ -115,6 +115,10 @@ export function canAccessBackend(role: Role): boolean {
   return role === Role.ADMIN;
 }
 
+export function canAccessWeeklyReport(role: Role): boolean {
+  return role === Role.ADMIN || role === Role.COORDINATOR;
+}
+
 /** Ends any dangling open shift for the user and starts a fresh one for the current login. */
 export async function startShiftForLogin(userId: string): Promise<{ id: string; type: ShiftType }> {
   const now = new Date();

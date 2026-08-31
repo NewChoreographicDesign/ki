@@ -3,8 +3,8 @@ import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { handleApiError } from "@/lib/api";
 import { reportSchema } from "@/lib/validations";
-import { parseDDMMYYYY, fullName } from "@/lib/utils";
-import { sendReportEmail } from "@/lib/email";
+import { parseDDMMYYYY } from "@/lib/utils";
+import { logAudit } from "@/lib/audit";
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,12 +32,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    await sendReportEmail({
-      clientName: fullName(client),
-      userName: session.name,
-      shift: data.shift,
-      date,
-      content: data.content,
+    await logAudit({
+      userId: session.sub,
+      action: "report.create",
+      targetType: "Client",
+      targetId: client.id,
     });
 
     return NextResponse.json({ ok: true, report });

@@ -17,8 +17,6 @@ export function SetupForm() {
   const router = useRouter();
   const [name, setName] = React.useState("");
   const [birthDate, setBirthDate] = React.useState("");
-  const [generalEmail, setGeneralEmail] = React.useState("");
-  const [coordinatorEmail, setCoordinatorEmail] = React.useState("");
   const [loading, setLoading] = React.useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -28,7 +26,7 @@ export function SetupForm() {
       const res = await fetch("/api/setup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, birthDate, generalEmail, coordinatorEmail }),
+        body: JSON.stringify({ name, birthDate }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -71,35 +69,6 @@ export function SetupForm() {
           maxLength={10}
           required
         />
-      </div>
-      <div>
-        <Label htmlFor="generalEmail">Algemeen e-mailadres</Label>
-        <Input
-          id="generalEmail"
-          type="email"
-          placeholder="zorg@voorbeeld.nl"
-          value={generalEmail}
-          onChange={(e) => setGeneralEmail(e.target.value)}
-          required
-        />
-        <p className="mt-1 text-xs text-slate-500">
-          Hier komen rapportages en medicatie-overzichten binnen.
-        </p>
-      </div>
-      <div>
-        <Label htmlFor="coordinatorEmail">E-mailadres coördinator</Label>
-        <Input
-          id="coordinatorEmail"
-          type="email"
-          placeholder="coordinator@voorbeeld.nl"
-          value={coordinatorEmail}
-          onChange={(e) => setCoordinatorEmail(e.target.value)}
-          required
-        />
-        <p className="mt-1 text-xs text-slate-500">
-          Hier komt het maandelijkse to-do overzicht binnen. Je kunt beide adressen later altijd
-          wijzigen bij Backend → Instellingen.
-        </p>
       </div>
       <Button type="submit" size="lg" disabled={loading} className="mt-2 w-full">
         {loading ? "Bezig..." : "Account aanmaken en starten"}

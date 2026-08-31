@@ -4,6 +4,7 @@ import { loginSchema } from "@/lib/validations";
 import { createSessionCookie, startShiftForLogin } from "@/lib/auth";
 import { parseDDMMYYYY } from "@/lib/utils";
 import { handleApiError } from "@/lib/api";
+import { logAudit } from "@/lib/audit";
 
 // Login has no password, only a name + birth date — a search space small
 // enough to brute-force in minutes without a lockout. This guards against
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
           },
         });
       }
+      await logAudit({ userId: user?.id ?? null, action: "login.failed" });
       return NextResponse.json({ error: "Naam of geboortedatum onjuist" }, { status: 401 });
     }
 
@@ -54,6 +56,7 @@ export async function POST(request: NextRequest) {
 
     await createSessionCookie({ sub: user.id, name: user.name, role: user.role });
     const shift = await startShiftForLogin(user.id);
+    await logAudit({ userId: user.id, action: "login.success" });
 
     return NextResponse.json({ ok: true, role: user.role, shift: shift.type });
   } catch (error) {

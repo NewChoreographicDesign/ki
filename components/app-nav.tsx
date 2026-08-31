@@ -14,6 +14,7 @@ import {
   FolderOpen,
   ShieldCheck,
   Settings,
+  Download,
   Menu,
   X,
   LogOut,
@@ -27,6 +28,7 @@ type NavItem = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   backendOnly?: boolean;
+  weeklyReportOnly?: boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
@@ -39,21 +41,27 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/agenda", label: "Agenda", icon: Calendar },
   { href: "/documenten", label: "Documenten", icon: FolderOpen },
   { href: "/protocollen", label: "Protocollen", icon: ShieldCheck },
+  { href: "/weekrapport", label: "Weekrapport", icon: Download, weeklyReportOnly: true },
   { href: "/backend", label: "Backend", icon: Settings, backendOnly: true },
 ];
 
 export function AppNav({
   userName,
   canAccessBackend,
+  canAccessWeeklyReport,
 }: {
   userName: string;
   canAccessBackend: boolean;
+  canAccessWeeklyReport: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
 
-  const items = NAV_ITEMS.filter((item) => !item.backendOnly || canAccessBackend);
+  const items = NAV_ITEMS.filter(
+    (item) =>
+      (!item.backendOnly || canAccessBackend) && (!item.weeklyReportOnly || canAccessWeeklyReport)
+  );
 
   async function handleLogout() {
     const res = await fetch("/api/auth/logout", { method: "POST" });

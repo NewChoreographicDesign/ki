@@ -26,18 +26,24 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
   rapportage-reset) converteert expliciet via `Europe/Amsterdam`
   (`lib/utils.ts`) in plaats van op de servertijd te vertrouwen — anders
   schuiven diensten en daggrenzen 1-2 uur op (DST-afhankelijk).
-- **E-mail** — [Resend](https://resend.com) *of* gewone SMTP (bv. een
-  Gmail-account met een "App-wachtwoord") voor rapportages, maandelijkse
-  medicatie-overzichten, maandelijkse to-do overzichten naar de coördinator en
-  agenda-herinneringen. Alle adressen staan in de `Setting`-tabel — één plek
-  om te wijzigen (Backend → Instellingen).
+- **Geen e-mail meer.** Vroeger verstuurde de app rapportages, medicatie- en
+  to-do-overzichten en agenda-herinneringen automatisch per e-mail (via Resend
+  of Gmail SMTP) — dat stuurde cliëntgegevens naar een externe partij zonder
+  dat daar per se een geldige AVG-grondslag/verwerkersovereenkomst voor was.
+  Dat hele mechanisme is verwijderd. In plaats daarvan trekken admin en
+  coördinator zelf een **weekrapport** (`/weekrapport`, reset elke maandag)
+  vanuit de app, met een downloadbare `.txt`-export. Zie
+  [Weekrapport](#weekrapport-vervangt-e-mail) hieronder.
 - **Security** — Zod-validatie op elke input, `requireAuth()` op alle API's,
   géén update/delete op `MedicationCheck` (onomkeerbaar), overdracht wist
   zichzelf (`expiresAt = shiftEinde + 1u`), rolcontrole (alleen admin ziet
   Backend en beheert accounts; Documenten uploaden/verwijderen is ook
   admin-only, via Backend → Documenten, maar iedereen met een account ziet en
   opent ze via het hoofdmenu; Protocollen toevoegen mag iedereen,
-  verwijderen blijft admin/coördinator), HTTPS via Vercel. Zie
+  verwijderen blijft admin/coördinator), HTTPS via Vercel, een auditlog van
+  gevoelige acties (Backend → Auditlog), automatisch uitloggen na 15 minuten
+  inactiviteit, en een optionele netwerkbeveiliging die de app beperkt tot het
+  IP-adres van de organisatie. Zie
   [Security &amp; privacy](#security--privacy) hieronder voor het volledige
   overzicht van getroffen maatregelen.
 - **UI/UX** — dark mode standaard, sky/emerald accenten, grote touch-targets,
@@ -50,7 +56,7 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
 | Module | Route | Omschrijving |
 | --- | --- | --- |
 | Overzicht | `/dashboard` | "Vandaag per kamer" (weekplanning + agenda-afspraken van vandaag, gegroepeerd per cliëntkamer) bovenaan, daaronder stats + snelle acties |
-| Rapportage | `/rapportage` | Rapportage per cliënt/dienst, e-mail naar algemeen adres. "Recente rapportages" toont alleen sinds de laatste donderdag |
+| Rapportage | `/rapportage` | Rapportage per cliënt/dienst. "Recente rapportages" toont alleen sinds de laatste donderdag |
 | Medicatie | `/medicatie` | Medicatie afvinken per cliënt (onomkeerbaar) |
 | Aanwezigheid | `/aanwezigheid` | Aanwezig/afwezig per cliënt per dag, gedeeld tussen alle accounts (geen per-sessie state) |
 | Overdracht | `/overdracht` | Notities die 1 uur na diensteinde verlopen |
@@ -58,7 +64,8 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
 | Agenda | `/agenda` | Aankomende afspraken bovenaan, daaronder het formulier voor een nieuwe afspraak |
 | Documenten | `/documenten` | Algemeen, per cliënt en "Nieuwe medewerker", voor iedereen zichtbaar. Uploaden/verwijderen alleen via Backend (admin) |
 | Protocollen | `/protocollen` | Algemene en cliëntspecifieke protocollen, als tekst en/of geüpload bestand, voor iedereen |
-| Backend | `/backend` | Cliënten, medewerkers, documenten (upload/verwijderen), medicatie beheer, weekplanning, instellingen (alleen admin) |
+| Weekrapport | `/weekrapport` | Downloadbaar overzicht van rapportages, medicatie, to-do's en afspraken sinds afgelopen maandag. Admin + coördinator |
+| Backend | `/backend` | Cliënten, medewerkers, documenten (upload/verwijderen), medicatie beheer, weekplanning, instellingen, auditlog (alleen admin) |
 
 ## Vereisten
 
@@ -66,13 +73,9 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
 2. Een Vercel-account (hosting)
 3. Database: lokaal SQLite (al geconfigureerd) → productie Neon.tech of Vercel
    Postgres (gratis tier)
-4. E-mail: [Resend](https://resend.com) (gratis tier, vereist een geverifieerd
-   eigen domein om naar willekeurige ontvangers te mailen) **of** SMTP via een
-   bestaande mailbox, bv. Gmail met een "App-wachtwoord" — geen domein/DNS
-   nodig. Zie de e-mail-sectie hieronder voor de afweging.
-5. (Optioneel) Een gratis [Cloudinary](https://cloudinary.com)-account voor
+4. (Optioneel) Een gratis [Cloudinary](https://cloudinary.com)-account voor
    documenten/protocollen uploaden
-6. Eigen domein (aanbevolen voor e-mail + PWA)
+5. Eigen domein (aanbevolen voor de PWA)
 
 ## Lokaal installeren
 
@@ -82,7 +85,7 @@ npm install
 
 # 2. Environment
 cp .env.example .env
-# Vul .env in: JWT_SECRET (min. 32 tekens), later RESEND_API_KEY of SMTP_*, GENERAL_EMAIL, COORDINATOR_EMAIL, CRON_SECRET
+# Vul .env in: JWT_SECRET (min. 32 tekens), CRON_SECRET, optioneel NETWORK_BYPASS_SECRET
 
 # 3. Database
 npx prisma db push
@@ -127,23 +130,12 @@ Kort samengevat voor ontwikkelaars:
 2. Koppel een Postgres-database (Vercel Storage → Neon) aan het project —
    dit zet `DATABASE_URL` automatisch.
 3. Zet de overige environment variables: `JWT_SECRET`, `CRON_SECRET`,
-   `EMAIL_FROM`, optioneel `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` /
+   optioneel `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` /
    `CLOUDINARY_API_SECRET` (documenten/protocollen uploaden — zie de
-   "Uploads"-sectie hieronder), en voor e-mail **één van beide**:
-   - `RESEND_API_KEY` — vereist een geverifieerd eigen domein bij Resend om
-     naar willekeurige ontvangers te mailen (zonder domein levert Resend
-     alleen af op het e-mailadres waarmee je bij Resend bent ingelogd); of
-   - `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` — stuurt via
-     een bestaande mailbox, bv. Gmail. Vereist geen domein/DNS-toegang: alleen
-     een Google-account met 2-staps-verificatie aan en een "App-wachtwoord"
-     via [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
-     (`SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`,
-     `SMTP_USER=<gmail-adres>`, `SMTP_PASSWORD=<16-tekens app-wachtwoord>`).
-     Is `SMTP_HOST` gezet, dan heeft SMTP voorrang boven Resend.
-
-   `GENERAL_EMAIL`/`COORDINATOR_EMAIL` hoeven hier niet: die worden bij de
-   allereerste keer opstarten via de `/setup`-wizard in de app zelf ingevuld
-   (zie hieronder).
+   "Uploads"-sectie hieronder), en optioneel `NETWORK_BYPASS_SECRET` (alleen
+   nodig als je later "Netwerkbeveiliging" gaat gebruiken — zie
+   [Netwerkbeveiliging](#netwerkbeveiliging) hieronder, **zet dit vóórdat je
+   die instelling aanzet**).
 4. Deploy. Het `vercel-build`-script (`package.json`) regelt de rest
    automatisch, in deze volgorde:
    - `scripts/prepare-datasource.js` zet de Prisma datasource-`provider` om
@@ -156,23 +148,20 @@ Kort samengevat voor ontwikkelaars:
    - `next build`.
 5. Open de live URL. Zolang er nog geen enkele gebruiker bestaat, stuurt de
    app je automatisch naar `/setup`: daar maak je eenmalig het eerste
-   (admin-)account aan en vul je de twee e-mailadressen in. Deze pagina kan
-   daarna nooit meer opnieuw gebruikt worden.
+   (admin-)account aan. Deze pagina kan daarna nooit meer opnieuw gebruikt
+   worden.
 
 ### Cron jobs
 
-`vercel.json` bevat al de cron-configuratie:
+`vercel.json` bevat de cron-configuratie:
 
-- `/api/cron/monthly-med` — maandelijks medicatie-overzicht (1e van de maand)
-- `/api/cron/monthly-todos` — maandelijks to-do overzicht naar coördinator (1e van de maand)
-- `/api/cron/agenda-reminders` — dagelijks om 07:00 UTC, verstuurt herinneringen voor
-  afspraken binnen 24 uur
+- `/api/cron/retention-purge` — maandelijks (1e van de maand, 04:00 UTC),
+  verwijdert `AuditLog`-rijen ouder dan ~2 jaar. Raakt geen cliëntgegevens
+  (rapportages, medicatie, documenten, ...) — zie
+  [Bewaartermijnen](#bewaartermijnen-retention) hieronder voor waarom.
 
-Alle cron-routes vereisen de header `Authorization: Bearer <CRON_SECRET>`
+De cron-route vereist de header `Authorization: Bearer <CRON_SECRET>`
 (Vercel Cron stuurt dit automatisch mee wanneer `CRON_SECRET` is ingesteld).
-Let op: het gratis Hobby-plan van Vercel staat alleen dagelijkse cron jobs toe
-(vaker dan 1x per dag geeft een mislukte deploy) — vandaar dat alle drie hier
-maximaal 1x per dag draaien.
 
 ### Uploads (documenten/protocollen)
 
@@ -245,21 +234,88 @@ afspraken zonder gekoppelde cliënt onder "Algemeen". "Vandaag" en de
 dag-van-de-week-berekening zijn Europe/Amsterdam-bewust (zie
 `todayDayOfWeek()` in `lib/utils.ts`), net als de rest van de app.
 
+### Weekrapport (vervangt e-mail)
+
+De app verstuurde vroeger rapportages, medicatie- en to-do-overzichten en
+agenda-herinneringen automatisch per e-mail. Dat is verwijderd: het stuurde
+gevoelige cliëntgegevens naar een externe e-maildienst zonder dat daar per se
+een geldige verwerkersovereenkomst/AVG-grondslag voor was, en voegde een
+derde partij (Resend of een Gmail-account) toe aan de verwerkingsketen.
+
+In plaats daarvan is er `/weekrapport` (`lib/weekly-report.ts`,
+`app/(app)/weekrapport/page.tsx`), zichtbaar voor ADMIN en COORDINATOR
+(`canAccessWeeklyReport()` in `lib/auth.ts`): een overzicht van rapportages,
+afgevinkte medicatie, to-do's en afspraken **sinds afgelopen maandag**
+(`mostRecentMondayStart()` in `lib/utils.ts`, hetzelfde patroon als
+rapportage's donderdag-reset), met een downloadknop die dezelfde data als
+platte tekst (`.txt`) teruggeeft (`app/api/weekrapport/download/route.ts`).
+Niets wordt automatisch verstuurd of ergens naartoe gepusht — admin/
+coördinator halen het overzicht zelf op wanneer ze het nodig hebben.
+
+### Netwerkbeveiliging
+
+Optionele instelling (Backend → Instellingen → Netwerkbeveiliging) die de
+hele app beperkt tot een IP-allowlist (bv. het publieke IP-adres van het
+kantoornetwerk). Uitgeschakeld is de standaard — bestaande installaties
+blijven dus ongewijzigd werken.
+
+**Technische opzet:** Next.js Middleware draait altijd op de Edge-runtime,
+waar Prisma niet werkt (geen TCP-verbinding naar Postgres mogelijk). De
+toggle staat daarom gewoon in de `Setting`-tabel (bewerkbaar via de normale
+Instellingen-UI), maar `middleware.ts` leest hem niet rechtstreeks: het doet
+een interne `fetch()` naar `/api/internal/network-policy`
+(`lib/network-policy.ts`), een gewone Node.js-route die wél bij Prisma kan.
+Die route cachet de instelling 30 seconden in het geheugen, dus een wijziging
+werkt binnen ~30s overal door. Gaat die interne check om wat voor reden dan
+ook mis (time-out, foutcode), dan valt middleware **open** terug (toegang
+toestaan) — dit is een extra beveiligingslaag, geen vervanging voor de
+eigenlijke AVG-grondslag, dus een storing hierin mag de hele app niet
+platleggen voor alle gebruikers.
+
+> **Waarschuwing — risico op uitsluiting.** Als je dit inschakelt met een
+> verkeerd, verouderd of te specifiek IP-adres, kan **niemand meer inloggen**
+> totdat het IP-adres van het netwerk weer overeenkomt met de instelling —
+> ook een admin niet, want de check geldt voor de hele app inclusief
+> `/login`. Zet daarom **`NETWORK_BYPASS_SECRET`** (een lange willekeurige
+> tekst) als environment variable in Vercel **voordat** je dit aanzet. Ben je
+> ooit buitengesloten? Ga vanaf een willekeurig netwerk naar
+> `https://<jouw-app-url>/login?bypass=<NETWORK_BYPASS_SECRET-waarde>` — dat
+> zet een 24-uurs cookie dat de IP-check omzeilt, log in, en zet de instelling
+> weer uit of goed bij Backend → Instellingen. Zonder `NETWORK_BYPASS_SECRET`
+> ingesteld werkt deze noodtoegang niet.
+>
+> Alleen IPv4 wordt ondersteund; een bezoeker over IPv6 matcht nooit een
+> geconfigureerd bereik. De instellingenpagina toont je huidige IP-adres als
+> hulp bij het invullen.
+
+### Bewaartermijnen (retention)
+
+De retention-cron (`/api/cron/retention-purge`, zie "Cron jobs" hierboven)
+verwijdert alleen oude `AuditLog`-rijen (~2 jaar). Cliëntgegevens
+(rapportages, medicatie(-checks), documenten, protocollen, aanwezigheid)
+worden **nooit** automatisch verwijderd: hoe lang die bewaard moeten/mogen
+blijven is een juridische afweging voor de organisatie zelf (in Nederland
+wijst de WGBO doorgaans naar een bewaartermijn van 20 jaar voor medische
+behandeldossiers), niet iets om stilzwijgend te automatiseren. Wil je hier
+wél automatisch beleid op, bepaal dan eerst zelf (met juridisch advies) welke
+termijn geldt voor jullie type zorg, en voeg dat gericht toe.
+
 ## Gebruiksinstructie (iPad)
 
 1. Open de app in Safari → "Zet op beginscherm" voor een app-gevoel (PWA-metadata is al geconfigureerd).
 2. Log in met naam + geboortedatum.
 3. Dashboard toont bovenaan "Vandaag per kamer" (weekplanning + afspraken van vandaag, per cliëntkamer), daaronder stats + snelle knoppen.
-4. **Rapportage** → kies cliënt + dienst + datum → typ → verstuur (gaat naar het algemene e-mailadres, bevat je naam). "Recente rapportages" toont alleen wat sinds afgelopen donderdag is toegevoegd.
-5. **Medicatie** → open cliënt → vink af (kan niet ongedaan worden gemaakt). Einde maand → overzicht naar e-mail.
+4. **Rapportage** → kies cliënt + dienst + datum → typ → verstuur. "Recente rapportages" toont alleen wat sinds afgelopen donderdag is toegevoegd; het volledige overzicht staat ook in het **Weekrapport**.
+5. **Medicatie** → open cliënt → vink af (kan niet ongedaan worden gemaakt).
 6. **Aanwezigheid** → tik Aanwezig/Afwezig (met optioneel commentaar). Gedeeld tussen iedereen die inlogt, blijft de hele dag staan totdat iemand het aanpast.
 7. **Overdracht** → typ notitie → wordt 1 uur na diensteinde automatisch gewist.
-8. **To-Do's** → openstaande taken bovenaan, formulier voor een nieuwe taak eronder. Voor iedereen zichtbaar. Maandelijks overzicht naar coördinator.
-9. **Agenda** → aankomende afspraken bovenaan, formulier voor een nieuwe afspraak eronder; herinnering gaat automatisch naar e-mail binnen 24 uur voor de afspraak.
+8. **To-Do's** → openstaande taken bovenaan, formulier voor een nieuwe taak eronder. Voor iedereen zichtbaar.
+9. **Agenda** → aankomende afspraken bovenaan, formulier voor een nieuwe afspraak eronder.
 10. **Documenten** → upload of link toevoegen, kies "Hoort bij" (Algemeen, Nieuwe medewerker of een cliënt); tabbladen filteren de lijst. Voor iedereen; verwijderen alleen voor admin/coördinator.
 11. **Protocollen** → algemeen of per cliënt. Voor iedereen; verwijderen alleen voor admin/coördinator.
-12. **Backend** (alleen admin) → cliënten (incl. kamer), medewerkers, instellingen, medicatie, weekplanning. Eén wijziging = overal doorgevoerd.
-13. Uitloggen rechtsonder in de zijbalk.
+12. **Weekrapport** (admin + coördinator) → rapportages, medicatie, to-do's en afspraken sinds afgelopen maandag, met een downloadknop.
+13. **Backend** (alleen admin) → cliënten (incl. kamer), medewerkers, instellingen, netwerkbeveiliging, auditlog, medicatie, weekplanning. Eén wijziging = overal doorgevoerd.
+14. Uitloggen rechtsonder in de zijbalk, of automatisch na 15 minuten inactiviteit.
 
 Diensttijd wordt automatisch bijgehouden bij login.
 
@@ -298,20 +354,25 @@ volgende, concreet geïmplementeerde maatregelen:
 - **Geen placeholder-secrets in productie.** `JWT_SECRET` en `CRON_SECRET`
   worden bij het opstarten geweigerd wanneer ze exact de voorbeeldwaarde uit
   `.env.example` bevatten — voorkomt dat een vergeten "verander dit"-stap
-  leidt tot vervalsbare sessies of vrij aanroepbare cron-endpoints (die
-  cliëntgegevens mailen).
+  leidt tot vervalsbare sessies of een vrij aanroepbaar cron-endpoint.
 - **Geen self-XSS via documentlinks.** `Document.url` accepteert alleen
   `http(s)`-links (`lib/validations.ts`); zonder die check zou een
   `javascript:`-URL als "document" kunnen worden opgeslagen en bij een klik
   door een andere medewerker of admin script uitvoeren.
-- **E-mailadressen worden gevalideerd.** `GENERAL_EMAIL` en
-  `COORDINATOR_EMAIL` in Instellingen moeten een geldig e-mailformaat hebben,
-  zodat rapportages en medicatie-overzichten niet stilzwijgend naar een
-  verkeerd of onbestaand adres verdwijnen.
-- **HTML-injectie in e-mails.** Alle vrije tekst (rapportage-inhoud, namen,
-  commentaar) wordt geëscaped voordat die in een e-mail-template terechtkomt
-  (`lib/email.ts`), dus gebruikersinvoer kan geen opmaak of scripts in de
-  ontvangen e-mail injecteren.
+- **Auditlog van gevoelige acties.** Inloggen (incl. mislukte pogingen),
+  aanmaken/wijzigen van cliënten en accounts, verwijderen van documenten/
+  protocollen en instellingswijzigingen worden gelogd (`AuditLog`-model,
+  `lib/audit.ts`), zichtbaar via Backend → Auditlog (alleen admin). Bewust
+  beperkt tot schrijfacties, niet elke paginaweergave — dat laatste zou een
+  database-write aan elke request toevoegen voor weinig onderzoekswaarde.
+- **Automatisch uitloggen na inactiviteit.** Gedeelde iPads in een
+  zorgomgeving zijn een reëel risico: iemand loopt weg bij een ontgrendelde
+  sessie en de volgende die het scherm aanraakt ziet cliëntgegevens.
+  `components/idle-logout.tsx` logt na 15 minuten zonder muis/toetsenbord/
+  touch-interactie automatisch uit, los van de 12-uurs JWT-sessieduur.
+- **Optionele netwerkbeveiliging.** Beperk de hele app tot een IP-allowlist
+  (bv. het kantoornetwerk) — zie [Netwerkbeveiliging](#netwerkbeveiliging)
+  hierboven, inclusief de noodtoegang tegen uitsluiting.
 - **Browserbeveiligingsheaders**: `X-Frame-Options: DENY`
   (clickjacking-bescherming op de loginpagina), HSTS, `X-Content-Type-Options:
   nosniff` en een `Permissions-Policy` die camera/microfoon/locatie
@@ -346,12 +407,17 @@ volgende, concreet geïmplementeerde maatregelen:
   naar Cloudinary lopen, niet rechtstreeks van de browser naar externe
   opslag; zie de "Uploads"-sectie hierboven voor waarom.
 
-**Wat nog aandacht verdient bij een echte productie-uitrol:** roteer
+**Wat nog aandacht verdient bij een echte productie-uitrol — dit is geen
+juridisch advies, raadpleeg bij twijfel een deskundige:** roteer
 `JWT_SECRET`/`CRON_SECRET` bij vermoeden van lekkage (bestaande sessies
-worden dan ongeldig), overweeg een audit-log-export voor de AVG/GDPR
-verantwoordingsplicht bovenop de bestaande timestamps, en zet — als de
-doelgroep dat vereist — een verwerkersovereenkomst met Resend/Vercel/Neon op
-voor de verwerking van bijzondere persoonsgegevens.
+worden dan ongeldig); zorg voor een geldige AVG-grondslag voor de verwerking
+van bijzondere persoonsgegevens (doorgaans Art. 9(2)(h) — zorgverlening —
+plus een geheimhoudingsbeding voor niet-BIG-geregistreerd personeel, zie
+UAVG Art. 30); sluit verwerkersovereenkomsten met Vercel/Neon/Cloudinary;
+stel een privacyverklaring, verwerkingsregister en datalekprotocol op; en
+bepaal een bewaartermijn voor cliëntgegevens (zie
+[Bewaartermijnen](#bewaartermijnen-retention) hierboven — de app verwijdert
+hier bewust niets automatisch).
 
 ## Testen
 

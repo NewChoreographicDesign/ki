@@ -5,10 +5,11 @@ import { requireAuth } from "@/lib/auth";
 import { handleApiError } from "@/lib/api";
 import { clientSchema } from "@/lib/validations";
 import { parseDDMMYYYY } from "@/lib/utils";
+import { logAudit } from "@/lib/audit";
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAuth([Role.ADMIN]);
+    const session = await requireAuth([Role.ADMIN]);
     const body = await request.json();
     const data = clientSchema.parse(body);
 
@@ -21,6 +22,7 @@ export async function POST(request: NextRequest) {
         notes: data.notes || null,
       },
     });
+    await logAudit({ userId: session.sub, action: "client.create", targetType: "Client", targetId: client.id });
 
     return NextResponse.json({ ok: true, client });
   } catch (error) {

@@ -4,7 +4,7 @@ Deze handleiding is geschreven voor iemand **zonder technische achtergrond**.
 Je hoeft geen programmeerkennis te hebben en je hoeft nergens een "terminal"
 of code voor te openen — alles gaat via het klikken door websites.
 
-Reken op ongeveer **20-30 minuten** de eerste keer. Je hebt hierna een eigen,
+Reken op ongeveer **15-20 minuten** de eerste keer. Je hebt hierna een eigen,
 werkende versie van de app online staan, die je zelf kunt bijhouden.
 
 ---
@@ -15,15 +15,17 @@ werkende versie van de app online staan, die je zelf kunt bijhouden.
 2. De app daar "importeren" vanuit GitHub (de code staat daar al klaar).
 3. Twee gratis opslagdiensten koppelen: één voor de **database** (waar alle
    gegevens in komen) en één voor **documenten/bestanden**.
-4. E-mail regelen voor rapportages en medicatie-overzichten: via een gratis
-   account bij **Resend**, of — als je geen toegang hebt tot een eigen
-   domein — via een gewoon **Gmail-account** dat je al hebt.
-5. De app voor het eerst openen en je eigen beheerdersaccount aanmaken.
-6. Klaar — vanaf nu werkt alles via de app zelf.
+4. De app voor het eerst openen en je eigen beheerdersaccount aanmaken.
+5. Klaar — vanaf nu werkt alles via de app zelf.
 
 Je hebt hiervoor nodig: een e-mailadres en toegang tot de GitHub-repository
 `NewChoreographicDesign/ki` (vraag dit na bij wie de GitHub-organisatie
 beheert als je hier nog niet bij kunt).
+
+> De app verstuurt geen e-mails meer (dat stuurde vroeger cliëntgegevens naar
+> een externe e-maildienst zonder duidelijke juridische grondslag daarvoor).
+> Rapportages, medicatie- en to-do-overzichten haal je nu zelf op in de app
+> zelf, via **Weekrapport** — zie "Wat kun je hierna doen in de app?" hieronder.
 
 ---
 
@@ -48,7 +50,7 @@ gebruik).
    Permissions** en geef Vercel toegang tot die repository.
 3. Vercel laat nu instellingen zien ("Configure Project"). Laat alles op de
    standaardwaarde staan.
-4. Klik **nog niet** op "Deploy" — ga eerst verder met stap 3 en 4 hieronder,
+4. Klik **nog niet** op "Deploy" — ga eerst verder met stap 3 hieronder,
    zodat de database en instellingen al klaarstaan. (Klik je toch per
    ongeluk te vroeg op Deploy? Geen probleem, dat kun je later gewoon
    opnieuw doen — zie "Problemen oplossen" onderaan.)
@@ -77,7 +79,7 @@ koppelt.
 Dit zorgt ervoor dat je straks in de app met één klik documenten (PDF's,
 Word-bestanden, foto's) kunt uploaden. Dit gebeurt via een aparte, gratis
 dienst genaamd **Cloudinary** (niet via Vercel zelf) — je maakt hier een
-account aan en kopieert één code over naar Vercel, in stap 6 hieronder.
+account aan en kopieert één code over naar Vercel, in stap 5 hieronder.
 
 1. Ga naar [cloudinary.com](https://cloudinary.com) en maak een gratis
    account aan ("Sign up for free").
@@ -89,66 +91,14 @@ account aan en kopieert één code over naar Vercel, in stap 6 hieronder.
    liever losse velden ziet: **Cloud name**, **API Key** en **API Secret**
    apart, met een oogicoontje om "API Secret" zichtbaar te maken).
 4. Bewaar dit tijdelijk (bijvoorbeeld in een kladblok) — je vult het zo
-   dadelijk in bij stap 6.
+   dadelijk in bij stap 5.
 
 > Sla je deze stap over? Dan werkt de rest van de app gewoon, alleen het
 > uploaden van documenten nog niet. Je kunt dit later altijd alsnog doen.
 
 ---
 
-## Stap 5 — E-mail regelen (Resend óf Gmail)
-
-De app verstuurt automatisch e-mails: rapportages, maandelijkse
-medicatie-overzichten en herinneringen voor afspraken. Kies **één** van de
-twee opties hieronder — je hebt er maar één nodig.
-
-### Optie A — Resend (aan te raden als je een eigen domein hebt)
-
-Resend is gratis tot 3.000 e-mails per maand — ruim voldoende.
-
-1. Ga naar resend.com en maak een gratis account aan.
-2. Bevestig je e-mailadres via de mail die je ontvangt.
-3. Ga naar **API Keys** in het menu van Resend, klik op **Create API Key**,
-   geef hem een naam (bijvoorbeeld "Woongroep Admin") en klik op **Add**.
-4. Er verschijnt eenmalig een lange code die begint met `re_`. Kopieer deze
-   direct (hij wordt daarna niet meer getoond) en bewaar hem tijdelijk, want
-   die heb je in de volgende stap nodig.
-
-> **Let op — versturen naar een eigen adres:** zonder een eigen domein mag
-> Resend's gratis proefomgeving standaard alleen mailen naar het adres
-> waarmee je bij Resend bent ingelogd. Voor echt gebruik met meerdere
-> ontvangers (het algemene adres, de coördinator) is het toevoegen van een
-> eigen domein bij Resend (**Domains** → **Add Domain**, met hulp van
-> wie je website/domein beheert) noodzakelijk. Heb je geen toegang tot
-> DNS-instellingen van een domein (bijvoorbeeld omdat dit bij een
-> organisatie ligt waar je zelf niet bij kunt)? Gebruik dan Optie B
-> hieronder — daar heb je geen domein voor nodig.
-
-### Optie B — Gmail (geen eigen domein nodig)
-
-Heb je geen toegang tot DNS-instellingen van een domein? Dan kun je e-mails
-laten versturen via een gewoon Gmail-account (van jezelf of speciaal voor de
-app aangemaakt). Dit werkt volledig zelfstandig — je hebt hier geen
-beheerder of IT-afdeling voor nodig.
-
-1. Zorg dat het Gmail-account **2-staps-verificatie** aan heeft staan: ga naar
-   [myaccount.google.com/security](https://myaccount.google.com/security) en
-   zet die aan als dat nog niet zo is (nodig via je telefoon).
-2. Ga daarna naar
-   [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords).
-3. Geef een naam op (bijvoorbeeld "Woongroep Admin") en klik op **Aanmaken**.
-4. Er verschijnt een code van 16 tekens (bijv. `abcd efgh ijkl mnop`). Kopieer
-   deze — zonder spaties — en bewaar hem tijdelijk, want die heb je in de
-   volgende stap nodig. Dit is **niet** het gewone Gmail-wachtwoord.
-
-> Met deze methode worden e-mails verstuurd namens dat Gmail-adres (de
-> ontvanger ziet dit adres als afzender, tenzij je hieronder bij `EMAIL_FROM`
-> iets anders instelt). Gmail staat maximaal 500 verzonden e-mails per dag
-> toe — voor deze app ruim voldoende.
-
----
-
-## Stap 6 — De overige instellingen invullen
+## Stap 5 — De overige instellingen invullen
 
 Terug in je Vercel-project, ga naar het tabblad **Settings** →
 **Environment Variables**. Hier voeg je een paar losse instellingen toe.
@@ -158,27 +108,7 @@ Voor elke regel: vul de **Name** (naam) en **Value** (waarde) in en klik op
 | Naam | Waarde | Uitleg |
 |---|---|---|
 | `JWT_SECRET` | een lange, willekeurige tekst van minstens 40 tekens | Zie hieronder hoe je dit maakt |
-| `CRON_SECRET` | ook een lange, willekeurige tekst | Beveiligt de automatische maandelijkse e-mails |
-
-Vul daarnaast **óf** de Resend-rij, **óf** de vier Gmail/SMTP-rijen in, al
-naar gelang welke optie je in stap 5 hebt gekozen:
-
-**Bij Optie A (Resend):**
-
-| Naam | Waarde | Uitleg |
-|---|---|---|
-| `RESEND_API_KEY` | de code die begint met `re_` uit stap 5 | Voor het versturen van e-mail |
-| `EMAIL_FROM` | bijv. `Woongroep Admin <onboarding@resend.dev>` | Het afzenderadres; met een eigen Resend-domein wordt dit je eigen adres |
-
-**Bij Optie B (Gmail):**
-
-| Naam | Waarde | Uitleg |
-|---|---|---|
-| `SMTP_HOST` | `smtp.gmail.com` | Vast adres van Gmail's verstuurserver |
-| `SMTP_PORT` | `465` | Vaste poort |
-| `SMTP_USER` | je volledige Gmail-adres | Het account waarmee verstuurd wordt |
-| `SMTP_PASSWORD` | de 16-tekens app-wachtwoord uit stap 5 (zonder spaties) | **Niet** je gewone Gmail-wachtwoord |
-| `EMAIL_FROM` | bijv. `Woongroep Admin <jouw-adres@gmail.com>` | Het afzenderadres; gebruik hetzelfde adres als bij `SMTP_USER` |
+| `CRON_SECRET` | ook een lange, willekeurige tekst | Beveiligt het automatische opschoon-taakje dat 1x per maand draait |
 
 **Voor documenten/protocollen uploaden** (optioneel, sla stap 4 over als je
 dit niet wilt): wat je in stap 4 bij Cloudinary hebt bewaard. Heb je de hele
@@ -215,13 +145,18 @@ voor de app) — gebruik voor elk van de twee een andere tekst.
   `.env.example` in het echt — die is expres onveilig gemaakt en wordt door
   de app zelf geweigerd.
 
-> **Niet nodig om zelf in te vullen:** `GENERAL_EMAIL` en
-> `COORDINATOR_EMAIL` hoef je hier niet toe te voegen — die vul je zo
-> dadelijk gewoon in de app zelf in, bij het allereerste opstarten.
+> **Optioneel — alleen als je later "Netwerkbeveiliging" gaat gebruiken**
+> (de app dan alleen laten werken op het netwerk van je organisatie, zie
+> "Wat kun je hierna doen in de app?" hieronder): voeg dan nu alvast een
+> derde regel toe, `NETWORK_BYPASS_SECRET`, met weer een eigen lange
+> willekeurige tekst (zelfde methode als hierboven). Dit is je "noodsleutel"
+> mocht je jezelf ooit per ongeluk buitensluiten — bewaar hem ergens veilig
+> (een wachtwoordmanager). Gebruik je die functie nooit? Dan kun je deze
+> regel gewoon overslaan.
 
 ---
 
-## Stap 7 — Online zetten (deployen)
+## Stap 6 — Online zetten (deployen)
 
 1. Ga naar het tabblad **Deployments**.
 2. Staat er nog geen deployment, of wil je de zojuist toegevoegde
@@ -235,7 +170,7 @@ voor de app) — gebruik voor elk van de twee een andere tekst.
 
 ---
 
-## Stap 8 — Je eigen account aanmaken (eenmalig)
+## Stap 7 — Je eigen account aanmaken (eenmalig)
 
 Bij het openen van de app voor de allereerste keer zie je automatisch een
 welkomstscherm ("Welkom bij Woongroep Admin"). Dit verschijnt **alleen**
@@ -244,11 +179,7 @@ zolang er nog geen enkel account bestaat.
 1. Vul je eigen naam in.
 2. Vul je geboortedatum in (DD-MM-JJJJ). Er is bewust geen wachtwoord — naam
    + geboortedatum samen zijn straks je inloggegevens.
-3. Vul het **algemene e-mailadres** in (hier komen rapportages en
-   medicatie-overzichten binnen) en het **e-mailadres van de coördinator**
-   (voor het maandelijkse to-do overzicht). Dit kun je later altijd wijzigen
-   bij **Backend → Instellingen**.
-4. Klik op **Account aanmaken en starten**.
+3. Klik op **Account aanmaken en starten**.
 
 Je bent nu automatisch ingelogd als beheerder (rol "Admin") en ziet het
 dashboard. Dit scherm kan daarna nooit meer opnieuw verschijnen — voeg
@@ -258,7 +189,7 @@ eventuele collega's toe via **Backend → Medewerkers**.
 
 ## Documenten en protocollen in de app krijgen
 
-Dit is de eenvoudigste stap van allemaal, zodra stap 4 en 6 hierboven
+Dit is de eenvoudigste stap van allemaal, zodra stap 4 en 5 hierboven
 (Cloudinary-account + de drie waarden invullen bij Environment Variables)
 zijn gedaan:
 
@@ -281,9 +212,9 @@ inhoud als tekst, en/of upload een bestand — minstens één van de twee is
 verplicht — en klik op **Toevoegen**.
 
 > **Zie je de melding "Uploaden lukt niet"?** Dan zijn de drie
-> `CLOUDINARY_*`-waarden uit stap 4/6 hierboven waarschijnlijk nog niet
+> `CLOUDINARY_*`-waarden uit stap 4/5 hierboven waarschijnlijk nog niet
 > (goed) ingevuld, of de laatste deploy dateert van vóór het invullen.
-> Controleer de waarden en doorloop stap 7 nogmaals (opnieuw deployen) en
+> Controleer de waarden en doorloop stap 6 nogmaals (opnieuw deployen) en
 > probeer het daarna nogmaals. Je kunt ondertussen ook gewoon
 > een link naar een bestand toevoegen via **"Ik heb al een link naar een
 > document"** onder de uploadknop.
@@ -294,7 +225,8 @@ verplicht — en klik op **Toevoegen**.
 
 - **Backend** is alleen zichtbaar en toegankelijk voor een admin-account —
   medewerkers en coördinatoren zien dit onderdeel niet in het menu.
-  - **Backend → Cliënten**: bewoners/cliënten toevoegen.
+  - **Backend → Cliënten**: bewoners/cliënten toevoegen (incl. optioneel een
+    kamernummer, dat op het dashboard gebruikt wordt).
   - **Backend → Medewerkers**: collega's toevoegen (naam + geboortedatum +
     rol: medewerker, coördinator of admin).
   - **Backend → Documenten**: documenten uploaden en verwijderen (zie
@@ -302,12 +234,24 @@ verplicht — en klik op **Toevoegen**.
   - **Backend → Medicatie beheer**: medicatie per cliënt instellen, met
     tijden en instructies.
   - **Backend → Weekplanning**: het weekschema per cliënt instellen.
-  - **Backend → Instellingen**: e-mailadressen later aanpassen.
+  - **Backend → Instellingen**: organisatienaam en
+    **Netwerkbeveiliging** — optioneel de app beperken tot het netwerk van
+    je organisatie (op IP-adres). Lees de waarschuwing op die pagina eerst
+    goed door: verkeerd ingesteld kan dit iedereen (ook een admin) buitensluiten.
+  - **Backend → Auditlog**: overzicht van wie wat heeft gedaan (inloggen,
+    cliënten/accounts aanmaken of wijzigen, documenten verwijderen,
+    instellingen wijzigen).
+- **Weekrapport** (zichtbaar voor admin en coördinator): rapportages,
+  afgevinkte medicatie, to-do's en afspraken van de huidige week (vanaf
+  afgelopen maandag), met een downloadknop. Dit verving de automatische
+  e-mails die de app vroeger verstuurde.
 - **Documenten** (bekijken/openen, niet uploaden) en **Protocollen**
   (toevoegen mag wel) staan in het hoofdmenu voor iedereen — zie hierboven.
 - De overige menu's (Rapportage, Medicatie, Aanwezigheid, Overdracht,
   To-Do's, Agenda) gebruikt iedereen dagelijks — zie ook `README.md` voor
   een korte beschrijving van elk onderdeel.
+- Wie een tijdje niets doet op een gedeeld toestel (bijv. een iPad die
+  meerdere collega's gebruiken) wordt na 15 minuten automatisch uitgelogd.
 
 ---
 
@@ -334,15 +278,15 @@ Vraag iemand met technische kennis om via Vercel/de database tijdelijk een
 account weer op actief te zetten — dit is de enige stap in deze hele
 handleiding die (in het uiterste noodgeval) technische hulp vraagt.
 
-**Ik krijg geen e-mails binnen.**
-Gebruik je Resend (Optie A)? Controleer bij Resend (tabblad **Logs**) of de
-mail daadwerkelijk is verstuurd. Zonder eigen domein bij Resend (zie stap 5)
-komen mails alleen aan bij het e-mailadres waarmee jij bij Resend bent
-ingelogd — dit is een beperking van het gratis proefaccount, niet van de app.
-Gebruik je Gmail (Optie B)? Controleer of `SMTP_USER` en `SMTP_PASSWORD`
-kloppen (het moet het 16-tekens app-wachtwoord zijn, niet je gewone
-Gmail-wachtwoord) en of 2-staps-verificatie nog steeds aanstaat op dat
-Google-account.
+**Niemand kan meer bij de app (pagina zegt "Geen toegang vanaf dit netwerk").**
+Je hebt "Netwerkbeveiliging" aangezet (Backend → Instellingen) en het huidige
+netwerk komt niet (meer) overeen met de ingestelde IP-adressen. Heb je bij
+stap 5 een `NETWORK_BYPASS_SECRET` ingesteld? Ga dan vanaf een willekeurig
+netwerk naar `https://jouw-app-url/login?bypass=<die geheime tekst>` om
+tijdelijk weer binnen te komen, en zet de instelling daarna uit of goed bij
+Backend → Instellingen. Geen `NETWORK_BYPASS_SECRET` ingesteld? Vraag dan
+iemand met technische kennis om de instelling in de database uit te zetten —
+zelfde uitzonderingsgeval als hierboven bij "beheerderstoegang kwijt".
 
 **Ik wil een eigen domeinnaam (bijv. `admin.mijnwoongroep.nl`) in plaats
 van het `.vercel.app`-adres.**
@@ -362,10 +306,7 @@ Alle onderstaande waarden vind je terug (en kun je aanpassen) via
 | `DATABASE_URL` | automatisch, via stap 3 | Ja |
 | `CLOUDINARY_URL` (of los: `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET`) | uit je Cloudinary-account, stap 4 | Voor documenten uploaden |
 | `JWT_SECRET` | zelf een lange willekeurige tekst | Ja |
-| `CRON_SECRET` | zelf een lange willekeurige tekst | Voor de maandelijkse e-mails |
-| `RESEND_API_KEY` | uit je Resend-account, stap 5 (Optie A) | Voor e-mail (kies A of B) |
-| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` | uit je Gmail-account, stap 5 (Optie B) | Voor e-mail (kies A of B) |
-| `EMAIL_FROM` | zelf gekozen afzenderadres | Voor e-mail |
-| `GENERAL_EMAIL` / `COORDINATOR_EMAIL` | ingevuld tijdens het eerste opstarten (stap 8), daarna aanpasbaar in de app zelf | Nee, via de app zelf |
+| `CRON_SECRET` | zelf een lange willekeurige tekst | Voor het maandelijkse opschoon-taakje |
+| `NETWORK_BYPASS_SECRET` | zelf een lange willekeurige tekst | Alleen als je Netwerkbeveiliging gebruikt |
 
 Meer technische achtergrond (voor ontwikkelaars) staat in `README.md`.
