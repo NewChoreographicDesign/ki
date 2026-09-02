@@ -31,18 +31,10 @@ export const userSchema = z.object({
   active: z.boolean().optional(),
 });
 
-export const settingSchema = z
-  .object({
-    key: z.string().trim().min(1).max(100),
-    value: z.string().trim().max(2000),
-  })
-  .superRefine((data, ctx) => {
-    // A typo'd "true"/"false" here would silently disable (or worse, never
-    // enable) network restriction, so enforce the exact literal values.
-    if (data.key === "NETWORK_RESTRICTION_ENABLED" && !["true", "false"].includes(data.value)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["value"], message: "Moet 'true' of 'false' zijn" });
-    }
-  });
+export const settingSchema = z.object({
+  key: z.string().trim().min(1).max(100),
+  value: z.string().trim().max(2000),
+});
 
 export const reportSchema = z.object({
   clientId: z.string().min(1),
@@ -97,7 +89,9 @@ export const protocolSchema = z
   .object({
     title: z.string().trim().min(1).max(300),
     content: z.string().trim().max(10000).optional().or(z.literal("")),
-    // Same http(s)-only restriction as documentSchema.url — see there for why.
+    // Restrict to http(s): z.url() alone also accepts javascript:/data: URIs,
+    // which would let a stored link execute script when another staff member
+    // (including an admin) clicks it — a stored self-XSS vector.
     url: z
       .string()
       .trim()
@@ -112,19 +106,6 @@ export const protocolSchema = z
     path: ["content"],
   });
 
-export const documentSchema = z.object({
-  title: z.string().trim().min(1).max(300),
-  // Restrict to http(s): z.url() alone also accepts javascript:/data: URIs,
-  // which would let a stored link execute script when another staff member
-  // (including an admin) clicks it — a stored self-XSS vector.
-  url: z
-    .string()
-    .trim()
-    .url()
-    .refine((value) => /^https?:\/\//i.test(value), "Alleen http(s) links zijn toegestaan"),
-  clientId: z.string().optional().or(z.literal("")),
-  category: z.enum(["GENERAL", "ONBOARDING"]).optional(),
-});
 
 export const weekPlanSchema = z.object({
   clientId: z.string().min(1),

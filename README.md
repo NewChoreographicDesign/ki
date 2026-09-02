@@ -12,10 +12,12 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
 - **Next.js 15 App Router + TypeScript** — server components voor data, client
   components alleen waar interactie nodig is (toggles, formulieren).
 - **Eén Prisma schema** (`prisma/schema.prisma`) met alle entities: `User`,
-  `Client`, `Document`, `Protocol`, `Report`, `Medication` + onomkeerbare
+  `Client`, `Protocol`, `Report`, `Medication` + onomkeerbare
   `MedicationCheck`, `WeekPlan`, `Todo`, `Presence`, `Handover` (auto-expiry),
-  `Appointment`, `Shift`, `Setting`. Eén wijziging in `Client` of `Setting`
-  werkt overal door.
+  `Appointment`, `Shift`, `Setting`, `AuditLog`. Eén wijziging in `Client` of
+  `Setting` werkt overal door. (`Document` bestaat nog in het schema maar
+  wordt niet meer gebruikt — zie [Uploads](#uploads-protocollen) hieronder
+  voor waarom het model bleef staan.)
 - **Auth** — alleen naam + geboortedatum (`DD-MM-JJJJ`), geen wachtwoorden.
   JWT in een `httpOnly`, `secure` cookie (12 uur geldig). Bij inloggen wordt
   automatisch een dienst gestart (ochtend 07:00-15:00 / avond 14:00-23:00,
@@ -37,13 +39,11 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
 - **Security** — Zod-validatie op elke input, `requireAuth()` op alle API's,
   géén update/delete op `MedicationCheck` (onomkeerbaar), overdracht wist
   zichzelf (`expiresAt = shiftEinde + 1u`), rolcontrole (alleen admin ziet
-  Backend en beheert accounts; Documenten uploaden/verwijderen is ook
-  admin-only, via Backend → Documenten, maar iedereen met een account ziet en
-  opent ze via het hoofdmenu; Protocollen toevoegen mag iedereen,
-  verwijderen blijft admin/coördinator), HTTPS via Vercel, een auditlog van
-  gevoelige acties (Backend → Auditlog), automatisch uitloggen na 15 minuten
-  inactiviteit, en een optionele netwerkbeveiliging die de app beperkt tot het
-  IP-adres van de organisatie. Zie
+  Backend en beheert accounts; Protocollen toevoegen mag iedereen, verwijderen
+  blijft admin/coördinator), HTTPS via Vercel, een auditlog van gevoelige
+  acties (Backend → Auditlog), automatisch uitloggen na 15 minuten
+  inactiviteit, en een optionele apparaatbeveiliging die de app beperkt tot
+  vrijgegeven apparaten. Zie
   [Security &amp; privacy](#security--privacy) hieronder voor het volledige
   overzicht van getroffen maatregelen.
 - **UI/UX** — dark mode standaard, sky/emerald accenten, grote touch-targets,
@@ -58,14 +58,13 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
 | Overzicht | `/dashboard` | "Vandaag per kamer" (weekplanning + agenda-afspraken van vandaag, gegroepeerd per cliëntkamer) bovenaan, daaronder stats + snelle acties |
 | Rapportage | `/rapportage` | Rapportage per cliënt/dienst. "Recente rapportages" toont alleen sinds de laatste donderdag |
 | Medicatie | `/medicatie` | Medicatie afvinken per cliënt (onomkeerbaar) |
-| Aanwezigheid | `/aanwezigheid` | Aanwezig/afwezig per cliënt per dag, gedeeld tussen alle accounts (geen per-sessie state) |
+| Aanwezigheid | `/aanwezigheid` | Aanwezig/afwezig per cliënt, gedeeld tussen alle accounts en diensten — blijft staan tot iemand het weer wijzigt (geen dagelijkse reset) |
 | Overdracht | `/overdracht` | Notities die 1 uur na diensteinde verlopen |
 | To-Do's | `/todos` | Openstaande taken bovenaan, daaronder het formulier voor een nieuwe taak. Voor iedereen zichtbaar |
 | Agenda | `/agenda` | Aankomende afspraken bovenaan, daaronder het formulier voor een nieuwe afspraak |
-| Documenten | `/documenten` | Algemeen, per cliënt en "Nieuwe medewerker", voor iedereen zichtbaar. Uploaden/verwijderen alleen via Backend (admin) |
 | Protocollen | `/protocollen` | Algemene en cliëntspecifieke protocollen, als tekst en/of geüpload bestand, voor iedereen |
 | Weekrapport | `/weekrapport` | Downloadbaar overzicht van rapportages, medicatie, to-do's en afspraken sinds afgelopen maandag. Admin + coördinator |
-| Backend | `/backend` | Cliënten, medewerkers, documenten (upload/verwijderen), medicatie beheer, weekplanning, instellingen, auditlog (alleen admin) |
+| Backend | `/backend` | Cliënten, medewerkers, medicatie beheer, weekplanning, instellingen, auditlog (alleen admin) |
 
 ## Vereisten
 
@@ -74,7 +73,7 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
 3. Database: lokaal SQLite (al geconfigureerd) → productie Neon.tech of Vercel
    Postgres (gratis tier)
 4. (Optioneel) Een gratis [Cloudinary](https://cloudinary.com)-account voor
-   documenten/protocollen uploaden
+   protocollen uploaden
 5. Eigen domein (aanbevolen voor de PWA)
 
 ## Lokaal installeren
@@ -85,7 +84,7 @@ npm install
 
 # 2. Environment
 cp .env.example .env
-# Vul .env in: JWT_SECRET (min. 32 tekens), CRON_SECRET, optioneel NETWORK_BYPASS_SECRET
+# Vul .env in: JWT_SECRET (min. 32 tekens), CRON_SECRET, optioneel DEVICE_RESTRICTION_ENABLED/DEVICE_PASSCODE
 
 # 3. Database
 npx prisma db push
@@ -131,11 +130,10 @@ Kort samengevat voor ontwikkelaars:
    dit zet `DATABASE_URL` automatisch.
 3. Zet de overige environment variables: `JWT_SECRET`, `CRON_SECRET`,
    optioneel `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` /
-   `CLOUDINARY_API_SECRET` (documenten/protocollen uploaden — zie de
-   "Uploads"-sectie hieronder), en optioneel `NETWORK_BYPASS_SECRET` (alleen
-   nodig als je later "Netwerkbeveiliging" gaat gebruiken — zie
-   [Netwerkbeveiliging](#netwerkbeveiliging) hieronder, **zet dit vóórdat je
-   die instelling aanzet**).
+   `CLOUDINARY_API_SECRET` (protocollen uploaden — zie de "Uploads"-sectie
+   hieronder), en optioneel `DEVICE_RESTRICTION_ENABLED` / `DEVICE_PASSCODE`
+   (alleen nodig als je "Apparaatbeveiliging" gaat gebruiken — zie
+   [Apparaatbeveiliging](#apparaatbeveiliging) hieronder).
 4. Deploy. Het `vercel-build`-script (`package.json`) regelt de rest
    automatisch, in deze volgorde:
    - `scripts/prepare-datasource.js` zet de Prisma datasource-`provider` om
@@ -157,36 +155,29 @@ Kort samengevat voor ontwikkelaars:
 
 - `/api/cron/retention-purge` — maandelijks (1e van de maand, 04:00 UTC),
   verwijdert `AuditLog`-rijen ouder dan ~2 jaar. Raakt geen cliëntgegevens
-  (rapportages, medicatie, documenten, ...) — zie
+  (rapportages, medicatie, protocollen, ...) — zie
   [Bewaartermijnen](#bewaartermijnen-retention) hieronder voor waarom.
 
 De cron-route vereist de header `Authorization: Bearer <CRON_SECRET>`
 (Vercel Cron stuurt dit automatisch mee wanneer `CRON_SECRET` is ingesteld).
 
-### Uploads (documenten/protocollen)
+### Uploads (protocollen)
 
-Documenten uploaden gebeurt alleen via **Backend → Documenten**
-(`app/(app)/backend/documenten/page.tsx`, admin-only — de backend-layout
-gate zorgt hiervoor) en heeft een ingebouwde upload-knop met voortgangsbalk:
-een gekozen bestand (PDF, Word, Excel, afbeelding, tekst — max 4 MB) gaat
-als `multipart/form-data` naar `app/api/documents/upload/route.ts` (dezelfde
-origin, na een `requireAuth([ADMIN])`-check en een whitelist van toegestane
-content-types uit `lib/file-upload.ts`), die op de server zelf het bestand
-naar [Cloudinary](https://cloudinary.com) stuurt (`lib/cloudinary.ts`).
-Voortgang wordt bijgehouden via een `XMLHttpRequest`-helper
-(`lib/client-upload.ts`) omdat `fetch()` geen upload-voortgang kan
-rapporteren.
+**Protocollen** (`/protocollen`, hoofdmenu, elke rol mag toevoegen) staan
+niet verplicht als tekst: `Protocol.content` en `Protocol.url` zijn allebei
+optioneel, zolang er minimaal één is ingevuld (afgedwongen door een
+`.refine()` op `protocolSchema`). Een geüpload bestand (PDF, Word, Excel,
+afbeelding, tekst — max 4 MB) gaat als `multipart/form-data` naar
+`app/api/protocols/upload/route.ts` (dezelfde origin, na een
+`requireAuth()`-check en een whitelist van toegestane content-types uit
+`lib/file-upload.ts`), die op de server zelf het bestand naar
+[Cloudinary](https://cloudinary.com) stuurt (`lib/cloudinary.ts`). Voortgang
+wordt bijgehouden via een `XMLHttpRequest`-helper (`lib/client-upload.ts`)
+omdat `fetch()` geen upload-voortgang kan rapporteren.
 
-Dit project gebruikte eerst Vercel Blob, zowel de rechtstreekse
-browser-naar-Vercel-upload (`@vercel/blob/client`'s `upload()`) als een
-server-bemiddelde variant (`put()`) — beide gaven in productie consistent
-een onleesbare `400` terug van Vercel's eigen Blob-API, ook tegen een
-volledig nieuw aangemaakte store, zonder duidelijke oorzaak. Overgestapt op
-Cloudinary via onze eigen server lost dit op. Bestanden gaan nog steeds via
-onze server (niet rechtstreeks van de browser naar Cloudinary), dus de
-bestandslimiet blijft 4 MB — dat is Vercel's harde platformlimiet voor het
-request-body van één Serverless Function, ongeacht welke opslagdienst
-daarachter zit.
+Bestanden gaan via onze eigen server (niet rechtstreeks van de browser naar
+Cloudinary), dus de bestandslimiet blijft 4 MB — dat is Vercel's harde
+platformlimiet voor het request-body van één Serverless Function.
 
 Elke upload zet expliciet `access_mode: "public"` mee (in
 `lib/cloudinary.ts`): een nieuw Cloudinary-account levert niet-afbeeldingen
@@ -197,32 +188,23 @@ geopend. Dit voorkomt dat.
 > **Let op bij Cloudinary-instellingen:** los van bovenstaande blokkeert een
 > nieuw Cloudinary-account soms ook de aflevering van PDF/ZIP-bestanden
 > volledig (een apart, account-breed beveiligingsschakelaartje). Krijg je
-> alsnog een `401` bij het openen van een geüpload PDF-document? Zet dan
+> alsnog een `401` bij het openen van een geüpload PDF-bestand? Zet dan
 > **Settings → Security → "Allow delivery of PDF and ZIP files"** aan in het
 > Cloudinary-dashboard.
 
-De hoofdmenu-pagina `/documenten` deelt dezelfde `DocumentManager`-component
-maar met `canUpload={false}` en `canDelete={false}` — puur bekijken/openen,
-voor elke ingelogde rol. De upload breekt na 60s automatisch af met een
-duidelijke melding als de verbinding vastloopt. Zonder Cloudinary-configuratie
-(`CLOUDINARY_CLOUD_NAME`/`CLOUDINARY_API_KEY`/`CLOUDINARY_API_SECRET`
-ontbreken) geeft die route een `503` met `code: "STORAGE_NOT_CONFIGURED"`
-terug; de UI toont dan een duidelijke melding en biedt "Ik heb al een link
-naar een document" als alternatief, dat gewoon
-een URL opslaat.
+Zonder Cloudinary-configuratie (`CLOUDINARY_CLOUD_NAME`/`CLOUDINARY_API_KEY`/
+`CLOUDINARY_API_SECRET` ontbreken) geeft die route een `503` met
+`code: "STORAGE_NOT_CONFIGURED"` terug; de UI toont dan een duidelijke
+melding — een protocol kan dan nog steeds als tekst en/of link worden
+toegevoegd.
 
-Documenten zonder gekoppelde cliënt horen bij een van twee "threads",
-gekozen via het veld "Hoort bij": **Algemeen** of **Nieuwe medewerker**
-(opgeslagen als `Document.category`, enum `GENERAL`/`ONBOARDING`). Een
-document met een gekoppelde cliënt hoort altijd bij die cliënt, ongeacht
-category. De documentenpagina toont deze als tabbladen (Algemeen, Nieuwe
-medewerker, per cliënt) die de zichtbare lijst client-side filteren.
-
-**Protocollen** (`/protocollen`, hoofdmenu, elke rol mag toevoegen) staan
-niet meer verplicht als tekst: `Protocol.content` en `Protocol.url` zijn
-allebei optioneel, zolang er minimaal één is ingevuld (afgedwongen door een
-`.refine()` op `protocolSchema`). Een geüpload bestand gebruikt dezelfde
-upload-flow als documenten, via `app/api/protocols/upload/route.ts`.
+> **De Documenten-module (upload + hoofdmenu-weergave) is verwijderd** uit de
+> app. Het onderliggende `Document`-model staat nog wel in
+> `prisma/schema.prisma`, bewust ongebruikt: het verwijderen zou `prisma db
+> push` bij de volgende deploy laten falen als destructieve wijziging (of
+> stilzwijgend bestaande documentgegevens verwijderen op een live
+> installatie). Was er al iets geüpload? Dat blijft gewoon in de database
+> staan, alleen niet meer zichtbaar in de app.
 
 **Cliënten** hebben een optioneel "Kamer"-veld (`Client.room`), instelbaar
 bij aanmaken en direct in de lijst te wijzigen (Backend → Cliënten). Het
@@ -252,48 +234,61 @@ platte tekst (`.txt`) teruggeeft (`app/api/weekrapport/download/route.ts`).
 Niets wordt automatisch verstuurd of ergens naartoe gepusht — admin/
 coördinator halen het overzicht zelf op wanneer ze het nodig hebben.
 
-### Netwerkbeveiliging
+### Apparaatbeveiliging
 
-Optionele instelling (Backend → Instellingen → Netwerkbeveiliging) die de
-hele app beperkt tot een IP-allowlist (bv. het publieke IP-adres van het
-kantoornetwerk). Uitgeschakeld is de standaard — bestaande installaties
-blijven dus ongewijzigd werken.
+Optionele functie die de hele app (inclusief `/login`) beperkt tot apparaten
+die één keer een wachtwoord hebben ingevoerd op `/apparaat`. Uitgeschakeld is
+de standaard — bestaande installaties blijven dus ongewijzigd werken.
 
-**Technische opzet:** Next.js Middleware draait altijd op de Edge-runtime,
-waar Prisma niet werkt (geen TCP-verbinding naar Postgres mogelijk). De
-toggle staat daarom gewoon in de `Setting`-tabel (bewerkbaar via de normale
-Instellingen-UI), maar `middleware.ts` leest hem niet rechtstreeks: het doet
-een interne `fetch()` naar `/api/internal/network-policy`
-(`lib/network-policy.ts`), een gewone Node.js-route die wél bij Prisma kan.
-Die route cachet de instelling 30 seconden in het geheugen, dus een wijziging
-werkt binnen ~30s overal door. Gaat die interne check om wat voor reden dan
-ook mis (time-out, foutcode), dan valt middleware **open** terug (toegang
-toestaan) — dit is een extra beveiligingslaag, geen vervanging voor de
-eigenlijke AVG-grondslag, dus een storing hierin mag de hele app niet
-platleggen voor alle gebruikers.
+**Waarom niet op IP-adres?** Deze functie verving een eerdere versie die op
+IP-adres restricteerde ("Netwerkbeveiliging"). Dat bleek onbetrouwbaar zodra
+het publieke IP-adres van de internetverbinding wisselt (heel gewoon bij
+consumenten-/kleinzakelijk internet zonder vast IP) — de app werd dan voor
+iedereen onbereikbaar, met geen enkele manier om er via de app zelf iets aan
+te doen. Apparaatbeveiliging heeft dat probleem niet: eenmaal vrijgegeven
+blijft een apparaat vrijgegeven, ongeacht het netwerk waarop het verbindt.
 
-> **Waarschuwing — risico op uitsluiting.** Als je dit inschakelt met een
-> verkeerd, verouderd of te specifiek IP-adres, kan **niemand meer inloggen**
-> totdat het IP-adres van het netwerk weer overeenkomt met de instelling —
-> ook een admin niet, want de check geldt voor de hele app inclusief
-> `/login`. Zet daarom **`NETWORK_BYPASS_SECRET`** (een lange willekeurige
-> tekst) als environment variable in Vercel **voordat** je dit aanzet. Ben je
-> ooit buitengesloten? Ga vanaf een willekeurig netwerk naar
-> `https://<jouw-app-url>/login?bypass=<NETWORK_BYPASS_SECRET-waarde>` — dat
-> zet een 24-uurs cookie dat de IP-check omzeilt, log in, en zet de instelling
-> weer uit of goed bij Backend → Instellingen. Zonder `NETWORK_BYPASS_SECRET`
-> ingesteld werkt deze noodtoegang niet.
->
-> Alleen IPv4 wordt ondersteund; een bezoeker over IPv6 matcht nooit een
-> geconfigureerd bereik. De instellingenpagina toont je huidige IP-adres als
-> hulp bij het invullen.
+**Instellen:** zet twee environment variables in Vercel:
+
+| Naam | Waarde | Uitleg |
+|---|---|---|
+| `DEVICE_RESTRICTION_ENABLED` | `true` | Zet de beperking aan |
+| `DEVICE_PASSCODE` | een lange, moeilijk te raden tekst | Het apparaat-wachtwoord — geen 4-cijferige pincode, want er zit geen pogingslimiet op (zelfde reden als bij `JWT_SECRET`/`CRON_SECRET`) |
+
+Op elk apparaat dat toegang moet krijgen: open de app, je wordt doorgestuurd
+naar `/apparaat`, voer `DEVICE_PASSCODE` in. Dat zet een `httpOnly`-cookie
+(`device_token`, 10 jaar geldig — zie `lib/device-auth.ts`) die verder los
+staat van de gewone 12-uurs sessie-cookie; iedereen kan zich daarna nog
+gewoon met naam + geboortedatum aanmelden.
+
+**Bewust géén in-app schakelaar.** Dit staat expres alleen in environment
+variables, niet als toggle in Backend → Instellingen: een schakelaar die de
+hele app kan blokkeren — inclusief de pagina waarmee je hem weer uitzet — is
+precies hoe de vorige (IP-gebaseerde) versie tot een lockout leidde. Zit je
+toch vast? Zet `DEVICE_RESTRICTION_ENABLED` terug op `false` in Vercel en
+redeploy — dat lukt altijd, want het vereist alleen toegang tot het
+Vercel-dashboard, niet tot de app zelf.
+
+**`DEVICE_PASSCODE` roteren = alle apparaten in één keer intrekken.**
+Middleware verifieert bij elk verzoek niet alleen de cookie's handtekening,
+maar ook een hash van de *huidige* `DEVICE_PASSCODE`-waarde die in de cookie
+zit ingebakken (`lib/device-auth.ts`). Wijzig je `DEVICE_PASSCODE` (en
+redeploy je), dan werken alle eerder vrijgegeven apparaten niet meer — handig
+als een apparaat kwijt is of iemand er geen toegang meer toe hoort te hebben.
+Er is geen granulariteit per apparaat (geen naam/label/losse intrekking) —
+voor een klein aantal gedeelde iPads is dat proportioneel; alles-of-niets
+roteren is de enige hefboom.
+
+Vercel Cron (`/api/cron/*`) en `/apparaat` zelf zijn altijd uitgezonderd van
+deze check (anders zou niemand een apparaat ooit kunnen vrijgeven, en Vercel
+Cron heeft toch geen `device_token`-cookie).
 
 ### Bewaartermijnen (retention)
 
 De retention-cron (`/api/cron/retention-purge`, zie "Cron jobs" hierboven)
 verwijdert alleen oude `AuditLog`-rijen (~2 jaar). Cliëntgegevens
-(rapportages, medicatie(-checks), documenten, protocollen, aanwezigheid)
-worden **nooit** automatisch verwijderd: hoe lang die bewaard moeten/mogen
+(rapportages, medicatie(-checks), protocollen, aanwezigheid) worden **nooit**
+automatisch verwijderd: hoe lang die bewaard moeten/mogen
 blijven is een juridische afweging voor de organisatie zelf (in Nederland
 wijst de WGBO doorgaans naar een bewaartermijn van 20 jaar voor medische
 behandeldossiers), niet iets om stilzwijgend te automatiseren. Wil je hier
@@ -307,15 +302,14 @@ termijn geldt voor jullie type zorg, en voeg dat gericht toe.
 3. Dashboard toont bovenaan "Vandaag per kamer" (weekplanning + afspraken van vandaag, per cliëntkamer), daaronder stats + snelle knoppen.
 4. **Rapportage** → kies cliënt + dienst + datum → typ → verstuur. "Recente rapportages" toont alleen wat sinds afgelopen donderdag is toegevoegd; het volledige overzicht staat ook in het **Weekrapport**.
 5. **Medicatie** → open cliënt → vink af (kan niet ongedaan worden gemaakt).
-6. **Aanwezigheid** → tik Aanwezig/Afwezig (met optioneel commentaar). Gedeeld tussen iedereen die inlogt, blijft de hele dag staan totdat iemand het aanpast.
+6. **Aanwezigheid** → tik Aanwezig/Afwezig (met optioneel commentaar). Gedeeld tussen iedereen die inlogt en alle diensten; blijft staan totdat iemand het weer aanpast (geen dagelijkse reset).
 7. **Overdracht** → typ notitie → wordt 1 uur na diensteinde automatisch gewist.
 8. **To-Do's** → openstaande taken bovenaan, formulier voor een nieuwe taak eronder. Voor iedereen zichtbaar.
 9. **Agenda** → aankomende afspraken bovenaan, formulier voor een nieuwe afspraak eronder.
-10. **Documenten** → upload of link toevoegen, kies "Hoort bij" (Algemeen, Nieuwe medewerker of een cliënt); tabbladen filteren de lijst. Voor iedereen; verwijderen alleen voor admin/coördinator.
-11. **Protocollen** → algemeen of per cliënt. Voor iedereen; verwijderen alleen voor admin/coördinator.
-12. **Weekrapport** (admin + coördinator) → rapportages, medicatie, to-do's en afspraken sinds afgelopen maandag, met een downloadknop.
-13. **Backend** (alleen admin) → cliënten (incl. kamer), medewerkers, instellingen, netwerkbeveiliging, auditlog, medicatie, weekplanning. Eén wijziging = overal doorgevoerd.
-14. Uitloggen rechtsonder in de zijbalk, of automatisch na 15 minuten inactiviteit.
+10. **Protocollen** → algemeen of per cliënt, tekst en/of geüpload bestand. Voor iedereen; verwijderen alleen voor admin/coördinator.
+11. **Weekrapport** (admin + coördinator) → rapportages, medicatie, to-do's en afspraken sinds afgelopen maandag, met een downloadknop.
+12. **Backend** (alleen admin) → cliënten (incl. kamer), medewerkers, instellingen, auditlog, medicatie, weekplanning. Eén wijziging = overal doorgevoerd.
+13. Uitloggen rechtsonder in de zijbalk, of automatisch na 15 minuten inactiviteit.
 
 Diensttijd wordt automatisch bijgehouden bij login.
 
@@ -355,13 +349,13 @@ volgende, concreet geïmplementeerde maatregelen:
   worden bij het opstarten geweigerd wanneer ze exact de voorbeeldwaarde uit
   `.env.example` bevatten — voorkomt dat een vergeten "verander dit"-stap
   leidt tot vervalsbare sessies of een vrij aanroepbaar cron-endpoint.
-- **Geen self-XSS via documentlinks.** `Document.url` accepteert alleen
+- **Geen self-XSS via protocol-links.** `Protocol.url` accepteert alleen
   `http(s)`-links (`lib/validations.ts`); zonder die check zou een
-  `javascript:`-URL als "document" kunnen worden opgeslagen en bij een klik
+  `javascript:`-URL als "protocol" kunnen worden opgeslagen en bij een klik
   door een andere medewerker of admin script uitvoeren.
 - **Auditlog van gevoelige acties.** Inloggen (incl. mislukte pogingen),
-  aanmaken/wijzigen van cliënten en accounts, verwijderen van documenten/
-  protocollen en instellingswijzigingen worden gelogd (`AuditLog`-model,
+  aanmaken/wijzigen van cliënten en accounts, verwijderen van protocollen
+  en instellingswijzigingen worden gelogd (`AuditLog`-model,
   `lib/audit.ts`), zichtbaar via Backend → Auditlog (alleen admin). Bewust
   beperkt tot schrijfacties, niet elke paginaweergave — dat laatste zou een
   database-write aan elke request toevoegen voor weinig onderzoekswaarde.
@@ -370,9 +364,10 @@ volgende, concreet geïmplementeerde maatregelen:
   sessie en de volgende die het scherm aanraakt ziet cliëntgegevens.
   `components/idle-logout.tsx` logt na 15 minuten zonder muis/toetsenbord/
   touch-interactie automatisch uit, los van de 12-uurs JWT-sessieduur.
-- **Optionele netwerkbeveiliging.** Beperk de hele app tot een IP-allowlist
-  (bv. het kantoornetwerk) — zie [Netwerkbeveiliging](#netwerkbeveiliging)
-  hierboven, inclusief de noodtoegang tegen uitsluiting.
+- **Optionele apparaatbeveiliging.** Beperk de hele app tot vrijgegeven
+  apparaten, env-var-gestuurd (bewust geen in-app schakelaar die zelf tot
+  uitsluiting kan leiden) — zie
+  [Apparaatbeveiliging](#apparaatbeveiliging) hierboven.
 - **Browserbeveiligingsheaders**: `X-Frame-Options: DENY`
   (clickjacking-bescherming op de loginpagina), HSTS, `X-Content-Type-Options:
   nosniff` en een `Permissions-Policy` die camera/microfoon/locatie
@@ -398,11 +393,9 @@ volgende, concreet geïmplementeerde maatregelen:
   maakt het allereerste account aan en weigert daarna permanent — zodra
   `db.user.count() > 0` is de route dood. Een productie-deploy bevat dus
   nooit voorspelbare seed-accounts zoals bij lokale ontwikkeling.
-- **Uploads zijn beperkt.** Documenten uploaden/verwijderen is admin-only
-  (`app/api/documents/upload/route.ts`, `app/api/documents/[id]/route.ts`);
-  protocollen uploaden mag elke ingelogde rol
+- **Uploads zijn beperkt.** Protocollen uploaden mag elke ingelogde rol
   (`app/api/protocols/upload/route.ts`), verwijderen blijft ADMIN/COORDINATOR.
-  Beide whitelist't content-types en beperkt de bestandsgrootte tot 4 MB
+  Whitelist van content-types en een bestandsgrootte-limiet van 4 MB
   (`lib/file-upload.ts`) — bewust laag omdat uploads via onze eigen server
   naar Cloudinary lopen, niet rechtstreeks van de browser naar externe
   opslag; zie de "Uploads"-sectie hierboven voor waarom.

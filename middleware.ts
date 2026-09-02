@@ -1,21 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
-import { getRequestIp, ipMatchesAny } from "@/lib/ip-match";
+import { isDeviceRestrictionEnabled, verifyDeviceToken, DEVICE_TOKEN_COOKIE } from "@/lib/device-auth";
 
 const COOKIE_NAME = "session";
-const BYPASS_COOKIE_NAME = "network_bypass";
-const BYPASS_COOKIE_MAX_AGE = 24 * 60 * 60; // 24 hours
 // "/" is public at the middleware layer because the page itself decides
 // where to send an unauthenticated visitor (first-run "/setup" wizard vs.
 // "/login") based on whether any user exists yet — middleware can't do that
 // DB lookup at the edge, so it must let the request through untouched.
 const PUBLIC_PATHS = ["/", "/login", "/setup"];
 const BACKEND_ROLES = new Set(["ADMIN"]);
-// Never subject to network restriction: Vercel Cron calls these with a
-// bearer-token secret, not from the office network, and the internal
-// network-policy endpoint must stay reachable so the check below doesn't
-// deadlock on itself.
-const NETWORK_CHECK_EXEMPT_PREFIXES = ["/api/cron", "/api/internal/network-policy"];
+// Always reachable regardless of device restriction: the unlock page/API
+// themselves (or nobody could ever unlock a new device), and cron (Vercel's
+// scheduler has no device cookie and is separately authenticated via
+// CRON_SECRET).
+const DEVICE_CHECK_EXEMPT_PREFIXES = ["/apparaat", "/api/device", "/api/cron"];
 
 function getSecretKey() {
   const secret = process.env.JWT_SECRET;
@@ -36,11 +34,8 @@ function buildCspHeader(nonce: string): string {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self' data:",
-    // Uploads (documents/protocols) go through our own server (same-origin)
-    // rather than a direct browser-to-Vercel-Blob request — see
-    // app/api/documents/upload/route.ts for why — so 'self' covers it.
-    // Opening an uploaded file is a plain link navigation, not fetch/XHR,
-    // so *.public.blob.vercel-storage.com doesn't need to be listed here.
+    // Uploads (protocollen) go through our own server (same-origin) rather
+    // than a direct browser-to-storage request, so 'self' covers it.
     "connect-src 'self'",
     "object-src 'none'",
     "frame-ancestors 'none'",
@@ -50,28 +45,8 @@ function buildCspHeader(nonce: string): string {
   ].join("; ");
 }
 
-/**
- * Asks /api/internal/network-policy (Node.js runtime, has DB access) whether
- * network restriction is on and, if so, whether this request's IP is in the
- * allowed list. Fails OPEN on any error (unreachable, non-200, bad JSON) —
- * this is a defense-in-depth mitigation, not the app's actual legal basis
- * for processing client data, so an outage of this one check must not take
- * the whole app down for every legitimate user.
- */
-async function isNetworkAllowed(request: NextRequest): Promise<boolean> {
-  try {
-    const res = await fetch(new URL("/api/internal/network-policy", request.url));
-    if (!res.ok) return true;
-    const policy = (await res.json()) as { enabled: boolean; allowedIps: string[] };
-    if (!policy.enabled) return true;
-    return ipMatchesAny(getRequestIp(request.headers), policy.allowedIps);
-  } catch {
-    return true;
-  }
-}
-
 export async function middleware(request: NextRequest) {
-  const { pathname, searchParams } = request.nextUrl;
+  const { pathname } = request.nextUrl;
 
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const csp = buildCspHeader(nonce);
@@ -79,60 +54,43 @@ export async function middleware(request: NextRequest) {
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("Content-Security-Policy", csp);
 
-  // Emergency unlock: visiting any URL with ?bypass=<NETWORK_BYPASS_SECRET>
-  // grants a 24h bypass cookie regardless of network restriction. Without
-  // this, an admin who enables network restriction while off-network (or
-  // whose office IP later changes) would be permanently locked out of their
-  // own app with no way back in — see README before turning this feature on.
-  const bypassSecret = process.env.NETWORK_BYPASS_SECRET;
-  const bypassParam = searchParams.get("bypass");
-  const grantingBypass = Boolean(bypassSecret && bypassParam && bypassParam === bypassSecret);
-  const hasBypassCookie = request.cookies.get(BYPASS_COOKIE_NAME)?.value === "1";
-
-  function applyExtras(response: NextResponse) {
+  function next() {
+    const response = NextResponse.next({ request: { headers: requestHeaders } });
     response.headers.set("Content-Security-Policy", csp);
-    if (grantingBypass) {
-      response.cookies.set(BYPASS_COOKIE_NAME, "1", {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        path: "/",
-        maxAge: BYPASS_COOKIE_MAX_AGE,
-      });
-    }
     return response;
   }
 
-  function next() {
-    return applyExtras(NextResponse.next({ request: { headers: requestHeaders } }));
-  }
-
   function redirect(url: URL) {
-    return applyExtras(NextResponse.redirect(url));
+    const response = NextResponse.redirect(url);
+    response.headers.set("Content-Security-Policy", csp);
+    return response;
   }
 
   function json(body: unknown, status: number) {
-    return applyExtras(NextResponse.json(body, { status }));
+    const response = NextResponse.json(body, { status });
+    response.headers.set("Content-Security-Policy", csp);
+    return response;
   }
 
-  const networkExempt = NETWORK_CHECK_EXEMPT_PREFIXES.some((p) => pathname.startsWith(p));
-  if (!networkExempt && !grantingBypass && !hasBypassCookie) {
-    const allowed = await isNetworkAllowed(request);
-    if (!allowed) {
+  // Device restriction (Backend/env-configured, see lib/device-auth.ts):
+  // gates the ENTIRE app, including /login and /setup, behind a one-time
+  // per-device passcode unlock at /apparaat. Deliberately env-var-gated
+  // (DEVICE_RESTRICTION_ENABLED/DEVICE_PASSCODE), not an in-app toggle —
+  // an in-app toggle for something that can block the whole app (including
+  // the settings page you'd use to undo it) is a lockout waiting to happen,
+  // which is exactly what happened with the IP-based network restriction
+  // this replaces. Recovery here only ever requires Vercel dashboard access
+  // (flip the env var, redeploy), same as JWT_SECRET/CRON_SECRET issues.
+  const deviceExempt = DEVICE_CHECK_EXEMPT_PREFIXES.some((p) => pathname.startsWith(p));
+  if (!deviceExempt && isDeviceRestrictionEnabled()) {
+    const deviceToken = request.cookies.get(DEVICE_TOKEN_COOKIE)?.value;
+    if (!(await verifyDeviceToken(deviceToken))) {
       if (pathname.startsWith("/api")) {
-        return json({ error: "Dit netwerk heeft geen toegang tot deze app" }, 403);
+        return json({ error: "Dit apparaat is niet vrijgegeven" }, 403);
       }
-      return applyExtras(
-        new NextResponse(
-          "<!doctype html><html lang=\"nl\"><meta charset=\"utf-8\">" +
-            "<title>Geen toegang</title>" +
-            "<body style=\"font-family:system-ui;padding:3rem;text-align:center;color:#334\">" +
-            "<h1>Geen toegang vanaf dit netwerk</h1>" +
-            "<p>Deze app is alleen bereikbaar vanaf het netwerk van de organisatie.</p>" +
-            "</body></html>",
-          { status: 403, headers: { "content-type": "text/html; charset=utf-8" } }
-        )
-      );
+      const unlockUrl = new URL("/apparaat", request.url);
+      unlockUrl.searchParams.set("next", pathname);
+      return redirect(unlockUrl);
     }
   }
 
@@ -140,7 +98,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/setup") ||
     pathname.startsWith("/api/cron") ||
-    pathname.startsWith("/api/internal") ||
+    pathname.startsWith("/api/device") ||
+    pathname.startsWith("/apparaat") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
     pathname.startsWith("/manifest") ||

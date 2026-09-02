@@ -14,7 +14,7 @@ werkende versie van de app online staan, die je zelf kunt bijhouden.
 1. Een gratis account aanmaken bij **Vercel** (waar de app op komt te draaien).
 2. De app daar "importeren" vanuit GitHub (de code staat daar al klaar).
 3. Twee gratis opslagdiensten koppelen: één voor de **database** (waar alle
-   gegevens in komen) en één voor **documenten/bestanden**.
+   gegevens in komen) en één voor **bestanden bij protocollen**.
 4. De app voor het eerst openen en je eigen beheerdersaccount aanmaken.
 5. Klaar — vanaf nu werkt alles via de app zelf.
 
@@ -74,12 +74,12 @@ koppelt.
 
 ---
 
-## Stap 4 — Bestandsopslag toevoegen (voor documenten/protocollen)
+## Stap 4 — Bestandsopslag toevoegen (voor protocollen)
 
-Dit zorgt ervoor dat je straks in de app met één klik documenten (PDF's,
-Word-bestanden, foto's) kunt uploaden. Dit gebeurt via een aparte, gratis
-dienst genaamd **Cloudinary** (niet via Vercel zelf) — je maakt hier een
-account aan en kopieert één code over naar Vercel, in stap 5 hieronder.
+Dit zorgt ervoor dat je straks bij een protocol een bestand (PDF, Word,
+foto) kunt uploaden. Dit gebeurt via een aparte, gratis dienst genaamd
+**Cloudinary** (niet via Vercel zelf) — je maakt hier een account aan en
+kopieert één code over naar Vercel, in stap 5 hieronder.
 
 1. Ga naar [cloudinary.com](https://cloudinary.com) en maak een gratis
    account aan ("Sign up for free").
@@ -93,8 +93,9 @@ account aan en kopieert één code over naar Vercel, in stap 5 hieronder.
 4. Bewaar dit tijdelijk (bijvoorbeeld in een kladblok) — je vult het zo
    dadelijk in bij stap 5.
 
-> Sla je deze stap over? Dan werkt de rest van de app gewoon, alleen het
-> uploaden van documenten nog niet. Je kunt dit later altijd alsnog doen.
+> Sla je deze stap over? Dan werkt de rest van de app gewoon; bij een
+> protocol kun je dan nog steeds tekst en/of een link toevoegen, alleen geen
+> bestand uploaden.
 
 ---
 
@@ -110,8 +111,8 @@ Voor elke regel: vul de **Name** (naam) en **Value** (waarde) in en klik op
 | `JWT_SECRET` | een lange, willekeurige tekst van minstens 40 tekens | Zie hieronder hoe je dit maakt |
 | `CRON_SECRET` | ook een lange, willekeurige tekst | Beveiligt het automatische opschoon-taakje dat 1x per maand draait |
 
-**Voor documenten/protocollen uploaden** (optioneel, sla stap 4 over als je
-dit niet wilt): wat je in stap 4 bij Cloudinary hebt bewaard. Heb je de hele
+**Voor protocollen uploaden** (optioneel, sla stap 4 over als je dit niet
+wilt): wat je in stap 4 bij Cloudinary hebt bewaard. Heb je de hele
 `CLOUDINARY_URL=cloudinary://...`-regel gekopieerd? Vul dan **alleen** deze
 ene rij in — plak de hele waarde (inclusief `cloudinary://` maar zonder het
 stuk `CLOUDINARY_URL=` ervoor) bij "Value":
@@ -145,14 +146,13 @@ voor de app) — gebruik voor elk van de twee een andere tekst.
   `.env.example` in het echt — die is expres onveilig gemaakt en wordt door
   de app zelf geweigerd.
 
-> **Optioneel — alleen als je later "Netwerkbeveiliging" gaat gebruiken**
-> (de app dan alleen laten werken op het netwerk van je organisatie, zie
-> "Wat kun je hierna doen in de app?" hieronder): voeg dan nu alvast een
-> derde regel toe, `NETWORK_BYPASS_SECRET`, met weer een eigen lange
-> willekeurige tekst (zelfde methode als hierboven). Dit is je "noodsleutel"
-> mocht je jezelf ooit per ongeluk buitensluiten — bewaar hem ergens veilig
-> (een wachtwoordmanager). Gebruik je die functie nooit? Dan kun je deze
-> regel gewoon overslaan.
+> **Optioneel — alleen als je "Apparaatbeveiliging" gaat gebruiken** (de app
+> dan alleen laten werken op vrijgegeven apparaten, bv. de kantoor-iPads —
+> zie "Wat kun je hierna doen in de app?" hieronder): voeg dan nu alvast twee
+> rijen toe: `DEVICE_RESTRICTION_ENABLED` met waarde `true`, en
+> `DEVICE_PASSCODE` met een eigen lange willekeurige tekst (zelfde methode
+> als hierboven — geen simpel 4-cijferig pincode, want er zit geen
+> pogingslimiet op). Gebruik je die functie niet? Dan sla je dit gewoon over.
 
 ---
 
@@ -174,7 +174,9 @@ voor de app) — gebruik voor elk van de twee een andere tekst.
 
 Bij het openen van de app voor de allereerste keer zie je automatisch een
 welkomstscherm ("Welkom bij Woongroep Admin"). Dit verschijnt **alleen**
-zolang er nog geen enkel account bestaat.
+zolang er nog geen enkel account bestaat. (Heb je bij stap 5
+`DEVICE_RESTRICTION_ENABLED` aangezet? Dan vraagt de app eerst één keer om
+het apparaat-wachtwoord op `/apparaat`, voordat je het welkomstscherm ziet.)
 
 1. Vul je eigen naam in.
 2. Vul je geboortedatum in (DD-MM-JJJJ). Er is bewust geen wachtwoord — naam
@@ -187,37 +189,20 @@ eventuele collega's toe via **Backend → Medewerkers**.
 
 ---
 
-## Documenten en protocollen in de app krijgen
+## Protocollen in de app krijgen
 
-Dit is de eenvoudigste stap van allemaal, zodra stap 4 en 5 hierboven
-(Cloudinary-account + de drie waarden invullen bij Environment Variables)
-zijn gedaan:
+Protocollen staan in het hoofdmenu voor iedereen (geen Backend nodig): ga
+naar **Protocollen**, typ de titel en eventueel inhoud als tekst, en/of
+upload een bestand (PDF, Word, Excel of een foto — tot 4 MB) — minstens één
+van de twee is verplicht — en klik op **Toevoegen**. Verwijderen kan alleen
+door een admin of coördinator.
 
-1. Log in als admin en ga naar **Backend → Documenten** (alleen een admin
-   ziet en gebruikt dit; iedereen met een account kan de documenten
-   daarna wél gewoon bekijken en openen via **Documenten** in het hoofdmenu).
-2. Klik bij **Bestand** op **Bestand kiezen** en selecteer het document van
-   je computer (PDF, Word, Excel of een foto — tot 4 MB per bestand).
-3. De **Titel** wordt automatisch overgenomen van de bestandsnaam; pas hem
-   aan als je wilt.
-4. Kies bij **Hoort bij** waar het document bij hoort: "Algemeen", "Nieuwe
-   medewerker" (voor onboarding-documenten), of een specifieke cliënt.
-5. Klik op **Uploaden** — een voortgangsbalk laat zien hoe ver de upload is.
-   Klaar — het document staat direct in het bijbehorende tabblad. Verwijderen
-   kan ook alleen via Backend → Documenten, door een admin.
-
-Protocollen werken net zo, maar staan gewoon in het hoofdmenu voor iedereen
-(geen Backend nodig): ga naar **Protocollen**, typ de titel en eventueel
-inhoud als tekst, en/of upload een bestand — minstens één van de twee is
-verplicht — en klik op **Toevoegen**.
-
-> **Zie je de melding "Uploaden lukt niet"?** Dan zijn de drie
+> **Zie je de melding "Uploaden lukt niet"?** Dan zijn de
 > `CLOUDINARY_*`-waarden uit stap 4/5 hierboven waarschijnlijk nog niet
 > (goed) ingevuld, of de laatste deploy dateert van vóór het invullen.
 > Controleer de waarden en doorloop stap 6 nogmaals (opnieuw deployen) en
-> probeer het daarna nogmaals. Je kunt ondertussen ook gewoon
-> een link naar een bestand toevoegen via **"Ik heb al een link naar een
-> document"** onder de uploadknop.
+> probeer het daarna nogmaals. Je kunt ondertussen ook gewoon tekst en/of een
+> link toevoegen in plaats van een bestand.
 
 ---
 
@@ -229,27 +214,28 @@ verplicht — en klik op **Toevoegen**.
     kamernummer, dat op het dashboard gebruikt wordt).
   - **Backend → Medewerkers**: collega's toevoegen (naam + geboortedatum +
     rol: medewerker, coördinator of admin).
-  - **Backend → Documenten**: documenten uploaden en verwijderen (zie
-    hierboven).
   - **Backend → Medicatie beheer**: medicatie per cliënt instellen, met
     tijden en instructies.
   - **Backend → Weekplanning**: het weekschema per cliënt instellen.
-  - **Backend → Instellingen**: organisatienaam en
-    **Netwerkbeveiliging** — optioneel de app beperken tot het netwerk van
-    je organisatie (op IP-adres). Lees de waarschuwing op die pagina eerst
-    goed door: verkeerd ingesteld kan dit iedereen (ook een admin) buitensluiten.
+  - **Backend → Instellingen**: organisatienaam.
   - **Backend → Auditlog**: overzicht van wie wat heeft gedaan (inloggen,
-    cliënten/accounts aanmaken of wijzigen, documenten verwijderen,
+    cliënten/accounts aanmaken of wijzigen, protocollen verwijderen,
     instellingen wijzigen).
 - **Weekrapport** (zichtbaar voor admin en coördinator): rapportages,
   afgevinkte medicatie, to-do's en afspraken van de huidige week (vanaf
   afgelopen maandag), met een downloadknop. Dit verving de automatische
   e-mails die de app vroeger verstuurde.
-- **Documenten** (bekijken/openen, niet uploaden) en **Protocollen**
-  (toevoegen mag wel) staan in het hoofdmenu voor iedereen — zie hierboven.
-- De overige menu's (Rapportage, Medicatie, Aanwezigheid, Overdracht,
-  To-Do's, Agenda) gebruikt iedereen dagelijks — zie ook `README.md` voor
-  een korte beschrijving van elk onderdeel.
+- **Aanwezigheid** is een blijvende status per cliënt, gedeeld tussen alle
+  accounts en diensten: wat de laatste persoon instelt, blijft zo staan
+  totdat iemand het weer wijzigt — er is geen dagelijkse reset.
+- **Apparaatbeveiliging** (optioneel, via environment variables — zie stap 5
+  hierboven, niet via een instelling in de app zelf): beperkt de app tot
+  apparaten die één keer het apparaat-wachtwoord hebben ingevoerd op
+  `/apparaat`. Dit verving een eerdere versie op basis van IP-adres, die
+  onbetrouwbaar bleek zodra het internetadres van het kantoor wisselt.
+- De overige menu's (Rapportage, Medicatie, Overdracht, To-Do's, Agenda)
+  gebruikt iedereen dagelijks — zie ook `README.md` voor een korte
+  beschrijving van elk onderdeel.
 - Wie een tijdje niets doet op een gedeeld toestel (bijv. een iPad die
   meerdere collega's gebruiken) wordt na 15 minuten automatisch uitgelogd.
 
@@ -278,15 +264,14 @@ Vraag iemand met technische kennis om via Vercel/de database tijdelijk een
 account weer op actief te zetten — dit is de enige stap in deze hele
 handleiding die (in het uiterste noodgeval) technische hulp vraagt.
 
-**Niemand kan meer bij de app (pagina zegt "Geen toegang vanaf dit netwerk").**
-Je hebt "Netwerkbeveiliging" aangezet (Backend → Instellingen) en het huidige
-netwerk komt niet (meer) overeen met de ingestelde IP-adressen. Heb je bij
-stap 5 een `NETWORK_BYPASS_SECRET` ingesteld? Ga dan vanaf een willekeurig
-netwerk naar `https://jouw-app-url/login?bypass=<die geheime tekst>` om
-tijdelijk weer binnen te komen, en zet de instelling daarna uit of goed bij
-Backend → Instellingen. Geen `NETWORK_BYPASS_SECRET` ingesteld? Vraag dan
-iemand met technische kennis om de instelling in de database uit te zetten —
-zelfde uitzonderingsgeval als hierboven bij "beheerderstoegang kwijt".
+**Ik ben zelf buitengesloten door Apparaatbeveiliging (verkeerd of vergeten
+wachtwoord).**
+Omdat dit alleen via environment variables werkt, kun je dit altijd zelf
+herstellen zonder de app te hoeven bereiken: ga naar Vercel → je project →
+**Settings → Environment Variables**, controleer/verander de waarde van
+`DEVICE_PASSCODE`, of zet `DEVICE_RESTRICTION_ENABLED` terug op `false` om de
+functie tijdelijk helemaal uit te zetten. Klik daarna opnieuw op **Deploy**
+(stap 6) — de wijziging werkt pas na een nieuwe deploy.
 
 **Ik wil een eigen domeinnaam (bijv. `admin.mijnwoongroep.nl`) in plaats
 van het `.vercel.app`-adres.**
@@ -304,9 +289,9 @@ Alle onderstaande waarden vind je terug (en kun je aanpassen) via
 | Naam | Waar komt dit vandaan | Verplicht? |
 |---|---|---|
 | `DATABASE_URL` | automatisch, via stap 3 | Ja |
-| `CLOUDINARY_URL` (of los: `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET`) | uit je Cloudinary-account, stap 4 | Voor documenten uploaden |
+| `CLOUDINARY_URL` (of los: `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET`) | uit je Cloudinary-account, stap 4 | Voor protocollen uploaden |
 | `JWT_SECRET` | zelf een lange willekeurige tekst | Ja |
 | `CRON_SECRET` | zelf een lange willekeurige tekst | Voor het maandelijkse opschoon-taakje |
-| `NETWORK_BYPASS_SECRET` | zelf een lange willekeurige tekst | Alleen als je Netwerkbeveiliging gebruikt |
+| `DEVICE_RESTRICTION_ENABLED` / `DEVICE_PASSCODE` | zelf ingesteld | Alleen als je Apparaatbeveiliging gebruikt |
 
 Meer technische achtergrond (voor ontwikkelaars) staat in `README.md`.

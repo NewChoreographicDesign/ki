@@ -79,21 +79,23 @@ async function getTodayByRoom() {
 
 async function getStats() {
   const today = startOfToday();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
   const weekEnd = new Date(today);
   weekEnd.setDate(weekEnd.getDate() + 7);
 
-  const [activeClients, openTodos, presentToday, upcomingAppointments, activeHandovers] =
+  // Presence isn't scoped to "today" (see app/(app)/aanwezigheid/page.tsx) —
+  // "present" here means each client's current status, i.e. whatever their
+  // most recent presence row says, not just rows written today.
+  const [activeClients, openTodos, latestPresences, upcomingAppointments, activeHandovers] =
     await Promise.all([
       db.client.count({ where: { active: true } }),
       db.todo.count({ where: { completed: false } }),
-      db.presence.count({ where: { date: { gte: today, lt: tomorrow }, present: true } }),
+      db.presence.findMany({ orderBy: { date: "desc" }, distinct: ["clientId"], select: { present: true } }),
       db.appointment.count({ where: { startAt: { gte: today, lt: weekEnd } } }),
       db.handover.count({ where: { expiresAt: { gt: new Date() } } }),
     ]);
+  const presentNow = latestPresences.filter((p) => p.present).length;
 
-  return { activeClients, openTodos, presentToday, upcomingAppointments, activeHandovers };
+  return { activeClients, openTodos, presentNow, upcomingAppointments, activeHandovers };
 }
 
 const QUICK_ACTIONS = [
@@ -159,7 +161,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard icon={Users} label="Actieve cliënten" value={stats.activeClients} />
         <StatCard icon={CheckSquare} label="Open to-do's" value={stats.openTodos} />
-        <StatCard icon={UserCheck} label="Aanwezig vandaag" value={stats.presentToday} />
+        <StatCard icon={UserCheck} label="Nu aanwezig" value={stats.presentNow} />
         <StatCard icon={Calendar} label="Afspraken (7 dagen)" value={stats.upcomingAppointments} />
         <StatCard icon={ArrowLeftRight} label="Actieve overdrachten" value={stats.activeHandovers} />
       </div>

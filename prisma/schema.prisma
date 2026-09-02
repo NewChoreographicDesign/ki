@@ -81,6 +81,10 @@ enum DocumentCategory {
   ONBOARDING
 }
 
+// The Documenten feature (upload/view) was removed from the app. This model
+// is kept, unused, rather than dropped: deleting it would make `prisma db
+// push` refuse the next deploy as a destructive change (or silently drop
+// any documents already stored for a live installation) — see README.md.
 model Document {
   id           String           @id @default(cuid())
   title        String

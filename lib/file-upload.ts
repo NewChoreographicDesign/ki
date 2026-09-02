@@ -4,7 +4,7 @@ import { ZodError } from "zod";
 import { AuthError } from "@/lib/auth";
 import { handleApiError } from "@/lib/api";
 
-/** Shared between the documents and protocols upload routes. */
+/** Used by the protocols upload route. */
 export const ALLOWED_CONTENT_TYPES = [
   "application/pdf",
   "application/msword",
