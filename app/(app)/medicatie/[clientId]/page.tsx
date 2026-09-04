@@ -1,10 +1,17 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { fullName, formatDateTime } from "@/lib/utils";
+import { fullName, formatDateTime, mostRecentMondayStart } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { MedicationCheckForm } from "./medication-check-form";
 
 export const dynamic = "force-dynamic";
+
+const STATUS_LABELS: Record<string, { label: string; variant: "emerald" | "amber" | "red" }> = {
+  TAKEN: { label: "Afgevinkt", variant: "emerald" },
+  LEAVE: { label: "Verlof", variant: "amber" },
+  NOT_TAKEN: { label: "Niet ingenomen", variant: "red" },
+};
 
 export default async function ClientMedicationPage({
   params,
@@ -12,12 +19,23 @@ export default async function ClientMedicationPage({
   params: Promise<{ clientId: string }>;
 }) {
   const { clientId } = await params;
+  // "Laatste registraties" only shows the current week (since Monday) — the
+  // full history isn't deleted, it just moves into the automatically
+  // generated weekly PDF archive (see /weekrapport) once a week completes,
+  // so this list starts fresh each week rather than growing forever.
+  const weekStart = mostRecentMondayStart();
   const client = await db.client.findUnique({
     where: { id: clientId },
     include: {
       medications: {
         where: { active: true },
-        include: { checks: { include: { user: true }, orderBy: { checkedAt: "desc" }, take: 5 } },
+        include: {
+          checks: {
+            where: { checkedAt: { gte: weekStart } },
+            include: { user: true },
+            orderBy: { checkedAt: "desc" },
+          },
+        },
       },
     },
   });
@@ -47,19 +65,27 @@ export default async function ClientMedicationPage({
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
                 <MedicationCheckForm medicationId={med.id} />
-                {med.checks.length > 0 && (
-                  <div className="border-t border-border pt-3">
-                    <p className="mb-2 text-sm font-medium text-slate-400">Laatste registraties</p>
+                <div className="border-t border-border pt-3">
+                  <p className="mb-2 text-sm font-medium text-slate-400">
+                    Registraties deze week
+                  </p>
+                  {med.checks.length === 0 ? (
+                    <p className="text-sm text-slate-500">Nog niets geregistreerd deze week.</p>
+                  ) : (
                     <ul className="flex flex-col gap-1.5">
-                      {med.checks.map((c) => (
-                        <li key={c.id} className="text-sm text-slate-400">
-                          {formatDateTime(c.checkedAt)} &middot; {c.user.name}
-                          {c.comment ? ` — ${c.comment}` : ""}
-                        </li>
-                      ))}
+                      {med.checks.map((c) => {
+                        const status = STATUS_LABELS[c.status] ?? STATUS_LABELS.TAKEN;
+                        return (
+                          <li key={c.id} className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
+                            <Badge variant={status.variant}>{status.label}</Badge>
+                            {formatDateTime(c.checkedAt)} &middot; {c.user.name}
+                            {c.comment ? ` — ${c.comment}` : ""}
+                          </li>
+                        );
+                      })}
                     </ul>
-                  </div>
-                )}
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))}

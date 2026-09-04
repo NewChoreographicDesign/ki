@@ -3,33 +3,46 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Plane, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+
+type MedicationCheckStatus = "TAKEN" | "LEAVE" | "NOT_TAKEN";
+
+const STATUS_OPTIONS: {
+  status: MedicationCheckStatus;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  variant: "secondary" | "outline" | "danger";
+}[] = [
+  { status: "TAKEN", label: "Afvinken", icon: CheckCircle2, variant: "secondary" },
+  { status: "LEAVE", label: "Verlof", icon: Plane, variant: "outline" },
+  { status: "NOT_TAKEN", label: "Niet ingenomen", icon: XCircle, variant: "danger" },
+];
 
 export function MedicationCheckForm({ medicationId }: { medicationId: string }) {
   const router = useRouter();
   const [comment, setComment] = React.useState("");
   const [showComment, setShowComment] = React.useState(false);
-  const [loading, setLoading] = React.useState(false);
+  const [loading, setLoading] = React.useState<MedicationCheckStatus | null>(null);
 
-  async function handleCheck() {
-    setLoading(true);
+  async function handleCheck(status: MedicationCheckStatus) {
+    setLoading(status);
     try {
       const res = await fetch("/api/medication-checks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ medicationId, comment }),
+        body: JSON.stringify({ medicationId, status, comment }),
       });
       if (!res.ok) throw new Error();
-      toast.success("Medicatie afgevinkt");
+      toast.success(STATUS_OPTIONS.find((o) => o.status === status)?.label + " geregistreerd");
       setComment("");
       setShowComment(false);
       router.refresh();
     } catch {
-      toast.error("Afvinken mislukt");
+      toast.error("Registreren mislukt");
     } finally {
-      setLoading(false);
+      setLoading(null);
     }
   }
 
@@ -43,10 +56,18 @@ export function MedicationCheckForm({ medicationId }: { medicationId: string }) 
           className="min-h-[70px]"
         />
       )}
-      <div className="flex gap-2">
-        <Button size="lg" variant="secondary" disabled={loading} onClick={handleCheck}>
-          <CheckCircle2 className="h-5 w-5" /> {loading ? "Bezig..." : "Afvinken"}
-        </Button>
+      <div className="flex flex-wrap gap-2">
+        {STATUS_OPTIONS.map(({ status, label, icon: Icon, variant }) => (
+          <Button
+            key={status}
+            size="lg"
+            variant={variant}
+            disabled={loading !== null}
+            onClick={() => handleCheck(status)}
+          >
+            <Icon className="h-5 w-5" /> {loading === status ? "Bezig..." : label}
+          </Button>
+        ))}
         {!showComment && (
           <Button size="lg" variant="ghost" onClick={() => setShowComment(true)}>
             Commentaar
@@ -54,7 +75,7 @@ export function MedicationCheckForm({ medicationId }: { medicationId: string }) 
         )}
       </div>
       <p className="text-xs text-slate-500">
-        Let op: afvinken kan niet ongedaan worden gemaakt.
+        Let op: een registratie kan niet ongedaan worden gemaakt.
       </p>
     </div>
   );

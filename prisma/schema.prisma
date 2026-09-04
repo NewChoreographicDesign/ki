@@ -149,15 +149,22 @@ model Medication {
   @@index([clientId, active])
 }
 
+enum MedicationCheckStatus {
+  TAKEN // Afgevinkt: ingenomen zoals voorgeschreven.
+  LEAVE // Verlof: cliënt afwezig, geen inname aan de orde.
+  NOT_TAKEN // Niet ingenomen: aanwezig maar bewust/onbewust niet ingenomen.
+}
+
 // Irreversible audit log: no update/delete allowed at the API layer.
 model MedicationCheck {
-  id           String     @id @default(cuid())
+  id           String                @id @default(cuid())
   medicationId String
-  medication   Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+  medication   Medication            @relation(fields: [medicationId], references: [id], onDelete: Cascade)
   userId       String
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status       MedicationCheckStatus @default(TAKEN)
   comment      String?
-  checkedAt    DateTime   @default(now())
+  checkedAt    DateTime              @default(now())
 
   @@index([medicationId, checkedAt])
   @@index([userId])
@@ -255,8 +262,7 @@ model Shift {
   @@index([userId, startedAt])
 }
 
-// Single source of truth for app-wide config (organization name, network
-// restriction toggle, etc).
+// Single source of truth for app-wide config (organization name, etc).
 model Setting {
   id        String   @id @default(cuid())
   key       String   @unique
@@ -282,4 +288,22 @@ model AuditLog {
   @@index([userId, createdAt])
   @@index([targetType, targetId])
   @@index([createdAt])
+}
+
+// One row per completed ISO calendar week, generated automatically by
+// /api/cron/weekly-report (see that route for the generation + 1-year
+// rolling-retention logic). The PDF itself is stored inline (Bytes) rather
+// than in external storage — these are small, infrequent (~52/year), and
+// keeping them in the same database avoids depending on Cloudinary being
+// configured for a compliance-relevant record.
+model WeeklyReportPdf {
+  id        String   @id @default(cuid())
+  isoYear   Int
+  isoWeek   Int
+  weekStart DateTime
+  pdf       Bytes
+  createdAt DateTime @default(now())
+
+  @@unique([isoYear, isoWeek])
+  @@index([weekStart])
 }

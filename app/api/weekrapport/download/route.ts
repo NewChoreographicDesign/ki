@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth, canAccessWeeklyReport } from "@/lib/auth";
 import { handleApiError } from "@/lib/api";
 import { getWeeklyReportData, renderWeeklyReportText } from "@/lib/weekly-report";
-import { formatDDMMYYYY } from "@/lib/utils";
+import { formatDDMMYYYY, mostRecentMondayStart } from "@/lib/utils";
 
 export async function GET() {
   try {
@@ -11,7 +11,7 @@ export async function GET() {
       return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
     }
 
-    const data = await getWeeklyReportData();
+    const data = await getWeeklyReportData(mostRecentMondayStart());
     const text = renderWeeklyReportText(data);
     const filename = `weekrapport-${formatDDMMYYYY(data.weekStart)}.txt`;
 

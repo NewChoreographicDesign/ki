@@ -169,6 +169,28 @@ export function mostRecentMondayStart(now: Date = new Date()): Date {
   );
 }
 
+/**
+ * ISO-8601 week number + "ISO year" (which can differ from the calendar
+ * year in late December/early January — e.g. 2025-12-29 falls in ISO week
+ * 1 of 2026) for a given instant, using its Europe/Amsterdam calendar date.
+ * Used to label/key the automatically generated weekly report PDFs.
+ */
+export function isoWeekOf(date: Date): { isoYear: number; isoWeek: number } {
+  const p = getZonedParts(date, AMSTERDAM_TZ);
+  // Treat the UTC Date object purely as a calendar-date container from here
+  // on (no timezone conversion involved) — we already have the Amsterdam
+  // wall-clock date in p.
+  const d = new Date(Date.UTC(p.year, p.month - 1, p.day));
+  const dayNum = (d.getUTCDay() + 6) % 7; // Mon=0..Sun=6
+  d.setUTCDate(d.getUTCDate() - dayNum + 3); // Thursday of this week decides the ISO year
+  const isoYear = d.getUTCFullYear();
+  const firstThursday = new Date(Date.UTC(isoYear, 0, 4));
+  const firstDayNum = (firstThursday.getUTCDay() + 6) % 7;
+  firstThursday.setUTCDate(firstThursday.getUTCDate() - firstDayNum + 3);
+  const isoWeek = 1 + Math.round((d.getTime() - firstThursday.getTime()) / (7 * 86_400_000));
+  return { isoYear, isoWeek };
+}
+
 export function fullName(client: { firstName: string; lastName: string }): string {
   return `${client.firstName} ${client.lastName}`;
 }

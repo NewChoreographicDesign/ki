@@ -13,11 +13,14 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
   components alleen waar interactie nodig is (toggles, formulieren).
 - **Eén Prisma schema** (`prisma/schema.prisma`) met alle entities: `User`,
   `Client`, `Protocol`, `Report`, `Medication` + onomkeerbare
-  `MedicationCheck`, `WeekPlan`, `Todo`, `Presence`, `Handover` (auto-expiry),
-  `Appointment`, `Shift`, `Setting`, `AuditLog`. Eén wijziging in `Client` of
-  `Setting` werkt overal door. (`Document` bestaat nog in het schema maar
-  wordt niet meer gebruikt — zie [Uploads](#uploads-protocollen) hieronder
-  voor waarom het model bleef staan.)
+  `MedicationCheck` (met een status: `TAKEN`/`LEAVE`/`NOT_TAKEN`), `WeekPlan`,
+  `Todo`, `Presence`, `Handover` (auto-expiry), `Appointment`, `Shift`,
+  `Setting`, `AuditLog`, `WeeklyReportPdf` (automatisch gegenereerde
+  weekrapport-PDF's, zie [Weekrapport](#weekrapport-automatisch-pdf-archief)
+  hieronder). Eén wijziging in `Client` of `Setting` werkt overal door.
+  (`Document` bestaat nog in het schema maar wordt niet meer gebruikt — zie
+  [Uploads](#uploads-protocollen) hieronder voor waarom het model bleef
+  staan.)
 - **Auth** — alleen naam + geboortedatum (`DD-MM-JJJJ`), geen wachtwoorden.
   JWT in een `httpOnly`, `secure` cookie (12 uur geldig). Bij inloggen wordt
   automatisch een dienst gestart (ochtend 07:00-15:00 / avond 14:00-23:00,
@@ -57,13 +60,13 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
 | --- | --- | --- |
 | Overzicht | `/dashboard` | "Vandaag per kamer" (weekplanning + agenda-afspraken van vandaag, gegroepeerd per cliëntkamer) bovenaan, daaronder stats + snelle acties |
 | Rapportage | `/rapportage` | Rapportage per cliënt/dienst. "Recente rapportages" toont alleen sinds de laatste donderdag |
-| Medicatie | `/medicatie` | Medicatie afvinken per cliënt (onomkeerbaar) |
+| Medicatie | `/medicatie` | Per cliënt registreren: Afvinken, Verlof of Niet ingenomen (onomkeerbaar). Weekoverzicht reset elke maandag (zie Weekrapport) |
 | Aanwezigheid | `/aanwezigheid` | Aanwezig/afwezig per cliënt, gedeeld tussen alle accounts en diensten — blijft staan tot iemand het weer wijzigt (geen dagelijkse reset) |
 | Overdracht | `/overdracht` | Notities die 1 uur na diensteinde verlopen |
 | To-Do's | `/todos` | Openstaande taken bovenaan, daaronder het formulier voor een nieuwe taak. Voor iedereen zichtbaar |
 | Agenda | `/agenda` | Aankomende afspraken bovenaan, daaronder het formulier voor een nieuwe afspraak |
 | Protocollen | `/protocollen` | Algemene en cliëntspecifieke protocollen, als tekst en/of geüpload bestand, voor iedereen |
-| Weekrapport | `/weekrapport` | Downloadbaar overzicht van rapportages, medicatie, to-do's en afspraken sinds afgelopen maandag. Admin + coördinator |
+| Weekrapport | `/weekrapport` | Automatisch archief van één PDF per kalenderweek (alle acties van die week), 1 jaar bewaard, plus een live overzicht van de lopende week. Admin + coördinator |
 | Backend | `/backend` | Cliënten, medewerkers, medicatie beheer, weekplanning, instellingen, auditlog (alleen admin) |
 
 ## Vereisten
@@ -157,8 +160,11 @@ Kort samengevat voor ontwikkelaars:
   verwijdert `AuditLog`-rijen ouder dan ~2 jaar. Raakt geen cliëntgegevens
   (rapportages, medicatie, protocollen, ...) — zie
   [Bewaartermijnen](#bewaartermijnen-retention) hieronder voor waarom.
+- `/api/cron/weekly-report` — elke maandag 02:00 UTC, archiveert de afgelopen
+  week als PDF en ruimt PDF's ouder dan ~1 jaar op — zie
+  [Weekrapport](#weekrapport-automatisch-pdf-archief) hieronder.
 
-De cron-route vereist de header `Authorization: Bearer <CRON_SECRET>`
+Beide cron-routes vereisen de header `Authorization: Bearer <CRON_SECRET>`
 (Vercel Cron stuurt dit automatisch mee wanneer `CRON_SECRET` is ingesteld).
 
 ### Uploads (protocollen)
@@ -216,7 +222,7 @@ afspraken zonder gekoppelde cliënt onder "Algemeen". "Vandaag" en de
 dag-van-de-week-berekening zijn Europe/Amsterdam-bewust (zie
 `todayDayOfWeek()` in `lib/utils.ts`), net als de rest van de app.
 
-### Weekrapport (vervangt e-mail)
+### Weekrapport (automatisch PDF-archief)
 
 De app verstuurde vroeger rapportages, medicatie- en to-do-overzichten en
 agenda-herinneringen automatisch per e-mail. Dat is verwijderd: het stuurde
@@ -224,15 +230,47 @@ gevoelige cliëntgegevens naar een externe e-maildienst zonder dat daar per se
 een geldige verwerkersovereenkomst/AVG-grondslag voor was, en voegde een
 derde partij (Resend of een Gmail-account) toe aan de verwerkingsketen.
 
-In plaats daarvan is er `/weekrapport` (`lib/weekly-report.ts`,
-`app/(app)/weekrapport/page.tsx`), zichtbaar voor ADMIN en COORDINATOR
-(`canAccessWeeklyReport()` in `lib/auth.ts`): een overzicht van rapportages,
-afgevinkte medicatie, to-do's en afspraken **sinds afgelopen maandag**
-(`mostRecentMondayStart()` in `lib/utils.ts`, hetzelfde patroon als
-rapportage's donderdag-reset), met een downloadknop die dezelfde data als
-platte tekst (`.txt`) teruggeeft (`app/api/weekrapport/download/route.ts`).
-Niets wordt automatisch verstuurd of ergens naartoe gepusht — admin/
-coördinator halen het overzicht zelf op wanneer ze het nodig hebben.
+In plaats daarvan legt de app **elke maandagochtend automatisch de
+afgelopen week vast als PDF** — geen handmatige download/opmaak meer nodig:
+
+- **Cron** `/api/cron/weekly-report` (`vercel.json`, elke maandag 02:00 UTC)
+  bepaalt de zojuist afgesloten week (`mostRecentMondayStart()` in
+  `lib/utils.ts` min 7 dagen), haalt alle rapportages, medicatieregistraties,
+  to-do's en afspraken van precies die week op (`getWeeklyReportData()` in
+  `lib/weekly-report.ts`, met een expliciete boven- én ondergrens zodat een
+  latere week nooit in een al-gearchiveerde PDF lekt), rendert dat als PDF
+  (`renderWeeklyReportPdf()` in `lib/weekly-report-pdf.ts`, via
+  [pdfkit](https://pdfkit.org) — geen headless browser nodig, werkt gewoon op
+  Vercel's Node-runtime) en slaat die op in `WeeklyReportPdf`
+  (`prisma/schema.prisma`), **inline in de database** (`Bytes`-kolom) in
+  plaats van bij Cloudinary — dit is een nalevingsrelevant document, dus geen
+  afhankelijkheid van of Cloudinary toevallig geconfigureerd is. Idempotent:
+  draait de cron nog een keer voor dezelfde week, dan wordt niets dubbel
+  aangemaakt.
+- Elke run **ruimt ook op**: `WeeklyReportPdf`-rijen ouder dan ~1 jaar
+  (`weekStart` meer dan 366 dagen terug) worden verwijderd — een rollend
+  archief van ongeveer de laatste 52 weken, dus bijvoorbeeld de PDF van
+  week 36 uit 2026 verdwijnt zodra week 36 van 2027 wordt gegenereerd.
+- **Weeknummers zijn ISO-8601** (`isoWeekOf()` in `lib/utils.ts`, dezelfde
+  telling als de gangbare Nederlandse kalenderweken), inclusief de
+  jaarwisseling-edge case waarbij eind december in ISO-week 1 van het
+  volgende jaar kan vallen.
+- `/weekrapport` (`app/(app)/weekrapport/page.tsx`, zichtbaar voor ADMIN en
+  COORDINATOR — `canAccessWeeklyReport()` in `lib/auth.ts`) toont dit archief
+  met een downloadknop per week (`app/api/weekrapport/archive/[id]/route.ts`),
+  plus daaronder een live, nog niet afgeronde weergave van de lopende week
+  (optioneel als platte tekst te downloaden — handig om tussentijds te zien
+  wat er al is, maar niet het officiële record; dat wordt pas de aankomende
+  maandag automatisch de PDF).
+
+**Wat dit betekent voor Medicatie:** de "Registraties deze week"-lijst op
+`/medicatie/[clientId]` toont alleen de lopende week (sinds afgelopen
+maandag) — die lijst "reset" dus elke week, in de zin dat hij weer leeg
+begint. De onderliggende `MedicationCheck`-rijen worden **niet** verwijderd
+(ze blijven gewoon in de database staan, voor altijd) — alleen de PDF-archief
+kopie heeft de 1-jaar-bewaartermijn. Zie
+[Bewaartermijnen](#bewaartermijnen-retention) hieronder voor de afweging
+achter dat onderscheid.
 
 ### Apparaatbeveiliging
 
@@ -285,15 +323,37 @@ Cron heeft toch geen `device_token`-cookie).
 
 ### Bewaartermijnen (retention)
 
-De retention-cron (`/api/cron/retention-purge`, zie "Cron jobs" hierboven)
-verwijdert alleen oude `AuditLog`-rijen (~2 jaar). Cliëntgegevens
-(rapportages, medicatie(-checks), protocollen, aanwezigheid) worden **nooit**
-automatisch verwijderd: hoe lang die bewaard moeten/mogen
-blijven is een juridische afweging voor de organisatie zelf (in Nederland
-wijst de WGBO doorgaans naar een bewaartermijn van 20 jaar voor medische
-behandeldossiers), niet iets om stilzwijgend te automatiseren. Wil je hier
-wél automatisch beleid op, bepaal dan eerst zelf (met juridisch advies) welke
-termijn geldt voor jullie type zorg, en voeg dat gericht toe.
+Twee dingen worden hier automatisch verwijderd, allebei bewust beperkt tot
+**afgeleide/gearchiveerde** data, nooit de brongegevens zelf:
+
+- `/api/cron/retention-purge` (maandelijks) — oude `AuditLog`-rijen (~2 jaar).
+- `/api/cron/weekly-report` (wekelijks) — `WeeklyReportPdf`-rijen ouder dan
+  ~1 jaar (zie [Weekrapport](#weekrapport-automatisch-pdf-archief) hierboven).
+  Dit is een **gegenereerde kopie** (een PDF-samenvatting) van gegevens die
+  ook al in `Report`/`MedicationCheck`/`Todo`/`Appointment` staan — het
+  verwijderen van die PDF na 1 jaar verwijdert dus geen brongegevens, wél de
+  opgemaakte weekoverzicht-kopie ervan.
+
+De onderliggende cliëntgegevens zelf (rapportages, medicatie(-checks),
+protocollen, aanwezigheid) worden **nooit** automatisch verwijderd: hoe lang
+die bewaard moeten/mogen blijven is een juridische afweging voor de
+organisatie zelf (in Nederland wijst de WGBO doorgaans naar een
+bewaartermijn van 20 jaar voor medische behandeldossiers), niet iets om
+stilzwijgend te automatiseren.
+
+> **Let op — dit betekent dat de 1-jaar-PDF-archivering niet hetzelfde is
+> als "het medische dossier 1 jaar bewaren".** De ruwe `MedicationCheck`-data
+> blijft gewoon staan (zie hierboven); alleen de opgemaakte PDF-samenvatting
+> verdwijnt na een jaar. Is een langer bewaarde, opgemaakte PDF per week
+> nodig voor jullie dossiervoering? Pas dan `RETENTION_MS` in
+> `app/api/cron/weekly-report/route.ts` aan (met juridisch advies over de
+> juiste termijn) — dit is bewust een losse constante, geen configuratie via
+> environment variables, zodat een wijziging hier een bewuste code-aanpassing
+> vereist en niet per ongeluk via een instelling kan gebeuren.
+
+Wil je automatisch beleid op de brongegevens zelf, bepaal dan eerst zelf (met
+juridisch advies) welke termijn geldt voor jullie type zorg, en voeg dat
+gericht toe.
 
 ## Gebruiksinstructie (iPad)
 
@@ -301,13 +361,13 @@ termijn geldt voor jullie type zorg, en voeg dat gericht toe.
 2. Log in met naam + geboortedatum.
 3. Dashboard toont bovenaan "Vandaag per kamer" (weekplanning + afspraken van vandaag, per cliëntkamer), daaronder stats + snelle knoppen.
 4. **Rapportage** → kies cliënt + dienst + datum → typ → verstuur. "Recente rapportages" toont alleen wat sinds afgelopen donderdag is toegevoegd; het volledige overzicht staat ook in het **Weekrapport**.
-5. **Medicatie** → open cliënt → vink af (kan niet ongedaan worden gemaakt).
+5. **Medicatie** → open cliënt → kies Afvinken, Verlof of Niet ingenomen (kan niet ongedaan worden gemaakt). "Registraties deze week" reset elke maandag; het volledige overzicht staat daarna in het Weekrapport-archief.
 6. **Aanwezigheid** → tik Aanwezig/Afwezig (met optioneel commentaar). Gedeeld tussen iedereen die inlogt en alle diensten; blijft staan totdat iemand het weer aanpast (geen dagelijkse reset).
 7. **Overdracht** → typ notitie → wordt 1 uur na diensteinde automatisch gewist.
 8. **To-Do's** → openstaande taken bovenaan, formulier voor een nieuwe taak eronder. Voor iedereen zichtbaar.
 9. **Agenda** → aankomende afspraken bovenaan, formulier voor een nieuwe afspraak eronder.
 10. **Protocollen** → algemeen of per cliënt, tekst en/of geüpload bestand. Voor iedereen; verwijderen alleen voor admin/coördinator.
-11. **Weekrapport** (admin + coördinator) → rapportages, medicatie, to-do's en afspraken sinds afgelopen maandag, met een downloadknop.
+11. **Weekrapport** (admin + coördinator) → automatisch archief van één PDF per kalenderweek (1 jaar bewaard), plus een live voortgangsoverzicht van de lopende week.
 12. **Backend** (alleen admin) → cliënten (incl. kamer), medewerkers, instellingen, auditlog, medicatie, weekplanning. Eén wijziging = overal doorgevoerd.
 13. Uitloggen rechtsonder in de zijbalk, of automatisch na 15 minuten inactiviteit.
 
@@ -415,9 +475,12 @@ hier bewust niets automatisch).
 ## Testen
 
 `npm run test` draait Vitest unit tests voor de zuivere logica: datum-parsing,
-dienstberekening en alle Zod-schema's (`lib/__tests__`). Daarnaast is de
-volledige flow handmatig doorlopen tegen een productie-build
+ISO-weeknummers, dienstberekening en alle Zod-schema's (`lib/__tests__`).
+Daarnaast is de volledige flow handmatig doorlopen tegen een productie-build
 (`npm run build && npm run start`): inloggen (correct/incorrect), sessie- en
-rolcontrole op elke route, en de create-acties van elke module (aanwezigheid,
-rapportage, medicatie-check, overdracht, to-do + afronden, afspraak, en de
-Backend-CRUD endpoints inclusief de 403 op een niet-toegestane rol).
+rolcontrole op elke route, de create-acties van elke module (aanwezigheid,
+rapportage, medicatie-check in alle drie statussen, overdracht, to-do +
+afronden, afspraak, en de Backend-CRUD endpoints inclusief de 403 op een
+niet-toegestane rol), en de weekrapport-cron end-to-end (PDF-generatie,
+idempotentie bij een tweede run, retentie-opruiming, en het downloaden van
+een gearchiveerde PDF).

@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth();
     const body = await request.json();
-    const { medicationId, comment } = medicationCheckSchema.parse(body);
+    const { medicationId, status, comment } = medicationCheckSchema.parse(body);
 
     const medication = await db.medication.findUnique({ where: { id: medicationId } });
     if (!medication) {
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     }
 
     const check = await db.medicationCheck.create({
-      data: { medicationId, userId: session.sub, comment: comment || null },
+      data: { medicationId, userId: session.sub, status, comment: comment || null },
     });
 
     return NextResponse.json({ ok: true, check });

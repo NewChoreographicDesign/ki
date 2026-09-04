@@ -24,8 +24,9 @@ beheert als je hier nog niet bij kunt).
 
 > De app verstuurt geen e-mails meer (dat stuurde vroeger cliëntgegevens naar
 > een externe e-maildienst zonder duidelijke juridische grondslag daarvoor).
-> Rapportages, medicatie- en to-do-overzichten haal je nu zelf op in de app
-> zelf, via **Weekrapport** — zie "Wat kun je hierna doen in de app?" hieronder.
+> In plaats daarvan legt de app elke maandagochtend automatisch de afgelopen
+> week vast als PDF (rapportages, medicatie, to-do's en afspraken) — zie
+> **Weekrapport** onder "Wat kun je hierna doen in de app?" hieronder.
 
 ---
 
@@ -221,10 +222,16 @@ door een admin of coördinator.
   - **Backend → Auditlog**: overzicht van wie wat heeft gedaan (inloggen,
     cliënten/accounts aanmaken of wijzigen, protocollen verwijderen,
     instellingen wijzigen).
-- **Weekrapport** (zichtbaar voor admin en coördinator): rapportages,
-  afgevinkte medicatie, to-do's en afspraken van de huidige week (vanaf
-  afgelopen maandag), met een downloadknop. Dit verving de automatische
-  e-mails die de app vroeger verstuurde.
+- **Weekrapport** (zichtbaar voor admin en coördinator): elke maandagochtend
+  legt de app automatisch de afgelopen week vast als PDF (rapportages,
+  medicatie, to-do's en afspraken) — geen handmatige actie nodig. Deze PDF's
+  blijven 1 jaar bewaard en staan als downloadbaar archief op deze pagina;
+  daaronder staat ook een live overzicht van de nog lopende week. Dit verving
+  de automatische e-mails die de app vroeger verstuurde.
+- **Medicatie**: per cliënt drie knoppen — **Afvinken** (ingenomen),
+  **Verlof** (cliënt afwezig) of **Niet ingenomen**. Kan niet ongedaan
+  gemaakt worden. "Registraties deze week" reset elke maandag (de
+  geschiedenis verdwijnt niet, die verhuist naar het Weekrapport-archief).
 - **Aanwezigheid** is een blijvende status per cliënt, gedeeld tussen alle
   accounts en diensten: wat de laatste persoon instelt, blijft zo staan
   totdat iemand het weer wijzigt — er is geen dagelijkse reset.
@@ -233,9 +240,9 @@ door een admin of coördinator.
   apparaten die één keer het apparaat-wachtwoord hebben ingevoerd op
   `/apparaat`. Dit verving een eerdere versie op basis van IP-adres, die
   onbetrouwbaar bleek zodra het internetadres van het kantoor wisselt.
-- De overige menu's (Rapportage, Medicatie, Overdracht, To-Do's, Agenda)
-  gebruikt iedereen dagelijks — zie ook `README.md` voor een korte
-  beschrijving van elk onderdeel.
+- De overige menu's (Rapportage, Overdracht, To-Do's, Agenda) gebruikt
+  iedereen dagelijks — zie ook `README.md` voor een korte beschrijving van
+  elk onderdeel.
 - Wie een tijdje niets doet op een gedeeld toestel (bijv. een iPad die
   meerdere collega's gebruiken) wordt na 15 minuten automatisch uitgelogd.
 

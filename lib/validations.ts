@@ -54,6 +54,7 @@ export const medicationSchema = z.object({
 
 export const medicationCheckSchema = z.object({
   medicationId: z.string().min(1),
+  status: z.enum(["TAKEN", "LEAVE", "NOT_TAKEN"]),
   comment: z.string().trim().max(1000).optional().or(z.literal("")),
 });
 

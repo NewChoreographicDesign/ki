@@ -10,6 +10,7 @@ import {
   mostRecentThursdayStart,
   mostRecentMondayStart,
   todayDayOfWeek,
+  isoWeekOf,
 } from "@/lib/utils";
 import { ShiftType } from "@prisma/client";
 
@@ -136,5 +137,22 @@ describe("todayDayOfWeek", () => {
     // 2026-01-05 is a Monday, 2026-01-11 is the following Sunday.
     expect(todayDayOfWeek(amsterdamDate(2026, 1, 5, 12))).toBe(0);
     expect(todayDayOfWeek(amsterdamDate(2026, 1, 11, 12))).toBe(6);
+  });
+});
+
+describe("isoWeekOf", () => {
+  it("returns week 1 for the year's first Thursday", () => {
+    // 2026-01-01 is a Thursday, so it anchors ISO week 1 of 2026.
+    expect(isoWeekOf(amsterdamDate(2026, 1, 1, 12))).toEqual({ isoYear: 2026, isoWeek: 1 });
+  });
+
+  it("assigns a late-December Monday to next year's week 1 (ISO year != calendar year)", () => {
+    // 2025-12-29 is a Monday in the same Mon-Sun week as 2026-01-01 (Thursday).
+    expect(isoWeekOf(amsterdamDate(2025, 12, 29, 12))).toEqual({ isoYear: 2026, isoWeek: 1 });
+  });
+
+  it("increments for the following week", () => {
+    // 2026-01-05 is a Monday, the start of ISO week 2 of 2026.
+    expect(isoWeekOf(amsterdamDate(2026, 1, 5, 12))).toEqual({ isoYear: 2026, isoWeek: 2 });
   });
 });

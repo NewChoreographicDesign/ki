@@ -2,40 +2,52 @@ import "server-only";
 import { db } from "@/lib/db";
 import { mostRecentMondayStart, formatDate, formatDateTime, fullName } from "@/lib/utils";
 
+const STATUS_LABELS: Record<string, string> = {
+  TAKEN: "Afgevinkt",
+  LEAVE: "Verlof",
+  NOT_TAKEN: "Niet ingenomen",
+};
+
 /**
  * Replaces the old per-report/monthly emails: instead of pushing client data
  * out over email (see the removed lib/email.ts), admin/coordinator pull a
- * report covering the current week (reset every Monday, same "sinds
- * afgelopen <weekday>" pattern as rapportage's Thursday reset) from inside
- * the app when they want it.
+ * report covering a given week from inside the app. Used two ways:
+ * - Live/in-progress current week: getWeeklyReportData(mostRecentMondayStart())
+ *   with weekEnd defaulting to "now".
+ * - A specific, already-completed week (the automatic PDF archive, see
+ *   app/api/cron/weekly-report/route.ts): pass an explicit weekEnd so next
+ *   week's data can't leak into an archived week's PDF.
  */
-export async function getWeeklyReportData(now: Date = new Date()) {
-  const weekStart = mostRecentMondayStart(now);
-
+export async function getWeeklyReportData(weekStart: Date, weekEnd: Date = new Date()) {
   const [reports, medicationChecks, todos, appointments] = await Promise.all([
     db.report.findMany({
-      where: { createdAt: { gte: weekStart } },
+      where: { createdAt: { gte: weekStart, lt: weekEnd } },
       include: { client: true, user: true },
       orderBy: { createdAt: "asc" },
     }),
     db.medicationCheck.findMany({
-      where: { checkedAt: { gte: weekStart } },
+      where: { checkedAt: { gte: weekStart, lt: weekEnd } },
       include: { medication: { include: { client: true } }, user: true },
       orderBy: { checkedAt: "asc" },
     }),
     db.todo.findMany({
-      where: { OR: [{ createdAt: { gte: weekStart } }, { completedAt: { gte: weekStart } }] },
+      where: {
+        OR: [
+          { createdAt: { gte: weekStart, lt: weekEnd } },
+          { completedAt: { gte: weekStart, lt: weekEnd } },
+        ],
+      },
       include: { createdBy: true, completedBy: true },
       orderBy: { createdAt: "asc" },
     }),
     db.appointment.findMany({
-      where: { startAt: { gte: weekStart } },
+      where: { startAt: { gte: weekStart, lt: weekEnd } },
       include: { client: true, createdBy: true },
       orderBy: { startAt: "asc" },
     }),
   ]);
 
-  return { weekStart, now, reports, medicationChecks, todos, appointments };
+  return { weekStart, weekEnd, reports, medicationChecks, todos, appointments };
 }
 
 export type WeeklyReportData = Awaited<ReturnType<typeof getWeeklyReportData>>;
@@ -45,7 +57,7 @@ export function renderWeeklyReportText(data: WeeklyReportData): string {
   const add = (line = "") => lines.push(line);
 
   add(`WEEKRAPPORT — sinds ${formatDate(data.weekStart)}`);
-  add(`Gegenereerd op ${formatDateTime(data.now)}`);
+  add(`Gegenereerd op ${formatDateTime(new Date())}`);
   add("=".repeat(60));
 
   add("");
@@ -64,14 +76,15 @@ export function renderWeeklyReportText(data: WeeklyReportData): string {
   }
 
   add("");
-  add(`MEDICATIE AFGEVINKT (${data.medicationChecks.length})`);
+  add(`MEDICATIE (${data.medicationChecks.length})`);
   add("-".repeat(60));
   if (data.medicationChecks.length === 0) {
-    add("Geen medicatie afgevinkt deze week.");
+    add("Geen medicatieregistraties deze week.");
   } else {
     for (const c of data.medicationChecks) {
+      const status = STATUS_LABELS[c.status] ?? c.status;
       add(
-        `${formatDateTime(c.checkedAt)} · ${fullName(c.medication.client)} · ${c.medication.name} · door ${c.user.name}${c.comment ? ` · ${c.comment}` : ""}`
+        `${formatDateTime(c.checkedAt)} · ${fullName(c.medication.client)} · ${c.medication.name} · ${status} · door ${c.user.name}${c.comment ? ` · ${c.comment}` : ""}`
       );
     }
   }

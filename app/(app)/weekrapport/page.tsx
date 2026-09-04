@@ -1,12 +1,19 @@
 import { redirect } from "next/navigation";
-import { Download } from "lucide-react";
+import { Download, Archive } from "lucide-react";
 import { getSession, canAccessWeeklyReport } from "@/lib/auth";
 import { getWeeklyReportData } from "@/lib/weekly-report";
-import { formatDate, formatDateTime, fullName } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { db } from "@/lib/db";
+import { formatDate, formatDateTime, fullName, mostRecentMondayStart } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
+
+const MEDICATION_STATUS_LABELS: Record<string, string> = {
+  TAKEN: "Afgevinkt",
+  LEAVE: "Verlof",
+  NOT_TAKEN: "Niet ingenomen",
+};
 
 export default async function WeekrapportPage() {
   const session = await getSession();
@@ -14,22 +21,73 @@ export default async function WeekrapportPage() {
     redirect("/dashboard");
   }
 
-  const data = await getWeeklyReportData();
+  const weekStart = mostRecentMondayStart();
+  const [data, archive] = await Promise.all([
+    getWeeklyReportData(weekStart),
+    db.weeklyReportPdf.findMany({
+      orderBy: { weekStart: "desc" },
+      select: { id: true, isoYear: true, isoWeek: true, weekStart: true, createdAt: true },
+    }),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-2xl font-semibold text-slate-50">Weekrapport</h1>
+        <p className="mt-1 text-slate-400">
+          Vervangt de e-mails die vroeger automatisch werden verstuurd.
+        </p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Archive className="h-4 w-4" /> Archief (automatisch, per kalenderweek)
+          </CardTitle>
+          <CardDescription>
+            Elke maandagochtend wordt de afgelopen week automatisch vastgelegd als PDF — hierin
+            staan alle acties van die week. PDF&apos;s worden 1 jaar bewaard; oudere worden
+            automatisch verwijderd.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          {archive.length === 0 ? (
+            <p className="text-slate-500">
+              Nog geen afgeronde week gearchiveerd — dat gebeurt vanaf de eerstvolgende maandag.
+            </p>
+          ) : (
+            archive.map((a) => (
+              <div
+                key={a.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface2 px-3 py-2"
+              >
+                <span className="text-sm text-slate-200">
+                  Week {a.isoWeek}, {a.isoYear}{" "}
+                  <span className="text-slate-500">({formatDate(a.weekStart)})</span>
+                </span>
+                <a href={`/api/weekrapport/archive/${a.id}`}>
+                  <Button size="sm" variant="outline" className="gap-2">
+                    <Download className="h-4 w-4" /> PDF
+                  </Button>
+                </a>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-50">Weekrapport</h1>
-          <p className="mt-1 text-slate-400">
-            Overzicht sinds {formatDate(data.weekStart)} (reset elke maandag). Vervangt de
-            e-mails die vroeger automatisch werden verstuurd.
+          <h2 className="text-lg font-semibold text-slate-100">Deze week (nog niet afgerond)</h2>
+          <p className="mt-1 text-sm text-slate-400">
+            Live overzicht sinds {formatDate(data.weekStart)} — wordt aankomende maandag
+            automatisch aan het archief hierboven toegevoegd.
           </p>
         </div>
         <a href="/api/weekrapport/download">
-          <Button className="gap-2">
+          <Button variant="outline" className="gap-2">
             <Download className="h-4 w-4" />
-            Downloaden (.txt)
+            Voortgang (.txt)
           </Button>
         </a>
       </div>
@@ -57,16 +115,16 @@ export default async function WeekrapportPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Medicatie afgevinkt ({data.medicationChecks.length})</CardTitle>
+          <CardTitle className="text-base">Medicatie ({data.medicationChecks.length})</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           {data.medicationChecks.length === 0 ? (
-            <p className="text-slate-500">Geen medicatie afgevinkt deze week.</p>
+            <p className="text-slate-500">Geen medicatieregistraties deze week.</p>
           ) : (
             data.medicationChecks.map((c) => (
               <p key={c.id} className="text-sm text-slate-300">
-                {formatDateTime(c.checkedAt)} · {fullName(c.medication.client)} · {c.medication.name} · door{" "}
-                {c.user.name}
+                {formatDateTime(c.checkedAt)} · {fullName(c.medication.client)} · {c.medication.name} ·{" "}
+                {MEDICATION_STATUS_LABELS[c.status] ?? c.status} · door {c.user.name}
                 {c.comment ? ` · ${c.comment}` : ""}
               </p>
             ))

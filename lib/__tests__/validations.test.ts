@@ -3,6 +3,7 @@ import {
   loginSchema,
   reportSchema,
   medicationSchema,
+  medicationCheckSchema,
   presenceSchema,
   todoSchema,
   clientSchema,
@@ -70,6 +71,23 @@ describe("medicationSchema", () => {
 
   it("rejects missing required fields", () => {
     const result = medicationSchema.safeParse({ clientId: "abc", name: "Paracetamol" });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("medicationCheckSchema", () => {
+  it.each(["TAKEN", "LEAVE", "NOT_TAKEN"])("accepts status %s", (status) => {
+    const result = medicationCheckSchema.safeParse({ medicationId: "abc", status });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a missing status", () => {
+    const result = medicationCheckSchema.safeParse({ medicationId: "abc" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an invalid status", () => {
+    const result = medicationCheckSchema.safeParse({ medicationId: "abc", status: "SKIPPED" });
     expect(result.success).toBe(false);
   });
 });
