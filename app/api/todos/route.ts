@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
         recurring: data.recurring ?? false,
         createdById: session.sub,
       },
+      include: { createdBy: true, completedBy: true },
     });
 
     return NextResponse.json({ ok: true, todo });

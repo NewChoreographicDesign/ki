@@ -70,8 +70,8 @@ export function SetupForm() {
           required
         />
       </div>
-      <Button type="submit" size="lg" disabled={loading} className="mt-2 w-full">
-        {loading ? "Bezig..." : "Account aanmaken en starten"}
+      <Button type="submit" size="lg" loading={loading} className="mt-2 w-full">
+        Account aanmaken en starten
       </Button>
     </form>
   );

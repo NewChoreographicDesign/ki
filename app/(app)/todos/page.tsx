@@ -1,39 +1,8 @@
 import { db } from "@/lib/db";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TodoForm } from "./todo-form";
-import { TodoItem, type TodoData } from "./todo-item";
+import { serializeTodo } from "./todo-types";
+import { TodoBoard } from "./todo-board";
 
 export const dynamic = "force-dynamic";
-
-function serialize(todo: {
-  id: string;
-  title: string;
-  description: string | null;
-  priority: "LOW" | "MEDIUM" | "HIGH";
-  dayOfWeek: number | null;
-  recurring: boolean;
-  completed: boolean;
-  completedBy: { name: string } | null;
-  completedAt: Date | null;
-  completionNote: string | null;
-  createdBy: { name: string };
-  createdAt: Date;
-}): TodoData {
-  return {
-    id: todo.id,
-    title: todo.title,
-    description: todo.description,
-    priority: todo.priority,
-    dayOfWeek: todo.dayOfWeek,
-    recurring: todo.recurring,
-    completed: todo.completed,
-    completedByName: todo.completedBy?.name ?? null,
-    completedAt: todo.completedAt ? todo.completedAt.toISOString() : null,
-    completionNote: todo.completionNote,
-    createdByName: todo.createdBy.name,
-    createdAt: todo.createdAt.toISOString(),
-  };
-}
 
 export default async function TodosPage() {
   const [open, completed] = await Promise.all([
@@ -59,40 +28,7 @@ export default async function TodosPage() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Nieuwe taak</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <TodoForm />
-        </CardContent>
-      </Card>
-
-      <div>
-        <h2 className="mb-3 text-lg font-semibold text-slate-100">Openstaand ({open.length})</h2>
-        {open.length === 0 ? (
-          <p className="text-slate-500">Geen openstaande taken.</p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {open.map((t) => (
-              <TodoItem key={t.id} todo={serialize(t)} />
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div>
-        <h2 className="mb-3 text-lg font-semibold text-slate-100">Recent afgerond</h2>
-        {completed.length === 0 ? (
-          <p className="text-slate-500">Nog niets afgerond.</p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {completed.map((t) => (
-              <TodoItem key={t.id} todo={serialize(t)} />
-            ))}
-          </div>
-        )}
-      </div>
+      <TodoBoard initialOpen={open.map(serializeTodo)} initialCompleted={completed.map(serializeTodo)} />
     </div>
   );
 }

@@ -62,10 +62,11 @@ export function MedicationCheckForm({ medicationId }: { medicationId: string }) 
             key={status}
             size="lg"
             variant={variant}
-            disabled={loading !== null}
+            loading={loading === status}
+            disabled={loading !== null && loading !== status}
             onClick={() => handleCheck(status)}
           >
-            <Icon className="h-5 w-5" /> {loading === status ? "Bezig..." : label}
+            {loading !== status && <Icon className="h-5 w-5" />} {label}
           </Button>
         ))}
         {!showComment && (

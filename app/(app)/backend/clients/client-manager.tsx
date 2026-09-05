@@ -109,8 +109,8 @@ export function ClientManager({ clients }: { clients: ClientRow[] }) {
               <Label htmlFor="notes">Notities (optioneel)</Label>
               <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
             </div>
-            <Button type="submit" disabled={loading || !firstName || !lastName} className="self-start">
-              {loading ? "Toevoegen..." : "Toevoegen"}
+            <Button type="submit" loading={loading} disabled={!firstName || !lastName} className="self-start">
+              Toevoegen
             </Button>
           </form>
         </CardContent>

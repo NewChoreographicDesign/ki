@@ -118,8 +118,8 @@ export function MedicationManager({
               <Label htmlFor="instructions">Instructies (optioneel)</Label>
               <Input id="instructions" value={instructions} onChange={(e) => setInstructions(e.target.value)} />
             </div>
-            <Button type="submit" disabled={loading || !clientId || !name || !dosage || !times} className="self-start">
-              {loading ? "Toevoegen..." : "Toevoegen"}
+            <Button type="submit" loading={loading} disabled={!clientId || !name || !dosage || !times} className="self-start">
+              Toevoegen
             </Button>
           </form>
         </CardContent>

@@ -24,6 +24,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         completedAt: new Date(),
         completionNote: completionNote || null,
       },
+      include: { createdBy: true, completedBy: true },
     });
 
     return NextResponse.json({ ok: true, todo });

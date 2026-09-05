@@ -70,8 +70,8 @@ export function LoginForm() {
           required
         />
       </div>
-      <Button type="submit" size="lg" disabled={loading} className="mt-2 w-full">
-        {loading ? "Bezig..." : "Inloggen"}
+      <Button type="submit" size="lg" loading={loading} className="mt-2 w-full">
+        Inloggen
       </Button>
     </form>
   );

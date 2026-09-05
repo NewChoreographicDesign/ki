@@ -51,8 +51,8 @@ export function ApparaatForm() {
           autoFocus
         />
       </div>
-      <Button type="submit" size="lg" disabled={loading || !passcode} className="w-full">
-        {loading ? "Bezig..." : "Vrijgeven"}
+      <Button type="submit" size="lg" loading={loading} disabled={!passcode} className="w-full">
+        Vrijgeven
       </Button>
     </form>
   );

@@ -177,10 +177,11 @@ export function ProtocolManager({
             )}
             <Button
               type="submit"
-              disabled={loading || !title || (!content && !file)}
+              loading={loading}
+              disabled={!title || (!content && !file)}
               className="self-start"
             >
-              {loading ? "Bezig..." : "Toevoegen"}
+              Toevoegen
             </Button>
           </form>
         </CardContent>

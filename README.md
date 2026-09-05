@@ -50,9 +50,25 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
   [Security &amp; privacy](#security--privacy) hieronder voor het volledige
   overzicht van getroffen maatregelen.
 - **UI/UX** — dark mode standaard, sky/emerald accenten, grote touch-targets,
-  sidebar + overlay voor iPad, responsive, cards, badges, toasts (sonner).
+  responsive, cards, badges, toasts (sonner). De sidebar staat vanaf `md`
+  (768px) permanent open in plaats van pas vanaf `lg` (1024px) — dat dekt
+  iPad-portrait (bv. iPad 9: 810px breed), zodat het primaire doelapparaat
+  geen extra tik-en-wacht op een hamburgermenu nodig heeft voor elke
+  navigatie.
 - **Prestatie** — server components voor data-ophaling, minimale client JS,
-  geïndexeerde uniques in Prisma.
+  geïndexeerde uniques in Prisma. `app/(app)/loading.tsx` toont direct een
+  skeleton zodra je op een ander onderdeel klikt — zonder dat blijft het
+  scherm bevroren staan op de vorige pagina totdat de nieuwe volledig klaar
+  is (elke pagina haalt data live op, dus zonder deze skeleton voelt elke
+  klik als "deed dit iets?"). Acties die vaak achter elkaar gebeuren
+  (to-do afronden/aanmaken, aanwezigheid wijzigen) werken **optimistisch**:
+  de UI update meteen client-side in plaats van te wachten op een volledige
+  paginaherlading via `router.refresh()` — dat laatste kost een dubbele
+  server-rondgang (de actie zelf, dan nog een keer om de pagina opnieuw op
+  te halen) voor iets dat er client-side al lag. Medicatie-registraties
+  blijven bewust wél op `router.refresh()` wachten voordat de UI verandert:
+  die zijn onomkeerbaar, en de weergave moet exact de bevestigde
+  serverstatus tonen, niet een aanname vooraf.
 
 ## Modules
 
@@ -63,7 +79,7 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
 | Medicatie | `/medicatie` | Per cliënt registreren: Afvinken, Verlof of Niet ingenomen (onomkeerbaar). Weekoverzicht reset elke maandag (zie Weekrapport) |
 | Aanwezigheid | `/aanwezigheid` | Aanwezig/afwezig per cliënt, gedeeld tussen alle accounts en diensten — blijft staan tot iemand het weer wijzigt (geen dagelijkse reset) |
 | Overdracht | `/overdracht` | Notities die 1 uur na diensteinde verlopen |
-| To-Do's | `/todos` | Openstaande taken bovenaan, daaronder het formulier voor een nieuwe taak. Optioneel een dag en "terugkerend (wekelijks)" instellen — een afgeronde terugkerende taak verschijnt automatisch weer als open taak zodra de nieuwe week begint (maandagochtend, via dezelfde cron als het weekrapport). Voor iedereen zichtbaar |
+| To-Do's | `/todos` | Openstaande taken direct bovenaan zichtbaar; "+ Nieuwe taak" is een compacte knop die het formulier inklapt/uitklapt in plaats van er altijd ruimte voor in te nemen. Optioneel een dag en "terugkerend (wekelijks)" instellen — een afgeronde terugkerende taak verschijnt automatisch weer als open taak zodra de nieuwe week begint (maandagochtend, via dezelfde cron als het weekrapport). Afronden/aanmaken update de lijst direct, zonder paginaherlading. Voor iedereen zichtbaar |
 | Agenda | `/agenda` | Aankomende afspraken bovenaan, daaronder het formulier voor een nieuwe afspraak |
 | Protocollen | `/protocollen` | Algemene en cliëntspecifieke protocollen, als tekst en/of geüpload bestand, voor iedereen |
 | Weekrapport | `/weekrapport` | Automatisch archief van één PDF per kalenderweek (alle acties van die week), 1 jaar bewaard, plus een live overzicht van de lopende week. Admin + coördinator |
@@ -378,8 +394,8 @@ gericht toe.
 5. **Medicatie** → open cliënt → kies Afvinken, Verlof of Niet ingenomen (kan niet ongedaan worden gemaakt). "Registraties deze week" reset elke maandag; het volledige overzicht staat daarna in het Weekrapport-archief.
 6. **Aanwezigheid** → tik Aanwezig/Afwezig (met optioneel commentaar). Gedeeld tussen iedereen die inlogt en alle diensten; blijft staan totdat iemand het weer aanpast (geen dagelijkse reset).
 7. **Overdracht** → typ notitie → wordt 1 uur na diensteinde automatisch gewist.
-8. **To-Do's** → openstaande taken bovenaan, formulier voor een nieuwe taak eronder. Voor iedereen zichtbaar.
-9. **Agenda** → aankomende afspraken bovenaan, formulier voor een nieuwe afspraak eronder.
+8. **To-Do's** → openstaande taken direct bovenaan; "+ Nieuwe taak" klapt het formulier open. Voor iedereen zichtbaar.
+9. **Agenda** → formulier voor een nieuwe afspraak bovenaan, aankomende afspraken eronder.
 10. **Protocollen** → algemeen of per cliënt, tekst en/of geüpload bestand. Voor iedereen; verwijderen alleen voor admin/coördinator.
 11. **Weekrapport** (admin + coördinator) → automatisch archief van één PDF per kalenderweek (1 jaar bewaard), plus een live voortgangsoverzicht van de lopende week.
 12. **Backend** (alleen admin) → cliënten (incl. kamer), medewerkers, instellingen, auditlog, medicatie, weekplanning. Eén wijziging = overal doorgevoerd.

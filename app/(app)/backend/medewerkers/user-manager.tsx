@@ -99,8 +99,8 @@ export function UserManager({ users, currentUserId }: { users: UserRow[]; curren
                 </Select>
               </div>
             </div>
-            <Button type="submit" disabled={loading || !name || !birthDate} className="self-start">
-              {loading ? "Toevoegen..." : "Toevoegen"}
+            <Button type="submit" loading={loading} disabled={!name || !birthDate} className="self-start">
+              Toevoegen
             </Button>
           </form>
         </CardContent>

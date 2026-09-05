@@ -76,8 +76,8 @@ export function AppointmentForm({ clients }: { clients: { id: string; name: stri
         <Label htmlFor="description">Omschrijving (optioneel)</Label>
         <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} />
       </div>
-      <Button type="submit" size="lg" disabled={loading || !title || !startAt} className="self-start">
-        {loading ? "Opslaan..." : "Afspraak toevoegen"}
+      <Button type="submit" size="lg" loading={loading} disabled={!title || !startAt} className="self-start">
+        Afspraak toevoegen
       </Button>
     </form>
   );

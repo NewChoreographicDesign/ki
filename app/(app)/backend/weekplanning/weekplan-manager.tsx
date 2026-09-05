@@ -114,8 +114,8 @@ export function WeekPlanManager({
                 <Input id="activity" value={activity} onChange={(e) => setActivity(e.target.value)} required />
               </div>
             </div>
-            <Button type="submit" disabled={loading || !clientId || !activity} className="self-start">
-              {loading ? "Toevoegen..." : "Toevoegen"}
+            <Button type="submit" loading={loading} disabled={!clientId || !activity} className="self-start">
+              Toevoegen
             </Button>
           </form>
         </CardContent>

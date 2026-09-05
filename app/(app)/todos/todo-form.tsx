@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,9 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { DAYS_OF_WEEK } from "@/lib/utils";
+import { serializeTodo, type TodoData } from "./todo-types";
 
-export function TodoForm() {
-  const router = useRouter();
+export function TodoForm({
+  onCreated,
+  onCancel,
+}: {
+  onCreated: (todo: TodoData) => void;
+  onCancel?: () => void;
+}) {
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [priority, setPriority] = React.useState<"LOW" | "MEDIUM" | "HIGH">("MEDIUM");
@@ -46,12 +51,12 @@ export function TodoForm() {
         return;
       }
       toast.success("Taak toegevoegd");
+      onCreated(serializeTodo(data.todo));
       setTitle("");
       setDescription("");
       setPriority("MEDIUM");
       setDayOfWeek("");
       setRecurring(false);
-      router.refresh();
     } catch {
       toast.error("Er is iets misgegaan");
     } finally {
@@ -64,7 +69,7 @@ export function TodoForm() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="sm:col-span-2">
           <Label htmlFor="title">Taak</Label>
-          <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+          <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus required />
         </div>
         <div>
           <Label htmlFor="priority">Prioriteit</Label>
@@ -108,9 +113,16 @@ export function TodoForm() {
           </label>
         </div>
       </div>
-      <Button type="submit" size="lg" disabled={loading || !title || needsDay} className="self-start">
-        {loading ? "Toevoegen..." : "Toevoegen"}
-      </Button>
+      <div className="flex gap-2">
+        <Button type="submit" size="lg" loading={loading} disabled={!title || needsDay} className="self-start">
+          Toevoegen
+        </Button>
+        {onCancel && (
+          <Button type="button" size="lg" variant="ghost" onClick={onCancel} className="self-start">
+            Annuleren
+          </Button>
+        )}
+      </div>
     </form>
   );
 }

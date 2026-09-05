@@ -100,7 +100,7 @@ export function AppNav({
   return (
     <>
       {/* Mobile / iPad top bar */}
-      <div className="flex items-center justify-between border-b border-border bg-surface px-4 py-3 lg:hidden">
+      <div className="flex items-center justify-between border-b border-border bg-surface px-4 py-3 md:hidden">
         <button
           aria-label="Menu"
           onClick={() => setOpen(true)}
@@ -114,7 +114,7 @@ export function AppNav({
 
       {/* Overlay for iPad / mobile */}
       {open && (
-        <div className="fixed inset-0 z-40 flex lg:hidden">
+        <div className="fixed inset-0 z-40 flex md:hidden">
           <div className="absolute inset-0 bg-black/60" onClick={() => setOpen(false)} />
           <div className="relative z-50 flex h-full w-80 max-w-[85vw] flex-col bg-surface">
             <div className="flex items-center justify-between p-4">
@@ -134,7 +134,7 @@ export function AppNav({
       )}
 
       {/* Desktop / iPad landscape sidebar */}
-      <aside className="hidden w-72 shrink-0 flex-col border-r border-border bg-surface lg:flex">
+      <aside className="hidden w-72 shrink-0 flex-col border-r border-border bg-surface md:flex">
         <div className="p-5">
           <span className="text-lg font-semibold">Woongroep Admin</span>
         </div>

@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CheckCircle2, Repeat } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,26 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDateTime, DAYS_OF_WEEK, PRIORITY_LABELS } from "@/lib/utils";
+import { serializeTodo, type TodoData } from "./todo-types";
 
 const PRIORITY_VARIANT = { LOW: "slate", MEDIUM: "sky", HIGH: "red" } as const;
 
-export type TodoData = {
-  id: string;
-  title: string;
-  description: string | null;
-  priority: "LOW" | "MEDIUM" | "HIGH";
-  dayOfWeek: number | null;
-  recurring: boolean;
-  completed: boolean;
-  completedByName: string | null;
-  completedAt: string | null;
-  completionNote: string | null;
-  createdByName: string;
-  createdAt: string;
-};
-
-export function TodoItem({ todo }: { todo: TodoData }) {
-  const router = useRouter();
+export function TodoItem({
+  todo,
+  onComplete,
+}: {
+  todo: TodoData;
+  onComplete?: (todo: TodoData) => void;
+}) {
   const [showComment, setShowComment] = React.useState(false);
   const [note, setNote] = React.useState("");
   const [loading, setLoading] = React.useState(false);
@@ -41,9 +31,10 @@ export function TodoItem({ todo }: { todo: TodoData }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ completionNote: note }),
       });
+      const data = await res.json();
       if (!res.ok) throw new Error();
       toast.success("Taak afgerond");
-      router.refresh();
+      onComplete?.(serializeTodo(data.todo));
     } catch {
       toast.error("Afronden mislukt");
     } finally {
@@ -69,8 +60,8 @@ export function TodoItem({ todo }: { todo: TodoData }) {
           </div>
           {!todo.completed && !showComment && (
             <div className="flex gap-2">
-              <Button size="sm" variant="secondary" disabled={loading} onClick={handleComplete}>
-                <CheckCircle2 className="h-4 w-4" /> Afronden
+              <Button size="sm" variant="secondary" loading={loading} onClick={handleComplete}>
+                {!loading && <CheckCircle2 className="h-4 w-4" />} Afronden
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setShowComment(true)}>
                 + commentaar
@@ -87,7 +78,7 @@ export function TodoItem({ todo }: { todo: TodoData }) {
               placeholder="Commentaar bij afronden..."
               className="min-h-[70px]"
             />
-            <Button size="sm" variant="secondary" disabled={loading} onClick={handleComplete} className="self-start">
+            <Button size="sm" variant="secondary" loading={loading} onClick={handleComplete} className="self-start">
               Afronden met commentaar
             </Button>
           </div>

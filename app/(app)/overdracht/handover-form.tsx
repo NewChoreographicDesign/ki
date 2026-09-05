@@ -44,8 +44,8 @@ export function HandoverForm() {
         className="min-h-[120px]"
         required
       />
-      <Button type="submit" size="lg" disabled={loading} className="self-start">
-        {loading ? "Opslaan..." : "Opslaan"}
+      <Button type="submit" size="lg" loading={loading} className="self-start">
+        Opslaan
       </Button>
     </form>
   );

@@ -95,8 +95,8 @@ export function ReportForm({
           required
         />
       </div>
-      <Button type="submit" size="lg" disabled={loading || !clientId} className="self-start">
-        {loading ? "Versturen..." : "Versturen"}
+      <Button type="submit" size="lg" loading={loading} disabled={!clientId} className="self-start">
+        Versturen
       </Button>
     </form>
   );
