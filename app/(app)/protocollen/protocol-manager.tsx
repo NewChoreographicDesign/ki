@@ -141,15 +141,28 @@ export function ProtocolManager({
             </div>
             <div>
               <Label htmlFor="protocol-file">Bestand (optioneel)</Label>
-              <input
-                ref={fileInputRef}
-                id="protocol-file"
-                type="file"
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.txt"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                disabled={loading}
-                className="block w-full rounded-xl border border-border bg-surface2 px-3 py-2.5 text-sm text-slate-100 file:mr-3 file:rounded-lg file:border-0 file:bg-sky-500 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white disabled:opacity-60"
-              />
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={loading}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Bestand kiezen
+                </Button>
+                <span className="truncate text-sm text-slate-400">
+                  {file ? file.name : "Geen bestand gekozen"}
+                </span>
+                <input
+                  ref={fileInputRef}
+                  id="protocol-file"
+                  type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.txt"
+                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                  disabled={loading}
+                  className="sr-only"
+                />
+              </div>
             </div>
             {loading && file && (
               <div className="flex flex-col gap-1">

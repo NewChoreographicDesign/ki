@@ -23,7 +23,7 @@ export default async function AgendaPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-50">Agenda</h1>
-        <p className="mt-1 text-slate-400">Aankomende afspraken en herinneringen per e-mail.</p>
+        <p className="mt-1 text-slate-400">Aankomende afspraken, voor iedereen zichtbaar in de app.</p>
       </div>
 
       <div>

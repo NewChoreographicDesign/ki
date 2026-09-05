@@ -202,6 +202,13 @@ export const DAYS_OF_WEEK = [
   "Zondag",
 ] as const;
 
+/** Dutch labels for Todo/priority, shared by the UI and the weekly report text/PDF. */
+export const PRIORITY_LABELS: Record<"LOW" | "MEDIUM" | "HIGH", string> = {
+  LOW: "Laag",
+  MEDIUM: "Gemiddeld",
+  HIGH: "Hoog",
+};
+
 export function fullName(client: { firstName: string; lastName: string }): string {
   return `${client.firstName} ${client.lastName}`;
 }

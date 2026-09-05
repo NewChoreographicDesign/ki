@@ -1,7 +1,7 @@
 import "server-only";
 import PDFDocument from "pdfkit";
 import type { WeeklyReportData } from "@/lib/weekly-report";
-import { formatDate, formatDateTime, fullName, isoWeekOf } from "@/lib/utils";
+import { formatDate, formatDateTime, fullName, isoWeekOf, PRIORITY_LABELS } from "@/lib/utils";
 
 const STATUS_LABELS: Record<string, string> = {
   TAKEN: "Afgevinkt",
@@ -68,7 +68,7 @@ export function renderWeeklyReportPdf(data: WeeklyReportData): Promise<Buffer> {
     } else {
       for (const t of data.todos) {
         const status = t.completed ? `afgerond door ${t.completedBy?.name ?? "?"}` : "open";
-        item(doc, `${t.title} (${t.priority}) · ${status} · aangemaakt door ${t.createdBy.name}`);
+        item(doc, `${t.title} (${PRIORITY_LABELS[t.priority]}) · ${status} · aangemaakt door ${t.createdBy.name}`);
       }
     }
 

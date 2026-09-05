@@ -8,10 +8,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDateTime, DAYS_OF_WEEK } from "@/lib/utils";
+import { formatDateTime, DAYS_OF_WEEK, PRIORITY_LABELS } from "@/lib/utils";
 
 const PRIORITY_VARIANT = { LOW: "slate", MEDIUM: "sky", HIGH: "red" } as const;
-const PRIORITY_LABEL = { LOW: "Laag", MEDIUM: "Gemiddeld", HIGH: "Hoog" } as const;
 
 export type TodoData = {
   id: string;
@@ -60,7 +59,7 @@ export function TodoItem({ todo }: { todo: TodoData }) {
             <span className={todo.completed ? "text-slate-500 line-through" : "font-medium text-slate-100"}>
               {todo.title}
             </span>
-            <Badge variant={PRIORITY_VARIANT[todo.priority]}>{PRIORITY_LABEL[todo.priority]}</Badge>
+            <Badge variant={PRIORITY_VARIANT[todo.priority]}>{PRIORITY_LABELS[todo.priority]}</Badge>
             {todo.dayOfWeek !== null && <Badge variant="slate">{DAYS_OF_WEEK[todo.dayOfWeek]}</Badge>}
             {todo.recurring && (
               <Badge variant="emerald" className="gap-1">

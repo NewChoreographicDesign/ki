@@ -10,8 +10,8 @@ export const dynamic = "force-dynamic";
 export default async function RapportagePage() {
   // "Recente rapportages" resets every Thursday: only reports from the most
   // recent Thursday onward are shown here. Nothing is deleted — this is a
-  // display window, not a retention policy — so older reports stay in the
-  // database and in whatever was already emailed out.
+  // display window, not a retention policy — older reports stay in the
+  // database and in the weekly PDF archive (see /weekrapport).
   const since = mostRecentThursdayStart();
 
   const [clients, reports] = await Promise.all([
@@ -29,7 +29,9 @@ export default async function RapportagePage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-50">Rapportage</h1>
-        <p className="mt-1 text-slate-400">Verstuur een rapportage naar het algemene e-mailadres.</p>
+        <p className="mt-1 text-slate-400">
+          Rapportage per cliënt en dienst — voor iedereen direct zichtbaar, geen e-mail nodig.
+        </p>
       </div>
 
       <Card>

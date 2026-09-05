@@ -3,7 +3,7 @@ import { Download, Archive } from "lucide-react";
 import { getSession, canAccessWeeklyReport } from "@/lib/auth";
 import { getWeeklyReportData } from "@/lib/weekly-report";
 import { db } from "@/lib/db";
-import { formatDate, formatDateTime, fullName, mostRecentMondayStart } from "@/lib/utils";
+import { formatDate, formatDateTime, fullName, mostRecentMondayStart, PRIORITY_LABELS } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -142,7 +142,7 @@ export default async function WeekrapportPage() {
           ) : (
             data.todos.map((t) => (
               <p key={t.id} className="text-sm text-slate-300">
-                {t.title} ({t.priority}) ·{" "}
+                {t.title} ({PRIORITY_LABELS[t.priority]}) ·{" "}
                 {t.completed ? `afgerond door ${t.completedBy?.name ?? "?"}` : "open"} · aangemaakt door{" "}
                 {t.createdBy.name}
               </p>

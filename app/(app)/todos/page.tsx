@@ -55,7 +55,7 @@ export default async function TodosPage() {
       <div>
         <h1 className="text-2xl font-semibold text-slate-50">To-Do&apos;s</h1>
         <p className="mt-1 text-slate-400">
-          Maandelijks wordt een overzicht naar de coördinator gestuurd.
+          Voor iedereen zichtbaar. Terugkerende taken verschijnen automatisch weer volgende week.
         </p>
       </div>
 

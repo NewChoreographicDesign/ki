@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db";
-import { mostRecentMondayStart, formatDate, formatDateTime, fullName } from "@/lib/utils";
+import { mostRecentMondayStart, formatDate, formatDateTime, fullName, PRIORITY_LABELS } from "@/lib/utils";
 
 const STATUS_LABELS: Record<string, string> = {
   TAKEN: "Afgevinkt",
@@ -97,7 +97,7 @@ export function renderWeeklyReportText(data: WeeklyReportData): string {
   } else {
     for (const t of data.todos) {
       const status = t.completed ? `afgerond door ${t.completedBy?.name ?? "?"}` : "open";
-      add(`${t.title} (${t.priority}) · ${status} · aangemaakt door ${t.createdBy.name}`);
+      add(`${t.title} (${PRIORITY_LABELS[t.priority]}) · ${status} · aangemaakt door ${t.createdBy.name}`);
     }
   }
 
