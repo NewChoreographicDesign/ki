@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { db } from "@/lib/db";
 import { fullName, formatDateTime, mostRecentMondayStart } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -45,6 +47,12 @@ export default async function ClientMedicationPage({
   return (
     <div className="flex flex-col gap-6">
       <div>
+        <Link
+          href="/medicatie"
+          className="mb-2 inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200"
+        >
+          <ArrowLeft className="h-4 w-4" /> Terug naar cliënten
+        </Link>
         <h1 className="text-2xl font-semibold text-slate-50">{fullName(client)}</h1>
         <p className="mt-1 text-slate-400">Medicatieoverzicht</p>
       </div>

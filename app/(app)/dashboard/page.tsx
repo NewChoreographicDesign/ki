@@ -163,7 +163,12 @@ export default async function DashboardPage() {
         <StatCard icon={CheckSquare} label="Open to-do's" value={stats.openTodos} />
         <StatCard icon={UserCheck} label="Nu aanwezig" value={stats.presentNow} />
         <StatCard icon={Calendar} label="Afspraken (7 dagen)" value={stats.upcomingAppointments} />
-        <StatCard icon={ArrowLeftRight} label="Actieve overdrachten" value={stats.activeHandovers} />
+        <StatCard
+          icon={ArrowLeftRight}
+          label="Actieve overdrachten"
+          value={stats.activeHandovers}
+          className="col-span-2 lg:col-span-1"
+        />
       </div>
 
       <div>
@@ -221,13 +226,15 @@ function StatCard({
   icon: Icon,
   label,
   value,
+  className,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: number;
+  className?: string;
 }) {
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-slate-400">{label}</CardTitle>
         <Icon className="h-5 w-5 text-slate-500" />

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SETTING_KEYS } from "@/lib/utils";
 
 const ddmmyyyy = /^\d{2}-\d{2}-\d{4}$/;
 
@@ -32,7 +33,7 @@ export const userSchema = z.object({
 });
 
 export const settingSchema = z.object({
-  key: z.string().trim().min(1).max(100),
+  key: z.enum(SETTING_KEYS),
   value: z.string().trim().max(2000),
 });
 

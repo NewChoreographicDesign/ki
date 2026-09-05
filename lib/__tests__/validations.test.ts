@@ -7,6 +7,7 @@ import {
   presenceSchema,
   todoSchema,
   clientSchema,
+  settingSchema,
 } from "@/lib/validations";
 
 describe("loginSchema", () => {
@@ -142,6 +143,18 @@ describe("clientSchema", () => {
 
   it("rejects a missing last name", () => {
     const result = clientSchema.safeParse({ firstName: "Jan" });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("settingSchema", () => {
+  it("accepts a known setting key", () => {
+    const result = settingSchema.safeParse({ key: "ORG_NAME", value: "Woongroep" });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a key that isn't in the known-settings whitelist", () => {
+    const result = settingSchema.safeParse({ key: "ANYTHING_ELSE", value: "x" });
     expect(result.success).toBe(false);
   });
 });

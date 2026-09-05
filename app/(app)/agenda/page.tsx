@@ -26,6 +26,15 @@ export default async function AgendaPage() {
         <p className="mt-1 text-slate-400">Aankomende afspraken, voor iedereen zichtbaar in de app.</p>
       </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Nieuwe afspraak</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AppointmentForm clients={clientOptions} />
+        </CardContent>
+      </Card>
+
       <div>
         <h2 className="mb-3 text-lg font-semibold text-slate-100">Aankomend</h2>
         {appointments.length === 0 ? (
@@ -50,15 +59,6 @@ export default async function AgendaPage() {
           </div>
         )}
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Nieuwe afspraak</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <AppointmentForm clients={clientOptions} />
-        </CardContent>
-      </Card>
     </div>
   );
 }

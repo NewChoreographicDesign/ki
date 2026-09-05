@@ -1,5 +1,6 @@
 import "server-only";
 import { NextRequest } from "next/server";
+import { secureCompare } from "@/lib/secure-compare";
 
 // The literal value from .env.example — reject it so a deployment that
 // copied the example file without generating a real secret can't have its
@@ -11,6 +12,6 @@ const PLACEHOLDER_CRON_SECRET = "change-me-cron-secret";
 export function isAuthorizedCronRequest(request: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret || secret === PLACEHOLDER_CRON_SECRET) return false;
-  const header = request.headers.get("authorization");
-  return header === `Bearer ${secret}`;
+  const header = request.headers.get("authorization") ?? "";
+  return secureCompare(header, `Bearer ${secret}`);
 }

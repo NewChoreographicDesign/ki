@@ -305,7 +305,7 @@ blijft een apparaat vrijgegeven, ongeacht het netwerk waarop het verbindt.
 | Naam | Waarde | Uitleg |
 |---|---|---|
 | `DEVICE_RESTRICTION_ENABLED` | `true` | Zet de beperking aan |
-| `DEVICE_PASSCODE` | een lange, moeilijk te raden tekst | Het apparaat-wachtwoord — geen 4-cijferige pincode, want er zit geen pogingslimiet op (zelfde reden als bij `JWT_SECRET`/`CRON_SECRET`) |
+| `DEVICE_PASSCODE` | een lange, moeilijk te raden tekst | Het apparaat-wachtwoord — geen 4-cijferige pincode: 10 foute pogingen achter elkaar blokkeert *alle* pogingen 15 minuten lang (`lib/device-lockout.ts`), maar dat is een noodrem, geen vervanging voor een echt sterk wachtwoord |
 
 Op elk apparaat dat toegang moet krijgen: open de app, je wordt doorgestuurd
 naar `/apparaat`, voer `DEVICE_PASSCODE` in. Dat zet een `httpOnly`-cookie
@@ -423,6 +423,28 @@ volgende, concreet geïmplementeerde maatregelen:
   worden bij het opstarten geweigerd wanneer ze exact de voorbeeldwaarde uit
   `.env.example` bevatten — voorkomt dat een vergeten "verander dit"-stap
   leidt tot vervalsbare sessies of een vrij aanroepbaar cron-endpoint.
+- **Timing-safe vergelijking van gedeelde secrets.** `CRON_SECRET`
+  (`lib/cron.ts`) en `DEVICE_PASSCODE` (`app/api/device/unlock/route.ts`)
+  worden vergeleken met `crypto.timingSafeEqual` (`lib/secure-compare.ts`) in
+  plaats van `===`, dat bij de eerste afwijkende byte stopt en zo via de
+  reactietijd zou kunnen laten afleiden hoeveel tekens van een gok al goed
+  waren.
+- **Bruteforce-bescherming op apparaat-ontgrendeling.** `DEVICE_PASSCODE`
+  heeft, net als login, geen accountconcept om per-gebruiker te vergrendelen
+  (het is één gedeeld geheim) — daarom blokkeert 10 foute pogingen achter
+  elkaar *alle* pogingen op `/api/device/unlock` 15 minuten lang, globaal
+  (`DeviceUnlockLockout`-model, `lib/device-lockout.ts`). Dit was voorheen
+  onbeschermd: elke aanvrager kon dit publieke endpoint (het staat per
+  definitie open, anders kan niemand een nieuw apparaat vrijgeven)
+  onbeperkt snel afvuren.
+- **Weekrapport-toegang is dubbel afgedwongen.** Zowel de pagina
+  (`app/(app)/weekrapport/page.tsx`) als beide API-routes die de inhoud
+  serveren (`app/api/weekrapport/download/route.ts` voor de live .txt, en
+  `app/api/weekrapport/archive/[id]/route.ts` voor een gearchiveerde PDF)
+  roepen zelf `canAccessWeeklyReport()` aan — ADMIN of COÖRDINATOR, verder
+  niemand. De PDF's zelf staan als `Bytes` in de database (geen publieke
+  opslag-URL die te raden of te delen is); alleen deze twee routes, na
+  authenticatie, kunnen ze uitlezen.
 - **Geen self-XSS via protocol-links.** `Protocol.url` accepteert alleen
   `http(s)`-links (`lib/validations.ts`); zonder die check zou een
   `javascript:`-URL als "protocol" kunnen worden opgeslagen en bij een klik

@@ -3,8 +3,9 @@ import { requireAuth } from "@/lib/auth";
 import { ALLOWED_CONTENT_TYPES, MAX_SIZE_BYTES, handleUploadError } from "@/lib/file-upload";
 import { uploadFileToCloudinary } from "@/lib/cloudinary";
 
-// See app/api/documents/upload/route.ts for why this uploads through our
-// own server to Cloudinary instead of a direct browser-to-storage request.
+// Uploads through our own server to Cloudinary (rather than a direct
+// browser-to-storage request) so the file type/size checks below and the
+// auth check can't be bypassed by talking to Cloudinary directly.
 export async function POST(request: NextRequest) {
   try {
     // Protocols are open to every logged-in role (same as creating one via

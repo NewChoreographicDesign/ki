@@ -281,6 +281,18 @@ model Setting {
   updatedAt DateTime @updatedAt
 }
 
+// Brute-force throttle for /api/device/unlock (see lib/device-lockout.ts).
+// A single fixed-id row: DEVICE_PASSCODE is one global shared secret, not a
+// per-user credential, so there is exactly one counter, not a table keyed by
+// account. Kept out of Setting on purpose — that table is rendered wholesale
+// on the instellingen page, and this is bookkeeping, not organization config.
+model DeviceUnlockLockout {
+  id          String    @id @default("singleton")
+  attempts    Int       @default(0)
+  lockedUntil DateTime?
+  updatedAt   DateTime  @updatedAt
+}
+
 // Accountability trail for sensitive actions (AVG Art. 5(2)). Deliberately
 // scoped to writes/logins, not every page view — logging every read would
 // add a DB write to every request for comparatively little investigative

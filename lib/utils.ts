@@ -209,6 +209,15 @@ export const PRIORITY_LABELS: Record<"LOW" | "MEDIUM" | "HIGH", string> = {
   HIGH: "Hoog",
 };
 
+/**
+ * The only Setting keys the app actually reads (instellingen/page.tsx).
+ * settingSchema (lib/validations.ts) restricts PATCH /api/backend/settings
+ * to this list — even though only ADMIN can call it, an API that silently
+ * accepts and stores any string key is a wider write surface than intended,
+ * and a typo'd key would otherwise write a setting nothing ever reads.
+ */
+export const SETTING_KEYS = ["ORG_NAME"] as const;
+
 export function fullName(client: { firstName: string; lastName: string }): string {
   return `${client.firstName} ${client.lastName}`;
 }

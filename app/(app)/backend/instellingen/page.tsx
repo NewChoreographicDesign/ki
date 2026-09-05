@@ -4,6 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export const dynamic = "force-dynamic";
 
+// Keys here must match lib/utils.ts's SETTING_KEYS — that's what
+// settingSchema (lib/validations.ts) allows PATCH /api/backend/settings to
+// write, so a key added only here could never actually be saved.
 const KNOWN_SETTINGS: Omit<SettingRow, "value">[] = [
   {
     key: "ORG_NAME",
