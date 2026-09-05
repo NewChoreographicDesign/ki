@@ -3,12 +3,12 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Repeat } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, DAYS_OF_WEEK } from "@/lib/utils";
 
 const PRIORITY_VARIANT = { LOW: "slate", MEDIUM: "sky", HIGH: "red" } as const;
 const PRIORITY_LABEL = { LOW: "Laag", MEDIUM: "Gemiddeld", HIGH: "Hoog" } as const;
@@ -18,6 +18,8 @@ export type TodoData = {
   title: string;
   description: string | null;
   priority: "LOW" | "MEDIUM" | "HIGH";
+  dayOfWeek: number | null;
+  recurring: boolean;
   completed: boolean;
   completedByName: string | null;
   completedAt: string | null;
@@ -59,6 +61,12 @@ export function TodoItem({ todo }: { todo: TodoData }) {
               {todo.title}
             </span>
             <Badge variant={PRIORITY_VARIANT[todo.priority]}>{PRIORITY_LABEL[todo.priority]}</Badge>
+            {todo.dayOfWeek !== null && <Badge variant="slate">{DAYS_OF_WEEK[todo.dayOfWeek]}</Badge>}
+            {todo.recurring && (
+              <Badge variant="emerald" className="gap-1">
+                <Repeat className="h-3 w-3" /> Wekelijks
+              </Badge>
+            )}
           </div>
           {!todo.completed && !showComment && (
             <div className="flex gap-2">
@@ -93,6 +101,7 @@ export function TodoItem({ todo }: { todo: TodoData }) {
             Afgerond door {todo.completedByName} &middot;{" "}
             {todo.completedAt && formatDateTime(new Date(todo.completedAt))}
             {todo.completionNote ? ` — ${todo.completionNote}` : ""}
+            {todo.recurring ? " · verschijnt automatisch weer volgende week" : ""}
           </div>
         )}
       </CardContent>

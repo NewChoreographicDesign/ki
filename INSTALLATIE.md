@@ -240,9 +240,13 @@ door een admin of coördinator.
   apparaten die één keer het apparaat-wachtwoord hebben ingevoerd op
   `/apparaat`. Dit verving een eerdere versie op basis van IP-adres, die
   onbetrouwbaar bleek zodra het internetadres van het kantoor wisselt.
-- De overige menu's (Rapportage, Overdracht, To-Do's, Agenda) gebruikt
-  iedereen dagelijks — zie ook `README.md` voor een korte beschrijving van
-  elk onderdeel.
+- Bij **To-Do's** kan een taak optioneel een dag en "terugkerend (wekelijks)"
+  meekrijgen. Een afgeronde terugkerende taak verdwijnt niet — hij
+  verschijnt automatisch weer als nieuwe, open taak zodra de volgende week
+  begint (maandagochtend), zonder dat iemand hem opnieuw hoeft aan te maken.
+- De overige menu's (Rapportage, Overdracht, Agenda) gebruikt iedereen
+  dagelijks — zie ook `README.md` voor een korte beschrijving van elk
+  onderdeel.
 - Wie een tijdje niets doet op een gedeeld toestel (bijv. een iPad die
   meerdere collega's gebruiken) wordt na 15 minuten automatisch uitgelogd.
 

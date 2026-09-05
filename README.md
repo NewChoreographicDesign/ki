@@ -63,7 +63,7 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
 | Medicatie | `/medicatie` | Per cliënt registreren: Afvinken, Verlof of Niet ingenomen (onomkeerbaar). Weekoverzicht reset elke maandag (zie Weekrapport) |
 | Aanwezigheid | `/aanwezigheid` | Aanwezig/afwezig per cliënt, gedeeld tussen alle accounts en diensten — blijft staan tot iemand het weer wijzigt (geen dagelijkse reset) |
 | Overdracht | `/overdracht` | Notities die 1 uur na diensteinde verlopen |
-| To-Do's | `/todos` | Openstaande taken bovenaan, daaronder het formulier voor een nieuwe taak. Voor iedereen zichtbaar |
+| To-Do's | `/todos` | Openstaande taken bovenaan, daaronder het formulier voor een nieuwe taak. Optioneel een dag en "terugkerend (wekelijks)" instellen — een afgeronde terugkerende taak verschijnt automatisch weer als open taak zodra de nieuwe week begint (maandagochtend, via dezelfde cron als het weekrapport). Voor iedereen zichtbaar |
 | Agenda | `/agenda` | Aankomende afspraken bovenaan, daaronder het formulier voor een nieuwe afspraak |
 | Protocollen | `/protocollen` | Algemene en cliëntspecifieke protocollen, als tekst en/of geüpload bestand, voor iedereen |
 | Weekrapport | `/weekrapport` | Automatisch archief van één PDF per kalenderweek (alle acties van die week), 1 jaar bewaard, plus een live overzicht van de lopende week. Admin + coördinator |
@@ -271,6 +271,20 @@ begint. De onderliggende `MedicationCheck`-rijen worden **niet** verwijderd
 kopie heeft de 1-jaar-bewaartermijn. Zie
 [Bewaartermijnen](#bewaartermijnen-retention) hieronder voor de afweging
 achter dat onderscheid.
+
+**Terugkerende to-do's delen dezelfde cron:** dezelfde
+`/api/cron/weekly-report`-run roept ook `regenerateRecurringTodos()`
+(`lib/recurring-todos.ts`) aan — niet als apart cron-endpoint, om binnen de
+limiet van het aantal cron-jobs op het gratis Vercel-plan te blijven, en
+omdat het inhoudelijk hetzelfde moment is: "het begin van een nieuwe week".
+Bij het aanmaken van een taak op `/todos` kan optioneel een dag (maandag t/m
+zondag) en "terugkerend (wekelijks)" worden gekozen; is "terugkerend"
+aangevinkt, dan is een dag verplicht. Zodra zo'n taak wordt afgerond, blijft
+hij die week gewoon als afgerond staan — pas bij de eerstvolgende
+maandagochtend-cron wordt automatisch een nieuwe, open kopie aangemaakt met
+dezelfde titel, omschrijving, prioriteit en dag. Elke afgeronde taak
+regenereert maar één keer (een `regenerated`-vlag voorkomt dubbele
+aanmaak bij een herhaalde cron-run).
 
 ### Apparaatbeveiliging
 

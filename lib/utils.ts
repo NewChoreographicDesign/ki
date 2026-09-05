@@ -191,6 +191,17 @@ export function isoWeekOf(date: Date): { isoYear: number; isoWeek: number } {
   return { isoYear, isoWeek };
 }
 
+/** Dutch day names, index 0=Monday..6=Sunday — matches WeekPlan.dayOfWeek and Todo.dayOfWeek. */
+export const DAYS_OF_WEEK = [
+  "Maandag",
+  "Dinsdag",
+  "Woensdag",
+  "Donderdag",
+  "Vrijdag",
+  "Zaterdag",
+  "Zondag",
+] as const;
+
 export function fullName(client: { firstName: string; lastName: string }): string {
   return `${client.firstName} ${client.lastName}`;
 }

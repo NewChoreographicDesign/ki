@@ -8,22 +8,37 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { DAYS_OF_WEEK } from "@/lib/utils";
 
 export function TodoForm() {
   const router = useRouter();
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [priority, setPriority] = React.useState<"LOW" | "MEDIUM" | "HIGH">("MEDIUM");
+  const [dayOfWeek, setDayOfWeek] = React.useState<string>("");
+  const [recurring, setRecurring] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
+
+  const needsDay = recurring && dayOfWeek === "";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (needsDay) {
+      toast.error("Kies een dag voor een terugkerende taak");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/todos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description, priority }),
+        body: JSON.stringify({
+          title,
+          description,
+          priority,
+          dayOfWeek: dayOfWeek === "" ? undefined : Number(dayOfWeek),
+          recurring,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -34,6 +49,8 @@ export function TodoForm() {
       setTitle("");
       setDescription("");
       setPriority("MEDIUM");
+      setDayOfWeek("");
+      setRecurring(false);
       router.refresh();
     } catch {
       toast.error("Er is iets misgegaan");
@@ -66,7 +83,32 @@ export function TodoForm() {
         <Label htmlFor="description">Omschrijving (optioneel)</Label>
         <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} />
       </div>
-      <Button type="submit" size="lg" disabled={loading || !title} className="self-start">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div>
+          <Label htmlFor="dayOfWeek">Dag (optioneel)</Label>
+          <Select id="dayOfWeek" value={dayOfWeek} onChange={(e) => setDayOfWeek(e.target.value)}>
+            <option value="">Geen specifieke dag</option>
+            {DAYS_OF_WEEK.map((day, i) => (
+              <option key={day} value={i}>
+                {day}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className="flex items-end pb-2.5 sm:col-span-2">
+          <label className="flex items-center gap-2 text-sm text-slate-200">
+            <input
+              type="checkbox"
+              checked={recurring}
+              onChange={(e) => setRecurring(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-600 bg-surface2"
+            />
+            Terugkerende taak (wekelijks) — bij afronden verschijnt hij automatisch weer voor
+            volgende week
+          </label>
+        </div>
+      </div>
+      <Button type="submit" size="lg" disabled={loading || !title || needsDay} className="self-start">
         {loading ? "Toevoegen..." : "Toevoegen"}
       </Button>
     </form>

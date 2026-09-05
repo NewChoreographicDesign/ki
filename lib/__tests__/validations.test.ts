@@ -113,6 +113,25 @@ describe("todoSchema", () => {
     const result = todoSchema.safeParse({ title: "Voorraad checken", priority: "URGENT" });
     expect(result.success).toBe(false);
   });
+
+  it("accepts a recurring todo with a day set", () => {
+    const result = todoSchema.safeParse({
+      title: "Vuilnis buiten zetten",
+      priority: "MEDIUM",
+      dayOfWeek: 2,
+      recurring: true,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a recurring todo without a day", () => {
+    const result = todoSchema.safeParse({
+      title: "Vuilnis buiten zetten",
+      priority: "MEDIUM",
+      recurring: true,
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("clientSchema", () => {

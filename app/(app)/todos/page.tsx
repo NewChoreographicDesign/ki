@@ -10,6 +10,8 @@ function serialize(todo: {
   title: string;
   description: string | null;
   priority: "LOW" | "MEDIUM" | "HIGH";
+  dayOfWeek: number | null;
+  recurring: boolean;
   completed: boolean;
   completedBy: { name: string } | null;
   completedAt: Date | null;
@@ -22,6 +24,8 @@ function serialize(todo: {
     title: todo.title,
     description: todo.description,
     priority: todo.priority,
+    dayOfWeek: todo.dayOfWeek,
+    recurring: todo.recurring,
     completed: todo.completed,
     completedByName: todo.completedBy?.name ?? null,
     completedAt: todo.completedAt ? todo.completedAt.toISOString() : null,

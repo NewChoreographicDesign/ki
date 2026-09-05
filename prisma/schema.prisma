@@ -192,6 +192,16 @@ model Todo {
   title           String
   description     String?
   priority        Priority  @default(MEDIUM)
+  // 0 = Monday .. 6 = Sunday, same convention as WeekPlan.dayOfWeek. Optional:
+  // not every task is tied to a specific day.
+  dayOfWeek       Int?
+  // A recurring task with dayOfWeek set gets automatically recreated (open,
+  // unchecked) once the current one is completed and the new week starts —
+  // see regenerateRecurringTodos() in lib/recurring-todos.ts.
+  recurring       Boolean   @default(false)
+  // Set once this completed recurring task has spawned its next-week copy,
+  // so the weekly rollover never regenerates the same completion twice.
+  regenerated     Boolean   @default(false)
   completed       Boolean   @default(false)
   completedById   String?
   completedBy     User?     @relation("TodoCompletedBy", fields: [completedById], references: [id], onDelete: SetNull)
@@ -203,6 +213,7 @@ model Todo {
   updatedAt       DateTime  @updatedAt
 
   @@index([completed, priority])
+  @@index([recurring, completed, regenerated])
 }
 
 model Presence {

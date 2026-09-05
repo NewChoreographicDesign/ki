@@ -69,11 +69,18 @@ export const handoverSchema = z.object({
   content: z.string().trim().min(3).max(5000),
 });
 
-export const todoSchema = z.object({
-  title: z.string().trim().min(1).max(300),
-  description: z.string().trim().max(2000).optional().or(z.literal("")),
-  priority: z.enum(["LOW", "MEDIUM", "HIGH"]),
-});
+export const todoSchema = z
+  .object({
+    title: z.string().trim().min(1).max(300),
+    description: z.string().trim().max(2000).optional().or(z.literal("")),
+    priority: z.enum(["LOW", "MEDIUM", "HIGH"]),
+    dayOfWeek: z.number().int().min(0).max(6).optional(),
+    recurring: z.boolean().optional(),
+  })
+  .refine((data) => !data.recurring || data.dayOfWeek !== undefined, {
+    message: "Kies een dag voor een terugkerende taak",
+    path: ["dayOfWeek"],
+  });
 
 export const todoCompleteSchema = z.object({
   completionNote: z.string().trim().max(1000).optional().or(z.literal("")),

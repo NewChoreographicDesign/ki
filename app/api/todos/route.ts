@@ -15,6 +15,8 @@ export async function POST(request: NextRequest) {
         title: data.title,
         description: data.description || null,
         priority: data.priority,
+        dayOfWeek: data.dayOfWeek ?? null,
+        recurring: data.recurring ?? false,
         createdById: session.sub,
       },
     });

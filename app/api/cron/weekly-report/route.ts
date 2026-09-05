@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { isAuthorizedCronRequest } from "@/lib/cron";
 import { getWeeklyReportData } from "@/lib/weekly-report";
 import { renderWeeklyReportPdf } from "@/lib/weekly-report-pdf";
+import { regenerateRecurringTodos } from "@/lib/recurring-todos";
 import { mostRecentMondayStart, isoWeekOf } from "@/lib/utils";
 
 // Runs every Monday (see vercel.json): archives the week that just ended as
@@ -13,6 +14,12 @@ import { mostRecentMondayStart, isoWeekOf } from "@/lib/utils";
 // [clientId]/page.tsx already filters to the current week) — the checks
 // themselves are never deleted from the database, only archived into the
 // PDF and dropped from that live view once the week rolls over.
+//
+// Also regenerates completed recurring to-do's for the new week
+// (regenerateRecurringTodos(), lib/recurring-todos.ts) — bundled into this
+// same route rather than a separate cron entry because both are "start of a
+// new week" work firing at the same time, and Vercel's Hobby plan limits
+// how many cron jobs a project can have.
 const RETENTION_MS = 366 * 24 * 60 * 60 * 1000; // ~1 year, with a day of slack for DST
 
 export async function GET(request: NextRequest) {
@@ -42,11 +49,14 @@ export async function GET(request: NextRequest) {
     where: { weekStart: { lt: cutoff } },
   });
 
+  const { regenerated } = await regenerateRecurringTodos();
+
   return NextResponse.json({
     ok: true,
     isoYear,
     isoWeek,
     generated: !existing,
     pruned,
+    recurringTodosRegenerated: regenerated,
   });
 }
