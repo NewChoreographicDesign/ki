@@ -8,6 +8,7 @@ import {
   todoSchema,
   clientSchema,
   settingSchema,
+  changeBirthDateSchema,
 } from "@/lib/validations";
 
 describe("loginSchema", () => {
@@ -155,6 +156,32 @@ describe("settingSchema", () => {
 
   it("rejects a key that isn't in the known-settings whitelist", () => {
     const result = settingSchema.safeParse({ key: "ANYTHING_ELSE", value: "x" });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("changeBirthDateSchema", () => {
+  it("accepts two valid DD-MM-JJJJ dates", () => {
+    const result = changeBirthDateSchema.safeParse({
+      currentBirthDate: "01-01-2001",
+      newBirthDate: "12-05-1990",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a malformed current date", () => {
+    const result = changeBirthDateSchema.safeParse({
+      currentBirthDate: "2001-01-01",
+      newBirthDate: "12-05-1990",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a malformed new date", () => {
+    const result = changeBirthDateSchema.safeParse({
+      currentBirthDate: "01-01-2001",
+      newBirthDate: "not-a-date",
+    });
     expect(result.success).toBe(false);
   });
 });

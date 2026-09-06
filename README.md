@@ -25,6 +25,17 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
   JWT in een `httpOnly`, `secure` cookie (12 uur geldig). Bij inloggen wordt
   automatisch een dienst gestart (ochtend 07:00-15:00 / avond 14:00-23:00,
   Europe/Amsterdam-tijd) — zie hieronder.
+- **Nieuwe medewerker aanmaken zonder de echte geboortedatum te kennen.**
+  Backend → Medewerkers vult het geboortedatumveld standaard met
+  `01-01-2001` (`DEFAULT_EMPLOYEE_BIRTH_DATE`, `lib/utils.ts`) — de admin kan
+  dit overschrijven, maar hoeft het niet. De medewerker logt eenmalig in met
+  die standaardwaarde en stelt daarna zelf de echte geboortedatum in bij
+  **Mijn account** (`/account`, bereikbaar via de eigen naam onderin de
+  zijbalk) — dat vereist de huidige geboortedatum als bevestiging. Is een
+  zelf ingestelde geboortedatum vergeten (of te vaak fout ingetoetst, zie
+  hieronder), dan zet "Geboortedatum resetten" in Backend → Medewerkers hem
+  terug naar `01-01-2001` én heft het meteen een eventuele blokkade op — de
+  medewerker kan direct opnieuw inloggen en een nieuwe waarde instellen.
 - **Tijdzone: Europe/Amsterdam overal.** Vercel's servers draaien in UTC, dus
   elke "wall clock"-berekening (welke dienst nu loopt, wanneer een dienst
   eindigt, wat "vandaag" is voor aanwezigheid, de wekelijkse
@@ -83,7 +94,8 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
 | Agenda | `/agenda` | Aankomende afspraken bovenaan, daaronder het formulier voor een nieuwe afspraak |
 | Protocollen | `/protocollen` | Algemene en cliëntspecifieke protocollen, als tekst en/of geüpload bestand, voor iedereen |
 | Weekrapport | `/weekrapport` | Automatisch archief van één PDF per kalenderweek (alle acties van die week), 1 jaar bewaard, plus een live overzicht van de lopende week. Admin + coördinator |
-| Backend | `/backend` | Cliënten, medewerkers, medicatie beheer, weekplanning, instellingen, auditlog (alleen admin) |
+| Backend | `/backend` | Cliënten, medewerkers (incl. geboortedatum resetten), medicatie beheer, weekplanning, instellingen, auditlog (alleen admin) |
+| Mijn account | `/account` | Eigen geboortedatum (het inloggegeven) wijzigen — vereist de huidige geboortedatum ter bevestiging. Voor iedereen, bereikbaar via de eigen naam onderin de zijbalk |
 
 ## Vereisten
 
@@ -427,7 +439,16 @@ volgende, concreet geïmplementeerde maatregelen:
   vergrendeld (`User.failedLoginAttempts` / `User.lockedUntil`,
   `app/api/auth/login/route.ts`). De foutmelding is bewust generiek ("Naam of
   geboortedatum onjuist") zodat een aanvaller niet kan afleiden of een naam
-  bestaat.
+  bestaat. Dit lost alleen "te snel achter elkaar geraden" op — een medewerker
+  die zijn zelf ingestelde geboortedatum daadwerkelijk vergeten is, komt er
+  ook na de 15 minuten niet in; daarvoor is de "Geboortedatum resetten"-knop
+  in Backend → Medewerkers (zie hierboven), die de blokkade ook direct opheft.
+- **Stap-up bevestiging bij het wijzigen van het inloggegeven.**
+  `/account` (`app/api/account/birthdate/route.ts`) is toegankelijk voor elke
+  ingelogde rol, maar vereist de huidige geboortedatum als bevestiging vóór
+  de nieuwe wordt opgeslagen — een geldige sessie-cookie alleen (denk aan een
+  gedeelde iPad waarop iemand nog ingelogd staat) is niet genoeg bewijs dat
+  degene achter het scherm het huidige inloggegeven kent.
 - **Directe intrekking van toegang.** De 12-uurs JWT-cookie bevat alleen de
   gebruikers-ID; `getSession()` (`lib/auth.ts`) haalt bij élke request de
   actuele `active`/`role` op uit de database. Een deactivering of

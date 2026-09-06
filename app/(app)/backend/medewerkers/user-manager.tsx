@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { formatBirthDateInput } from "@/lib/format-birthdate-input";
+import { DEFAULT_EMPLOYEE_BIRTH_DATE } from "@/lib/utils";
 
 export type UserRow = {
   id: string;
@@ -19,10 +21,12 @@ export type UserRow = {
 
 const ROLE_LABEL = { ADMIN: "Admin", COORDINATOR: "Coördinator", EMPLOYEE: "Medewerker" } as const;
 
+type UserPatch = Partial<Pick<UserRow, "active" | "role">> | { resetBirthDate: true };
+
 export function UserManager({ users, currentUserId }: { users: UserRow[]; currentUserId: string }) {
   const router = useRouter();
   const [name, setName] = React.useState("");
-  const [birthDate, setBirthDate] = React.useState("");
+  const [birthDate, setBirthDate] = React.useState(DEFAULT_EMPLOYEE_BIRTH_DATE);
   const [role, setRole] = React.useState<UserRow["role"]>("EMPLOYEE");
   const [loading, setLoading] = React.useState(false);
 
@@ -42,7 +46,7 @@ export function UserManager({ users, currentUserId }: { users: UserRow[]; curren
       }
       toast.success("Medewerker toegevoegd");
       setName("");
-      setBirthDate("");
+      setBirthDate(DEFAULT_EMPLOYEE_BIRTH_DATE);
       setRole("EMPLOYEE");
       router.refresh();
     } catch {
@@ -52,7 +56,7 @@ export function UserManager({ users, currentUserId }: { users: UserRow[]; curren
     }
   }
 
-  async function updateUser(id: string, patch: Partial<Pick<UserRow, "active" | "role">>) {
+  async function updateUser(id: string, patch: UserPatch) {
     try {
       const res = await fetch(`/api/backend/users/${id}`, {
         method: "PATCH",
@@ -60,7 +64,11 @@ export function UserManager({ users, currentUserId }: { users: UserRow[]; curren
         body: JSON.stringify(patch),
       });
       if (!res.ok) throw new Error();
-      toast.success("Bijgewerkt");
+      toast.success(
+        "resetBirthDate" in patch
+          ? `Geboortedatum gereset naar ${DEFAULT_EMPLOYEE_BIRTH_DATE}`
+          : "Bijgewerkt"
+      );
       router.refresh();
     } catch {
       toast.error("Bijwerken mislukt");
@@ -84,9 +92,11 @@ export function UserManager({ users, currentUserId }: { users: UserRow[]; curren
                 <Label htmlFor="birthDate">Geboortedatum</Label>
                 <Input
                   id="birthDate"
+                  inputMode="numeric"
                   placeholder="DD-MM-JJJJ"
                   value={birthDate}
-                  onChange={(e) => setBirthDate(e.target.value)}
+                  onChange={(e) => setBirthDate(formatBirthDateInput(e.target.value))}
+                  maxLength={10}
                   required
                 />
               </div>
@@ -99,7 +109,12 @@ export function UserManager({ users, currentUserId }: { users: UserRow[]; curren
                 </Select>
               </div>
             </div>
-            <Button type="submit" loading={loading} disabled={!name || !birthDate} className="self-start">
+            <p className="text-xs text-slate-500">
+              Standaard {DEFAULT_EMPLOYEE_BIRTH_DATE} — je hoeft de echte geboortedatum niet te
+              weten. De medewerker logt hiermee eenmalig in en stelt daarna zelf de echte
+              geboortedatum in bij Mijn account.
+            </p>
+            <Button type="submit" loading={loading} disabled={!name || birthDate.length !== 10} className="self-start">
               Toevoegen
             </Button>
           </form>
@@ -127,6 +142,15 @@ export function UserManager({ users, currentUserId }: { users: UserRow[]; curren
                 </Select>
                 <Button
                   size="sm"
+                  variant="outline"
+                  disabled={u.id === currentUserId}
+                  title={`Zet geboortedatum terug naar ${DEFAULT_EMPLOYEE_BIRTH_DATE} en heft een blokkade op`}
+                  onClick={() => updateUser(u.id, { resetBirthDate: true })}
+                >
+                  Geboortedatum resetten
+                </Button>
+                <Button
+                  size="sm"
                   variant={u.active ? "outline" : "secondary"}
                   disabled={u.id === currentUserId}
                   onClick={() => updateUser(u.id, { active: !u.active })}
@@ -138,6 +162,11 @@ export function UserManager({ users, currentUserId }: { users: UserRow[]; curren
           </Card>
         ))}
       </div>
+      <p className="text-xs text-slate-500">
+        &quot;Geboortedatum resetten&quot; zet de datum terug naar {DEFAULT_EMPLOYEE_BIRTH_DATE} en
+        heft een blokkade na te veel foute inlogpogingen meteen op — handig als een medewerker de
+        zelf ingestelde geboortedatum is vergeten.
+      </p>
       <p className="text-xs text-slate-500">Label: {ROLE_LABEL.ADMIN} / {ROLE_LABEL.COORDINATOR} / {ROLE_LABEL.EMPLOYEE}</p>
     </div>
   );

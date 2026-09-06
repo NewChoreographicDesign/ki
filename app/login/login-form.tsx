@@ -6,12 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-function formatBirthDateInput(value: string): string {
-  const digits = value.replace(/\D/g, "").slice(0, 8);
-  const parts = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean);
-  return parts.join("-");
-}
+import { formatBirthDateInput } from "@/lib/format-birthdate-input";
 
 export function LoginForm() {
   const router = useRouter();

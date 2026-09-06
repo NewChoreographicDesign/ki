@@ -128,7 +128,7 @@ export function AppNav({
               </button>
             </div>
             {NavList}
-            <UserFooter userName={userName} onLogout={handleLogout} />
+            <UserFooter userName={userName} onLogout={handleLogout} onNavigate={() => setOpen(false)} />
           </div>
         </div>
       )}
@@ -145,11 +145,26 @@ export function AppNav({
   );
 }
 
-function UserFooter({ userName, onLogout }: { userName: string; onLogout: () => void }) {
+function UserFooter({
+  userName,
+  onLogout,
+  onNavigate,
+}: {
+  userName: string;
+  onLogout: () => void;
+  onNavigate?: () => void;
+}) {
   return (
     <div className="border-t border-border p-3">
       <div className="flex items-center justify-between gap-2 rounded-xl px-3 py-2">
-        <span className="truncate text-sm text-slate-300">{userName}</span>
+        <Link
+          href="/account"
+          onClick={onNavigate}
+          className="truncate text-sm text-slate-300 hover:text-slate-100 hover:underline"
+          title="Mijn account — geboortedatum wijzigen"
+        >
+          {userName}
+        </Link>
         <Button variant="ghost" size="icon" onClick={onLogout} aria-label="Uitloggen">
           <LogOut className="h-5 w-5" />
         </Button>

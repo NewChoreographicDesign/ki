@@ -12,6 +12,8 @@ const ACTION_LABELS: Record<string, string> = {
   "protocol.delete": "Protocol verwijderd",
   "user.create": "Gebruiker aangemaakt",
   "user.update": "Gebruiker gewijzigd",
+  "user.reset-birthdate": "Geboortedatum gereset door admin",
+  "user.change-own-birthdate": "Geboortedatum zelf gewijzigd",
   "client.create": "Cliënt aangemaakt",
   "client.update": "Cliënt gewijzigd",
   "setting.update": "Instelling gewijzigd",

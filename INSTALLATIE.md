@@ -213,8 +213,16 @@ door een admin of coördinator.
   medewerkers en coördinatoren zien dit onderdeel niet in het menu.
   - **Backend → Cliënten**: bewoners/cliënten toevoegen (incl. optioneel een
     kamernummer, dat op het dashboard gebruikt wordt).
-  - **Backend → Medewerkers**: collega's toevoegen (naam + geboortedatum +
-    rol: medewerker, coördinator of admin).
+  - **Backend → Medewerkers**: collega's toevoegen (naam + rol: medewerker,
+    coördinator of admin). Het geboortedatumveld staat standaard al op
+    `01-01-2001` — je hoeft de echte geboortedatum van een nieuwe collega
+    niet te weten. Diegene logt daarmee één keer in en stelt zelf de echte
+    geboortedatum in bij **Mijn account** (klik op je eigen naam onderin de
+    zijbalk). Is een collega die zelf ingestelde datum vergeten (of te vaak
+    fout ingetoetst, zie hieronder), klik dan op **Geboortedatum resetten**
+    bij die collega — dat zet hem terug naar `01-01-2001` en heft een
+    eventuele blokkade meteen op, zodat diegene direct opnieuw kan inloggen
+    en een nieuwe geboortedatum kan instellen.
   - **Backend → Medicatie beheer**: medicatie per cliënt instellen, met
     tijden en instructies.
   - **Backend → Weekplanning**: het weekschema per cliënt instellen.
@@ -247,6 +255,11 @@ door een admin of coördinator.
 - De overige menu's (Rapportage, Overdracht, Agenda) gebruikt iedereen
   dagelijks — zie ook `README.md` voor een korte beschrijving van elk
   onderdeel.
+- **Mijn account** (klik op je eigen naam onderin de zijbalk): hier stelt
+  iedereen zelf zijn geboortedatum in — dat is je inloggegeven, er is geen
+  apart wachtwoord. Nodig na een eerste keer inloggen met de standaard
+  `01-01-2001`, of wanneer je je geboortedatum wilt wijzigen. Vereist de
+  huidige geboortedatum ter bevestiging.
 - Wie een tijdje niets doet op een gedeeld toestel (bijv. een iPad die
   meerdere collega's gebruiken) wordt na 15 minuten automatisch uitgelogd.
 
@@ -268,7 +281,12 @@ klaargezet worden) en herlaad de pagina.
 Controleer of je naam exact klopt (hoofdletters maken niet uit, spaties wel)
 en of de geboortedatum in het formaat DD-MM-JJJJ staat. Na 5 verkeerde
 pogingen wordt een account 15 minuten vergrendeld als beveiliging tegen
-misbruik — wacht in dat geval gewoon even.
+misbruik — wacht in dat geval gewoon even. Weet je de geboortedatum die je
+zelf hebt ingesteld (bij Mijn account) echt niet meer? Dan helpt wachten
+niet — vraag een admin om op **Geboortedatum resetten** te klikken bij
+Backend → Medewerkers. Dat zet je geboortedatum terug naar `01-01-2001` en
+heft de blokkade meteen op, waarna je weer kunt inloggen en zelf een nieuwe
+geboortedatum instelt.
 
 **Ik ben mijn beheerderstoegang kwijt (geen enkele admin kan meer inloggen).**
 Vraag iemand met technische kennis om via Vercel/de database tijdelijk een

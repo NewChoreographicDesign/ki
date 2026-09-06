@@ -37,6 +37,15 @@ export const settingSchema = z.object({
   value: z.string().trim().max(2000),
 });
 
+// Self-service credential change (/account) — requires the current birthdate
+// as step-up confirmation even though the request is already authenticated,
+// since a shared-device session left open is enough to reach this page
+// otherwise. See app/api/account/birthdate/route.ts.
+export const changeBirthDateSchema = z.object({
+  currentBirthDate: z.string().regex(ddmmyyyy, "Gebruik het formaat DD-MM-JJJJ"),
+  newBirthDate: z.string().regex(ddmmyyyy, "Gebruik het formaat DD-MM-JJJJ"),
+});
+
 export const reportSchema = z.object({
   clientId: z.string().min(1),
   shift: z.enum(["MORNING", "EVENING"]),

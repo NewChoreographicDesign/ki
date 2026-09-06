@@ -202,6 +202,17 @@ export const DAYS_OF_WEEK = [
   "Zondag",
 ] as const;
 
+/**
+ * Placeholder birthdate for a newly created employee (Backend → Medewerkers)
+ * — the admin doesn't have to know a new hire's real birthdate up front.
+ * The employee logs in once with this value and immediately changes it to
+ * their real one at /account (that's their login credential from then on).
+ * Also what an admin resets a locked-out/forgotten account back to
+ * (app/api/backend/users/[id]/route.ts) so the employee can get back in
+ * with a known value and set a new one themselves.
+ */
+export const DEFAULT_EMPLOYEE_BIRTH_DATE = "01-01-2001";
+
 /** Dutch labels for Todo/priority, shared by the UI and the weekly report text/PDF. */
 export const PRIORITY_LABELS: Record<"LOW" | "MEDIUM" | "HIGH", string> = {
   LOW: "Laag",
