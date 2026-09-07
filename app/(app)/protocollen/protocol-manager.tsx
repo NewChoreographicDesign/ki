@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Trash2, FileText } from "lucide-react";
+import { Plus, ChevronDown, Trash2, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,11 @@ export type ProtocolRow = {
   content: string | null;
   url: string | null;
   clientName: string | null;
+  /** Client's room, "Geen kamer" if the client has none, or null when this is a general protocol. */
+  room: string | null;
 };
+
+const ALGEMEEN = "Algemeen";
 
 export function ProtocolManager({
   protocols,
@@ -26,10 +30,166 @@ export function ProtocolManager({
   canDelete,
 }: {
   protocols: ProtocolRow[];
-  clients: { id: string; name: string }[];
+  clients: { id: string; name: string; room: string | null }[];
   canDelete: boolean;
 }) {
   const router = useRouter();
+  const [formOpen, setFormOpen] = React.useState(false);
+
+  const grouped = React.useMemo(() => groupByRoom(protocols), [protocols]);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        {!formOpen && (
+          <div className="mb-3 flex justify-end">
+            <Button size="sm" variant="outline" onClick={() => setFormOpen(true)}>
+              <Plus className="h-4 w-4" /> Nieuw protocol
+            </Button>
+          </div>
+        )}
+        {formOpen && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Nieuw protocol</CardTitle>
+              <p className="text-sm text-slate-500">
+                Typ de inhoud als tekst, upload een bestand (PDF, Word, Excel, foto), of beide.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <NewProtocolForm
+                clients={clients}
+                onSaved={() => {
+                  setFormOpen(false);
+                  router.refresh();
+                }}
+                onCancel={() => setFormOpen(false)}
+              />
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-3">
+        {grouped.rooms.length === 0 && grouped.algemeen.length === 0 ? (
+          <p className="text-slate-500">Nog geen protocollen.</p>
+        ) : (
+          <>
+            {grouped.rooms.map(({ room, items }) => (
+              <RoomSection key={room} title={room} items={items} canDelete={canDelete} router={router} />
+            ))}
+            {grouped.algemeen.length > 0 && (
+              <RoomSection title={ALGEMEEN} items={grouped.algemeen} canDelete={canDelete} router={router} />
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Groups protocols by their client's room, real rooms first (alphabetically)
+// then "Geen kamer" — mirrors the ranking already used for the dashboard's
+// "today per room" overview. General (no client) protocols are kept out of
+// this map entirely and rendered as their own single Algemeen dropdown.
+function groupByRoom(protocols: ProtocolRow[]) {
+  const byRoom = new Map<string, ProtocolRow[]>();
+  const algemeen: ProtocolRow[] = [];
+  for (const p of protocols) {
+    if (p.room === null) {
+      algemeen.push(p);
+      continue;
+    }
+    const list = byRoom.get(p.room);
+    if (list) list.push(p);
+    else byRoom.set(p.room, [p]);
+  }
+  const rank = (room: string) => (room === "Geen kamer" ? 1 : 0);
+  const rooms = Array.from(byRoom.entries())
+    .map(([room, items]) => ({ room, items }))
+    .sort((a, b) => rank(a.room) - rank(b.room) || a.room.localeCompare(b.room));
+  return { rooms, algemeen };
+}
+
+function RoomSection({
+  title,
+  items,
+  canDelete,
+  router,
+}: {
+  title: string;
+  items: ProtocolRow[];
+  canDelete: boolean;
+  router: ReturnType<typeof useRouter>;
+}) {
+  const [open, setOpen] = React.useState(false);
+
+  async function handleDelete(id: string) {
+    try {
+      const res = await fetch(`/api/protocols/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      toast.success("Protocol verwijderd");
+      router.refresh();
+    } catch {
+      toast.error("Verwijderen mislukt");
+    }
+  }
+
+  return (
+    <Card>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 p-5 text-left"
+      >
+        <span className="font-semibold text-slate-100">
+          {title} <span className="font-normal text-slate-500">({items.length})</span>
+        </span>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <CardContent className="flex flex-col gap-3 pt-0">
+          {items.map((p) => (
+            <div key={p.id} className="flex flex-col gap-2 rounded-lg border border-border bg-surface2/50 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-medium text-slate-100">
+                  {p.title}{" "}
+                  {p.clientName && <span className="text-sm text-slate-500">({p.clientName})</span>}
+                </span>
+                {canDelete && (
+                  <Button size="icon" variant="ghost" onClick={() => handleDelete(p.id)} aria-label="Verwijderen">
+                    <Trash2 className="h-5 w-5 text-red-400" />
+                  </Button>
+                )}
+              </div>
+              {p.content && <p className="whitespace-pre-wrap text-sm text-slate-400">{p.content}</p>}
+              {p.url && (
+                <a
+                  href={p.url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="flex w-fit items-center gap-2 text-sm text-sky-400 hover:underline"
+                >
+                  <FileText className="h-4 w-4" /> Bestand openen
+                </a>
+              )}
+            </div>
+          ))}
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
+function NewProtocolForm({
+  clients,
+  onSaved,
+  onCancel,
+}: {
+  clients: { id: string; name: string; room: string | null }[];
+  onSaved: () => void;
+  onCancel: () => void;
+}) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [title, setTitle] = React.useState("");
   const [content, setContent] = React.useState("");
@@ -82,12 +242,7 @@ export function ProtocolManager({
         return;
       }
       toast.success("Protocol toegevoegd");
-      setTitle("");
-      setContent("");
-      setFile(null);
-      setClientId("");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      router.refresh();
+      onSaved();
     } catch {
       toast.error("Er is iets misgegaan");
     } finally {
@@ -96,126 +251,63 @@ export function ProtocolManager({
     }
   }
 
-  async function handleDelete(id: string) {
-    try {
-      const res = await fetch(`/api/protocols/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error();
-      toast.success("Protocol verwijderd");
-      router.refresh();
-    } catch {
-      toast.error("Verwijderen mislukt");
-    }
-  }
-
   return (
-    <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Nieuw protocol</CardTitle>
-          <p className="text-sm text-slate-500">
-            Typ de inhoud als tekst, upload een bestand (PDF, Word, Excel, foto), of beide.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleCreate} className="flex flex-col gap-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="title">Titel</Label>
-                <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required />
-              </div>
-              <div>
-                <Label htmlFor="client">Cliënt (optioneel)</Label>
-                <Select id="client" value={clientId} onChange={(e) => setClientId(e.target.value)}>
-                  <option value="">Algemeen</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="content">Inhoud (optioneel als je een bestand uploadt)</Label>
-              <Textarea id="content" value={content} onChange={(e) => setContent(e.target.value)} />
-            </div>
-            <div>
-              <Label htmlFor="protocol-file">Bestand (optioneel)</Label>
-              <div className="flex items-center gap-3">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={loading}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  Bestand kiezen
-                </Button>
-                <span className="truncate text-sm text-slate-400">
-                  {file ? file.name : "Geen bestand gekozen"}
-                </span>
-                <input
-                  ref={fileInputRef}
-                  id="protocol-file"
-                  type="file"
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.txt"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                  disabled={loading}
-                  className="sr-only"
-                />
-              </div>
-            </div>
-            {loading && file && (
-              <div className="flex flex-col gap-1">
-                <div className="h-2 w-full overflow-hidden rounded-full bg-surface2">
-                  <div
-                    className="h-full rounded-full bg-sky-500 transition-all"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-                <span className="text-xs text-slate-500">{Math.round(progress)}%</span>
-              </div>
-            )}
-            <Button
-              type="submit"
-              loading={loading}
-              disabled={!title || (!content && !file)}
-              className="self-start"
-            >
-              Toevoegen
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <div className="flex flex-col gap-3">
-        {protocols.map((p) => (
-          <Card key={p.id}>
-            <CardContent className="flex flex-col gap-2 p-5">
-              <div className="flex items-center justify-between gap-3">
-                <span className="font-medium text-slate-100">
-                  {p.title} {p.clientName && <span className="text-sm text-slate-500">({p.clientName})</span>}
-                </span>
-                {canDelete && (
-                  <Button size="icon" variant="ghost" onClick={() => handleDelete(p.id)} aria-label="Verwijderen">
-                    <Trash2 className="h-5 w-5 text-red-400" />
-                  </Button>
-                )}
-              </div>
-              {p.content && <p className="whitespace-pre-wrap text-sm text-slate-400">{p.content}</p>}
-              {p.url && (
-                <a
-                  href={p.url}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="flex w-fit items-center gap-2 text-sm text-sky-400 hover:underline"
-                >
-                  <FileText className="h-4 w-4" /> Bestand openen
-                </a>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+    <form onSubmit={handleCreate} className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="title">Titel</Label>
+          <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+        </div>
+        <div>
+          <Label htmlFor="client">Kamer / cliënt</Label>
+          <Select id="client" value={clientId} onChange={(e) => setClientId(e.target.value)}>
+            <option value="">Algemeen</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.room ? `${c.room} · ${c.name}` : c.name}
+              </option>
+            ))}
+          </Select>
+        </div>
       </div>
-    </div>
+      <div>
+        <Label htmlFor="content">Inhoud (optioneel als je een bestand uploadt)</Label>
+        <Textarea id="content" value={content} onChange={(e) => setContent(e.target.value)} />
+      </div>
+      <div>
+        <Label htmlFor="protocol-file">Bestand (optioneel)</Label>
+        <div className="flex items-center gap-3">
+          <Button type="button" variant="secondary" disabled={loading} onClick={() => fileInputRef.current?.click()}>
+            Bestand kiezen
+          </Button>
+          <span className="truncate text-sm text-slate-400">{file ? file.name : "Geen bestand gekozen"}</span>
+          <input
+            ref={fileInputRef}
+            id="protocol-file"
+            type="file"
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.txt"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            disabled={loading}
+            className="sr-only"
+          />
+        </div>
+      </div>
+      {loading && file && (
+        <div className="flex flex-col gap-1">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-surface2">
+            <div className="h-full rounded-full bg-sky-500 transition-all" style={{ width: `${progress}%` }} />
+          </div>
+          <span className="text-xs text-slate-500">{Math.round(progress)}%</span>
+        </div>
+      )}
+      <div className="flex gap-2">
+        <Button type="submit" loading={loading} disabled={!title || (!content && !file)} className="self-start">
+          Toevoegen
+        </Button>
+        <Button type="button" variant="ghost" onClick={onCancel}>
+          Annuleren
+        </Button>
+      </div>
+    </form>
   );
 }

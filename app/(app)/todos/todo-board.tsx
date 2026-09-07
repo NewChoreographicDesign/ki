@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Plus } from "lucide-react";
+import { Plus, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { DAYS_OF_WEEK } from "@/lib/utils";
 import { TodoForm } from "./todo-form";
 import { TodoItem } from "./todo-item";
 import type { TodoData } from "./todo-types";
@@ -19,15 +20,26 @@ export function TodoBoard({
   initialOpen,
   initialCompleted,
   canManage = false,
+  todayWeekday,
 }: {
   initialOpen: TodoData[];
   initialCompleted: TodoData[];
   /** Admin-only: shows edit/delete controls on every task. */
   canManage?: boolean;
+  /** 0 = Monday .. 6 = Sunday, see lib/utils.ts todayDayOfWeek(). */
+  todayWeekday: number;
 }) {
   const [open, setOpen] = React.useState(() => [...initialOpen].sort(sortByTime));
   const [completed, setCompleted] = React.useState(initialCompleted);
   const [formOpen, setFormOpen] = React.useState(false);
+  const [showWeek, setShowWeek] = React.useState(false);
+
+  // A task with no day set has no day restriction, so it's always "due
+  // today"; a task with days set is only shown here on one of those days —
+  // the rest of the week it moves into the "Alle weektaken" dropdown below,
+  // so the main list only ever shows what actually needs doing today.
+  const dueToday = open.filter((t) => t.daysOfWeek.length === 0 || t.daysOfWeek.includes(todayWeekday));
+  const otherDays = open.filter((t) => t.daysOfWeek.length > 0 && !t.daysOfWeek.includes(todayWeekday));
 
   function handleCreated(todo: TodoData) {
     setOpen((prev) => [...prev, todo].sort(sortByTime));
@@ -52,7 +64,7 @@ export function TodoBoard({
     <>
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-100">Openstaand ({open.length})</h2>
+          <h2 className="text-lg font-semibold text-slate-100">Vandaag ({dueToday.length})</h2>
           {!formOpen && (
             <Button size="sm" variant="outline" onClick={() => setFormOpen(true)}>
               <Plus className="h-4 w-4" /> Nieuwe taak
@@ -71,11 +83,11 @@ export function TodoBoard({
           </Card>
         )}
 
-        {open.length === 0 ? (
-          <p className="text-slate-500">Geen openstaande taken.</p>
+        {dueToday.length === 0 ? (
+          <p className="text-slate-500">Geen taken voor vandaag.</p>
         ) : (
           <div className="flex flex-col gap-3">
-            {open.map((t) => (
+            {dueToday.map((t) => (
               <TodoItem
                 key={t.id}
                 todo={t}
@@ -85,6 +97,45 @@ export function TodoBoard({
                 onDelete={handleDelete}
               />
             ))}
+          </div>
+        )}
+
+        {otherDays.length > 0 && (
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => setShowWeek((v) => !v)}
+              className="flex items-center gap-1.5 text-sm font-medium text-slate-400 hover:text-slate-200"
+            >
+              <ChevronDown className={`h-4 w-4 transition-transform ${showWeek ? "rotate-180" : ""}`} />
+              Alle weektaken tonen ({otherDays.length})
+            </button>
+            {showWeek && (
+              <div className="mt-3 flex flex-col gap-5">
+                {DAYS_OF_WEEK.map((label, day) => {
+                  if (day === todayWeekday) return null;
+                  const tasksForDay = otherDays.filter((t) => t.daysOfWeek.includes(day));
+                  if (tasksForDay.length === 0) return null;
+                  return (
+                    <div key={day}>
+                      <h3 className="mb-2 text-sm font-semibold text-slate-400">{label}</h3>
+                      <div className="flex flex-col gap-3">
+                        {tasksForDay.map((t) => (
+                          <TodoItem
+                            key={t.id}
+                            todo={t}
+                            canManage={canManage}
+                            onComplete={handleComplete}
+                            onUpdate={handleUpdated}
+                            onDelete={handleDelete}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>

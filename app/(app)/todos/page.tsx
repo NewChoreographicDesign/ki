@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { todayDayOfWeek } from "@/lib/utils";
 import { serializeTodo } from "./todo-types";
 import { TodoBoard } from "./todo-board";
 import { regenerateRecurringTodos } from "@/lib/recurring-todos";
@@ -33,8 +34,9 @@ export default async function TodosPage() {
       <div>
         <h1 className="text-2xl font-semibold text-slate-50">To-Do&apos;s</h1>
         <p className="mt-1 text-slate-400">
-          Voor iedereen zichtbaar, gesorteerd op tijd. Terugkerende taken verschijnen automatisch
-          weer open op de volgende geplande dag.
+          Voor iedereen zichtbaar, gesorteerd op tijd. Taken voor een andere dag staan onder
+          &quot;Alle weektaken&quot;. Terugkerende taken verschijnen automatisch weer open op de
+          volgende geplande dag.
         </p>
       </div>
 
@@ -42,6 +44,7 @@ export default async function TodosPage() {
         initialOpen={open.map(serializeTodo)}
         initialCompleted={completed.map(serializeTodo)}
         canManage={session?.role === "ADMIN"}
+        todayWeekday={todayDayOfWeek()}
       />
     </div>
   );

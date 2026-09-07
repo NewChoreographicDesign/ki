@@ -90,9 +90,9 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
 | Medicatie | `/medicatie` | Per cliënt registreren: Afvinken, Verlof of Niet ingenomen (onomkeerbaar). Weekoverzicht reset elke maandag (zie Weekrapport). Er verschijnt automatisch een melding met geluid 5 minuten voor een geplande inname (zie [Medicatie-herinneringen](#medicatie-herinneringen)) |
 | Aanwezigheid | `/aanwezigheid` | Aanwezig/afwezig per cliënt, gedeeld tussen alle accounts en diensten — blijft staan tot iemand het weer wijzigt (geen dagelijkse reset) |
 | Overdracht | `/overdracht` | Notities die 1 uur na diensteinde verlopen |
-| To-Do's | `/todos` | Openstaande taken direct bovenaan zichtbaar, gesorteerd op tijd; "+ Nieuwe taak" is een compacte knop die het formulier inklapt/uitklapt. Optioneel een tijd en één of meer dagen instellen (of "Elke dag" voor een dagelijkse taak) — een afgeronde terugkerende taak verschijnt automatisch weer open zodra de volgende gekozen dag aanbreekt. Afronden/aanmaken update de lijst direct, zonder paginaherlading. Voor iedereen zichtbaar; bewerken/verwijderen is alleen voor admin |
+| To-Do's | `/todos` | Toont onder "Vandaag" alleen taken zonder dag of met vandaag in hun dagen — taken voor een andere dag staan ingeklapt onder "Alle weektaken tonen", per dag gegroepeerd. "+ Nieuwe taak" is een compacte knop die het formulier inklapt/uitklapt. Optioneel een tijd en één of meer dagen instellen (of "Elke dag" voor een dagelijkse taak) — een afgeronde terugkerende taak verschijnt automatisch weer open zodra de volgende gekozen dag aanbreekt. Afronden/aanmaken update de lijst direct, zonder paginaherlading. Voor iedereen zichtbaar; bewerken/verwijderen is alleen voor admin |
 | Agenda | `/agenda` | Aankomende afspraken bovenaan, daaronder het formulier voor een nieuwe afspraak |
-| Protocollen | `/protocollen` | Algemene en cliëntspecifieke protocollen, als tekst en/of geüpload bestand, voor iedereen |
+| Protocollen | `/protocollen` | Per kamer gegroepeerd in een inklapbare sectie, plus één aparte sectie "Algemeen" voor protocollen zonder cliënt. "+ Nieuw protocol" is dezelfde compacte inklap-knop als bij To-Do's. Tekst en/of geüpload bestand, voor iedereen |
 | Weekrapport | `/weekrapport` | Automatisch archief van één PDF per kalenderweek (alle acties van die week), 1 jaar bewaard, plus een live overzicht van de lopende week. Admin + coördinator |
 | Backend | `/backend` | Cliënten, medewerkers (incl. geboortedatum resetten of verwijderen), medicatie beheer (incl. wijzigen of verwijderen), weekplanning, archief (gedeactiveerde medewerkers/medicatie), instellingen, auditlog (alleen admin) |
 | Mijn account | `/account` | Eigen geboortedatum (het inloggegeven) wijzigen — vereist de huidige geboortedatum ter bevestiging. Voor iedereen, bereikbaar via de eigen naam onderin de zijbalk |
@@ -459,9 +459,9 @@ gericht toe.
 5. **Medicatie** → open cliënt → kies Afvinken, Verlof of Niet ingenomen (kan niet ongedaan worden gemaakt). "Registraties deze week" reset elke maandag; het volledige overzicht staat daarna in het Weekrapport-archief.
 6. **Aanwezigheid** → tik Aanwezig/Afwezig (met optioneel commentaar). Gedeeld tussen iedereen die inlogt en alle diensten; blijft staan totdat iemand het weer aanpast (geen dagelijkse reset).
 7. **Overdracht** → typ notitie → wordt 1 uur na diensteinde automatisch gewist.
-8. **To-Do's** → openstaande taken direct bovenaan; "+ Nieuwe taak" klapt het formulier open. Voor iedereen zichtbaar.
+8. **To-Do's** → "Vandaag" toont alleen taken zonder dag of met vandaag als dag; andere taken staan onder "Alle weektaken tonen". "+ Nieuwe taak" klapt het formulier open. Voor iedereen zichtbaar.
 9. **Agenda** → formulier voor een nieuwe afspraak bovenaan, aankomende afspraken eronder.
-10. **Protocollen** → algemeen of per cliënt, tekst en/of geüpload bestand. Voor iedereen; verwijderen alleen voor admin/coördinator.
+10. **Protocollen** → per kamer een inklapbare sectie, plus één sectie "Algemeen". "+ Nieuw protocol" klapt het formulier open. Voor iedereen; verwijderen alleen voor admin/coördinator.
 11. **Weekrapport** (admin + coördinator) → automatisch archief van één PDF per kalenderweek (1 jaar bewaard), plus een live voortgangsoverzicht van de lopende week.
 12. **Backend** (alleen admin) → cliënten (incl. kamer), medewerkers, instellingen, auditlog, medicatie, weekplanning. Eén wijziging = overal doorgevoerd.
 13. Uitloggen rechtsonder in de zijbalk, of automatisch na 15 minuten inactiviteit.

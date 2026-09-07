@@ -17,7 +17,9 @@ export default async function ProtocollenPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-50">Protocollen</h1>
-        <p className="mt-1 text-slate-400">Algemene en cliëntspecifieke protocollen.</p>
+        <p className="mt-1 text-slate-400">
+          Per kamer gegroepeerd, plus een apart overzicht voor algemene protocollen.
+        </p>
       </div>
       <ProtocolManager
         protocols={protocols.map((p) => ({
@@ -26,8 +28,9 @@ export default async function ProtocollenPage() {
           content: p.content,
           url: p.url,
           clientName: p.client ? fullName(p.client) : null,
+          room: p.client ? p.client.room || "Geen kamer" : null,
         }))}
-        clients={clients.map((c) => ({ id: c.id, name: fullName(c) }))}
+        clients={clients.map((c) => ({ id: c.id, name: fullName(c), room: c.room }))}
         canDelete={session?.role === Role.ADMIN || session?.role === Role.COORDINATOR}
       />
     </div>

@@ -192,11 +192,16 @@ eventuele collega's toe via **Backend → Medewerkers**.
 
 ## Protocollen in de app krijgen
 
-Protocollen staan in het hoofdmenu voor iedereen (geen Backend nodig): ga
-naar **Protocollen**, typ de titel en eventueel inhoud als tekst, en/of
-upload een bestand (PDF, Word, Excel of een foto — tot 4 MB) — minstens één
-van de twee is verplicht — en klik op **Toevoegen**. Verwijderen kan alleen
-door een admin of coördinator.
+Protocollen staan in het hoofdmenu voor iedereen (geen Backend nodig), per
+kamer gegroepeerd in een inklapbare sectie — klik op een kamer om de
+protocollen daaronder te zien — plus één aparte sectie **Algemeen** voor
+protocollen die niet aan een specifieke cliënt hangen. Klik op **+ Nieuw
+protocol** (dezelfde soort knop als "+ Nieuwe taak" bij To-Do's) om het
+formulier te openen: typ de titel, kies een kamer/cliënt of laat "Algemeen"
+staan, en typ eventueel inhoud als tekst en/of upload een bestand (PDF,
+Word, Excel of een foto — tot 4 MB) — minstens één van de twee is verplicht
+— en klik op **Toevoegen**. Verwijderen kan alleen door een admin of
+coördinator.
 
 > **Zie je de melding "Uploaden lukt niet"?** Dan zijn de
 > `CLOUDINARY_*`-waarden uit stap 4/5 hierboven waarschijnlijk nog niet
@@ -276,8 +281,11 @@ door een admin of coördinator.
   onbetrouwbaar bleek zodra het internetadres van het kantoor wisselt.
 - Bij **To-Do's** kan een taak optioneel een tijdstip en één of meerdere
   dagen meekrijgen (of "Elke dag" voor dagelijks), en desgewenst
-  "terugkerend" — de lijst met openstaande taken staat automatisch
-  gesorteerd op tijdstip. Een afgeronde terugkerende taak verdwijnt niet: hij
+  "terugkerend". Onder "Vandaag" staan alleen taken zonder dag of met
+  vandaag als een van hun dagen, gesorteerd op tijdstip — een taak voor
+  woensdag staat op maandag dus niet tussen de taken van vandaag. Klik op
+  **Alle weektaken tonen** om de rest van de week te zien, per dag
+  gegroepeerd. Een afgeronde terugkerende taak verdwijnt niet: hij
   verschijnt vanzelf weer als nieuwe, open taak zodra een volgende dag uit
   zijn eigen dagpatroon aanbreekt, zonder dat iemand hem opnieuw hoeft aan te
   maken. Een admin kan elke taak met het potlood-icoon wijzigen of met het
