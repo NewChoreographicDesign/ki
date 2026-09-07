@@ -94,7 +94,7 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
 | Agenda | `/agenda` | Aankomende afspraken bovenaan, daaronder het formulier voor een nieuwe afspraak |
 | Protocollen | `/protocollen` | Algemene en cliëntspecifieke protocollen, als tekst en/of geüpload bestand, voor iedereen |
 | Weekrapport | `/weekrapport` | Automatisch archief van één PDF per kalenderweek (alle acties van die week), 1 jaar bewaard, plus een live overzicht van de lopende week. Admin + coördinator |
-| Backend | `/backend` | Cliënten, medewerkers (incl. geboortedatum resetten of verwijderen), medicatie beheer (incl. wijzigen of verwijderen), weekplanning, instellingen, auditlog (alleen admin) |
+| Backend | `/backend` | Cliënten, medewerkers (incl. geboortedatum resetten of verwijderen), medicatie beheer (incl. wijzigen of verwijderen), weekplanning, archief (gedeactiveerde medewerkers/medicatie), instellingen, auditlog (alleen admin) |
 | Mijn account | `/account` | Eigen geboortedatum (het inloggegeven) wijzigen — vereist de huidige geboortedatum ter bevestiging. Voor iedereen, bereikbaar via de eigen naam onderin de zijbalk |
 
 ## Vereisten
@@ -320,6 +320,20 @@ zelf afgerond"-criterium voorkomt dat een Ma/Wo/Vrij-taak die net op maandag
 is afgerond meteen weer een kopie voor maandag zelf spawnt. Een
 `regenerated`-vlag zorgt dat elke afgeronde taak maar één keer een kopie
 maakt, ook als `/todos` diezelfde dag nog vaker bezocht wordt.
+
+`Todo.dayOfWeek` (de oude, enkele-dag-kolom van vóór `daysOfWeek`) staat nog
+steeds in `schema.prisma`, gemarkeerd als deprecated/ongebruikt, in plaats
+van verwijderd. Een kolom droppen die op productie al gevuld is telt voor
+`prisma db push` als potentieel dataverlies; niet-interactief (zoals tijdens
+een Vercel-build) weigert `db push` dat dan gewoon, met een foutmelding die
+vraagt om `--accept-data-loss` — een vlag die we bewust nooit doorgeven (zie
+de vorige alinea's uitleg waarom een destructieve wijziging de build hoort
+te laten falen in plaats van stilzwijgend data weg te gooien). Zo'n dode
+kolom laten staan is dus de prijs voor die garantie; hernoemen of
+verwijderen van een kolom die al bestaat in productie kan alleen via een
+losse, bewuste opschoonstap (handmatig de kolom droppen met
+`--accept-data-loss`, na een verse back-up), nooit automatisch als
+onderdeel van een gewone deploy.
 
 ### Medicatie-herinneringen
 
@@ -584,6 +598,12 @@ volgende, concreet geïmplementeerde maatregelen:
   zonder enige geregistreerde historie kan echt hard verwijderd worden. Een
   `Todo` heeft geen onderliggende relaties, dus die kan een admin altijd
   vrij verwijderen — open of afgerond, met of zonder historie.
+- **Backend → Archief** verzamelt alle gedeactiveerde medewerkers en
+  medicatie op één pagina (`app/(app)/backend/archief`), naast — niet in
+  plaats van — de bestaande Medewerkers- en Medicatie beheer-pagina's, die
+  ongewijzigd blijven. Activeren vanuit het archief gebruikt dezelfde
+  `PATCH`-routes als de knop "Activeren" elders; er is geen apart
+  archief-datamodel, het is puur een gefilterde weergave (`active: false`).
 
 **Wat nog aandacht verdient bij een echte productie-uitrol — dit is geen
 juridisch advies, raadpleeg bij twijfel een deskundige:** roteer

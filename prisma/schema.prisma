@@ -192,6 +192,12 @@ model Todo {
   title           String
   description     String?
   priority        Priority  @default(MEDIUM)
+  // Deprecated, unused — superseded by daysOfWeek below. Kept (rather than
+  // dropped) so `prisma db push` stays a purely additive change against the
+  // already-deployed schema; dropping a populated column is treated as data
+  // loss and `db push` refuses to run non-interactively without a flag we
+  // deliberately never pass (see the "Terugkerende to-do's" README section).
+  dayOfWeek       Int?
   // Comma-separated weekday indices this task applies to, e.g. "0,2,4" for
   // Ma/Wo/Vr, or "0,1,2,3,4,5,6" for every day. Empty string = no specific
   // day. Same 0=Monday..6=Sunday convention as WeekPlan.dayOfWeek. Stored as

@@ -236,6 +236,12 @@ door een admin of coördinator.
     nog nergens iets heeft geregistreerd (geen rapportages, medicatie-
     afvinkjes, aanwezigheid, to-do's, afspraken of diensten); is dat al wel
     het geval, gebruik dan **Deactiveren** in plaats van verwijderen.
+  - **Backend → Archief**: een overzicht van alle gedeactiveerde
+    medewerkers en medicatie op één pagina, zodat je niet per cliënt of
+    per medewerker hoeft na te gaan wat er allemaal ooit gedeactiveerd is.
+    Vanaf hier kun je met **Activeren** ook meteen iets weer terugzetten —
+    dat werkt hetzelfde als de Activeren-knop op de Medewerkers- of
+    Medicatie beheer-pagina zelf.
   - **Backend → Instellingen**: organisatienaam.
   - **Backend → Auditlog**: overzicht van wie wat heeft gedaan (inloggen,
     cliënten/accounts aanmaken, wijzigen of verwijderen, medicatie wijzigen

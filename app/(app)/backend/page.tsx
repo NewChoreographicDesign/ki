@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users, UserCog, Settings, Pill, CalendarRange, History } from "lucide-react";
+import { Users, UserCog, Settings, Pill, CalendarRange, History, Archive } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 const SECTIONS = [
@@ -7,6 +7,7 @@ const SECTIONS = [
   { href: "/backend/medewerkers", label: "Medewerkers", description: "Beheer accounts en rollen", icon: UserCog },
   { href: "/backend/medicatie", label: "Medicatie beheer", description: "Medicatie toevoegen per cliënt", icon: Pill },
   { href: "/backend/weekplanning", label: "Weekplanning", description: "Weekschema per cliënt", icon: CalendarRange },
+  { href: "/backend/archief", label: "Archief", description: "Gedeactiveerde medewerkers en medicatie", icon: Archive },
   { href: "/backend/instellingen", label: "Instellingen", description: "Organisatie-instellingen", icon: Settings },
   { href: "/backend/audit", label: "Auditlog", description: "Wie deed wat, en wanneer", icon: History },
 ] as const;
