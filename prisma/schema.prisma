@@ -192,15 +192,22 @@ model Todo {
   title           String
   description     String?
   priority        Priority  @default(MEDIUM)
-  // 0 = Monday .. 6 = Sunday, same convention as WeekPlan.dayOfWeek. Optional:
-  // not every task is tied to a specific day.
-  dayOfWeek       Int?
-  // A recurring task with dayOfWeek set gets automatically recreated (open,
-  // unchecked) once the current one is completed and the new week starts —
-  // see regenerateRecurringTodos() in lib/recurring-todos.ts.
+  // Comma-separated weekday indices this task applies to, e.g. "0,2,4" for
+  // Ma/Wo/Vr, or "0,1,2,3,4,5,6" for every day. Empty string = no specific
+  // day. Same 0=Monday..6=Sunday convention as WeekPlan.dayOfWeek. Stored as
+  // a string rather than a native array so this keeps working on SQLite in
+  // local dev, not just Postgres (see scripts/prepare-datasource.js).
+  daysOfWeek      String    @default("")
+  // Scheduled time of day, "HH:MM" (Europe/Amsterdam). Optional — not every
+  // task needs a specific time. Drives the sort order on the Todos page and
+  // the "due soon" list, same string-not-Date choice as Medication.times.
+  time            String?
+  // A recurring task gets automatically reopened as a fresh copy the next
+  // time one of its daysOfWeek comes around, once the current one has been
+  // completed — see regenerateRecurringTodos() in lib/recurring-todos.ts.
   recurring       Boolean   @default(false)
-  // Set once this completed recurring task has spawned its next-week copy,
-  // so the weekly rollover never regenerates the same completion twice.
+  // Set once this completed recurring task has spawned its next occurrence,
+  // so a task is never regenerated twice for the same completion.
   regenerated     Boolean   @default(false)
   completed       Boolean   @default(false)
   completedById   String?

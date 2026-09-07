@@ -14,8 +14,13 @@ const ACTION_LABELS: Record<string, string> = {
   "user.update": "Gebruiker gewijzigd",
   "user.reset-birthdate": "Geboortedatum gereset door admin",
   "user.change-own-birthdate": "Geboortedatum zelf gewijzigd",
+  "user.delete": "Gebruiker verwijderd",
   "client.create": "Cliënt aangemaakt",
   "client.update": "Cliënt gewijzigd",
+  "medication.update": "Medicatie gewijzigd",
+  "medication.delete": "Medicatie verwijderd",
+  "todo.update": "Taak gewijzigd",
+  "todo.delete": "Taak verwijderd",
   "setting.update": "Instelling gewijzigd",
 };
 

@@ -3,12 +3,15 @@
 // (todo-form.tsx, todo-item.tsx), and a plain function export from a
 // "use client" file can't be called from a Server Component at all (Next's
 // RSC bundler rejects it at runtime, not just in the type system).
+import { parseDaysOfWeek } from "@/lib/utils";
+
 export type TodoData = {
   id: string;
   title: string;
   description: string | null;
   priority: "LOW" | "MEDIUM" | "HIGH";
-  dayOfWeek: number | null;
+  daysOfWeek: number[];
+  time: string | null;
   recurring: boolean;
   completed: boolean;
   completedByName: string | null;
@@ -23,7 +26,8 @@ type RawTodo = {
   title: string;
   description: string | null;
   priority: "LOW" | "MEDIUM" | "HIGH";
-  dayOfWeek: number | null;
+  daysOfWeek: string;
+  time: string | null;
   recurring: boolean;
   completed: boolean;
   completedBy: { name: string } | null;
@@ -41,7 +45,8 @@ export function serializeTodo(todo: RawTodo): TodoData {
     title: todo.title,
     description: todo.description,
     priority: todo.priority,
-    dayOfWeek: todo.dayOfWeek,
+    daysOfWeek: parseDaysOfWeek(todo.daysOfWeek),
+    time: todo.time,
     recurring: todo.recurring,
     completed: todo.completed,
     completedByName: todo.completedBy?.name ?? null,

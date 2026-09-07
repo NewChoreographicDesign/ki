@@ -44,3 +44,50 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return handleApiError(error);
   }
 }
+
+// Only safe when the account never actually recorded anything — reports,
+// medication checks, presence entries, created to-do's and appointments,
+// and shifts all cascade-delete along with their User (see schema.prisma),
+// which would silently destroy real care records for anyone who's actually
+// worked a shift. "Deactiveren" (already supported) is the correct way to
+// retire an account with history; this only covers a mistakenly created or
+// genuinely never-used account.
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const session = await requireAuth([Role.ADMIN]);
+    const { id } = await params;
+
+    if (id === session.sub) {
+      return NextResponse.json({ error: "Je kunt je eigen account niet verwijderen" }, { status: 400 });
+    }
+
+    const existing = await db.user.findUnique({
+      where: { id },
+      select: {
+        _count: {
+          select: { reports: true, medicationChecks: true, presences: true, todosCreated: true, appointments: true, shifts: true },
+        },
+      },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: "Gebruiker niet gevonden" }, { status: 404 });
+    }
+    const hasHistory = Object.values(existing._count).some((count) => count > 0);
+    if (hasHistory) {
+      return NextResponse.json(
+        {
+          error:
+            "Deze medewerker heeft al gegevens geregistreerd en kan niet verwijderd worden — gebruik Deactiveren.",
+        },
+        { status: 409 }
+      );
+    }
+
+    await db.user.delete({ where: { id } });
+    await logAudit({ userId: session.sub, action: "user.delete", targetType: "User", targetId: id });
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}

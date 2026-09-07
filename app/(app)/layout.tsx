@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession, canAccessBackend, canAccessWeeklyReport } from "@/lib/auth";
 import { AppNav } from "@/components/app-nav";
 import { IdleLogout } from "@/components/idle-logout";
+import { MedicationReminderWatcher } from "@/components/medication-reminder-watcher";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
@@ -10,6 +11,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       <IdleLogout />
+      <MedicationReminderWatcher />
       <AppNav
         userName={session.name}
         canAccessBackend={canAccessBackend(session.role)}

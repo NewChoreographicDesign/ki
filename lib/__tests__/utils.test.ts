@@ -11,6 +11,8 @@ import {
   mostRecentMondayStart,
   todayDayOfWeek,
   isoWeekOf,
+  parseDaysOfWeek,
+  formatDaysOfWeek,
 } from "@/lib/utils";
 import { ShiftType } from "@prisma/client";
 
@@ -154,5 +156,32 @@ describe("isoWeekOf", () => {
   it("increments for the following week", () => {
     // 2026-01-05 is a Monday, the start of ISO week 2 of 2026.
     expect(isoWeekOf(amsterdamDate(2026, 1, 5, 12))).toEqual({ isoYear: 2026, isoWeek: 2 });
+  });
+});
+
+describe("parseDaysOfWeek / formatDaysOfWeek", () => {
+  it("parses a comma-separated string into a sorted array", () => {
+    expect(parseDaysOfWeek("4,0,2")).toEqual([0, 2, 4]);
+  });
+
+  it("parses an empty string as no days", () => {
+    expect(parseDaysOfWeek("")).toEqual([]);
+  });
+
+  it("deduplicates and drops out-of-range values", () => {
+    expect(parseDaysOfWeek("0,0,3,9,-1")).toEqual([0, 3]);
+  });
+
+  it("formats an array back into the stored string form", () => {
+    expect(formatDaysOfWeek([4, 0, 2])).toBe("0,2,4");
+  });
+
+  it("formats an empty array as an empty string", () => {
+    expect(formatDaysOfWeek([])).toBe("");
+  });
+
+  it("round-trips every day of the week", () => {
+    const allDays = [0, 1, 2, 3, 4, 5, 6];
+    expect(parseDaysOfWeek(formatDaysOfWeek(allDays))).toEqual(allDays);
   });
 });

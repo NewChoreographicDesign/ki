@@ -1,32 +1,41 @@
 import "server-only";
 import { db } from "@/lib/db";
+import { todayDayOfWeek, startOfToday, parseDaysOfWeek, formatDaysOfWeek } from "@/lib/utils";
 
 /**
- * Recreates every completed recurring to-do as a fresh, open copy for the
- * new week — called from the weekly cron (app/api/cron/weekly-report/
- * route.ts; bundled there rather than a separate cron entry since both
- * represent the same "start of a new week" rollover and Vercel's cron job
- * count is limited on the Hobby plan).
+ * Reopens completed recurring to-do's whose next scheduled day has arrived.
+ * Called from the Todos page itself (app/(app)/todos/page.tsx) on every
+ * load rather than from a cron: a task can recur on any subset of days
+ * (daily, or just Mon/Wed/Fri, ...), so "once a week" cron timing can't
+ * correctly time this — checking on each page view, which happens many
+ * times a day in real use, keeps it close to real-time without needing a
+ * cron slot Vercel's Hobby plan doesn't have room for.
  *
- * `regenerated` guards against creating a duplicate if this ever runs twice
- * for the same completion: once a completed recurring to-do has spawned its
- * successor, it's marked regenerated and skipped on future runs. A to-do
- * left open (not completed) never regenerates — only a *completed*
- * recurring task produces next week's copy, per the feature request.
+ * A completed recurring to-do regenerates once its `daysOfWeek` includes
+ * today AND it was completed on an earlier day (never the same day it was
+ * just completed — otherwise a Mon/Wed/Fri task completed on Monday would
+ * immediately spawn another copy for Monday). `regenerated` then guards
+ * against creating a second copy if this runs again later the same day.
  */
 export async function regenerateRecurringTodos(): Promise<{ regenerated: number }> {
-  const toRegenerate = await db.todo.findMany({
-    where: { recurring: true, completed: true, regenerated: false },
+  const today = startOfToday();
+  const todayWeekday = todayDayOfWeek();
+
+  const candidates = await db.todo.findMany({
+    where: { recurring: true, completed: true, regenerated: false, completedAt: { lt: today } },
   });
 
-  for (const todo of toRegenerate) {
+  const due = candidates.filter((todo) => parseDaysOfWeek(todo.daysOfWeek).includes(todayWeekday));
+
+  for (const todo of due) {
     await db.$transaction([
       db.todo.create({
         data: {
           title: todo.title,
           description: todo.description,
           priority: todo.priority,
-          dayOfWeek: todo.dayOfWeek,
+          daysOfWeek: formatDaysOfWeek(parseDaysOfWeek(todo.daysOfWeek)),
+          time: todo.time,
           recurring: true,
           createdById: todo.createdById,
         },
@@ -35,5 +44,5 @@ export async function regenerateRecurringTodos(): Promise<{ regenerated: number 
     ]);
   }
 
-  return { regenerated: toRegenerate.length };
+  return { regenerated: due.length };
 }

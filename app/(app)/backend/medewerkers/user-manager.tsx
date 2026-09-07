@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Trash2 } from "lucide-react";
 import { formatBirthDateInput } from "@/lib/format-birthdate-input";
 import { DEFAULT_EMPLOYEE_BIRTH_DATE } from "@/lib/utils";
 
@@ -72,6 +73,24 @@ export function UserManager({ users, currentUserId }: { users: UserRow[]; curren
       router.refresh();
     } catch {
       toast.error("Bijwerken mislukt");
+    }
+  }
+
+  async function deleteUser(id: string, name: string) {
+    if (!window.confirm(`${name} definitief verwijderen? Dit kan niet ongedaan worden gemaakt.`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/backend/users/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Verwijderen mislukt");
+        return;
+      }
+      toast.success("Medewerker verwijderd");
+      router.refresh();
+    } catch {
+      toast.error("Verwijderen mislukt");
     }
   }
 
@@ -156,6 +175,17 @@ export function UserManager({ users, currentUserId }: { users: UserRow[]; curren
                   onClick={() => updateUser(u.id, { active: !u.active })}
                 >
                   {u.active ? "Deactiveren" : "Activeren"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={u.id === currentUserId}
+                  onClick={() => deleteUser(u.id, u.name)}
+                  aria-label="Verwijderen"
+                  title="Alleen mogelijk zonder geregistreerde gegevens"
+                  className="text-red-400 hover:text-red-300"
+                >
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             </CardContent>

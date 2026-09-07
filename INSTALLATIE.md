@@ -224,11 +224,22 @@ door een admin of coördinator.
     eventuele blokkade meteen op, zodat diegene direct opnieuw kan inloggen
     en een nieuwe geboortedatum kan instellen.
   - **Backend → Medicatie beheer**: medicatie per cliënt instellen, met
-    tijden en instructies.
+    tijden en instructies. Een bestaande medicatie kan een admin met het
+    potlood-icoon wijzigen, of met het prullenbak-icoon verwijderen — dat
+    laatste kan alleen zolang er nog geen enkele registratie op die medicatie
+    staat; staat die er al wel, dan toont de app een melding en gebruik je in
+    plaats daarvan **Deactiveren**, zodat de medicatiehistorie nooit
+    verloren gaat.
   - **Backend → Weekplanning**: het weekschema per cliënt instellen.
+  - **Backend → Medewerkers**: naast toevoegen kan een admin een collega ook
+    met het prullenbak-icoon verwijderen — dit kan alleen zolang die collega
+    nog nergens iets heeft geregistreerd (geen rapportages, medicatie-
+    afvinkjes, aanwezigheid, to-do's, afspraken of diensten); is dat al wel
+    het geval, gebruik dan **Deactiveren** in plaats van verwijderen.
   - **Backend → Instellingen**: organisatienaam.
   - **Backend → Auditlog**: overzicht van wie wat heeft gedaan (inloggen,
-    cliënten/accounts aanmaken of wijzigen, protocollen verwijderen,
+    cliënten/accounts aanmaken, wijzigen of verwijderen, medicatie wijzigen
+    of verwijderen, to-do's wijzigen of verwijderen, protocollen verwijderen,
     instellingen wijzigen).
 - **Weekrapport** (zichtbaar voor admin en coördinator): elke maandagochtend
   legt de app automatisch de afgelopen week vast als PDF (rapportages,
@@ -240,6 +251,15 @@ door een admin of coördinator.
   **Verlof** (cliënt afwezig) of **Niet ingenomen**. Kan niet ongedaan
   gemaakt worden. "Registraties deze week" reset elke maandag (de
   geschiedenis verdwijnt niet, die verhuist naar het Weekrapport-archief).
+  Vanaf 5 minuten vóór een geplande innametijd verschijnt automatisch, op elke
+  pagina, een opvallende melding rechtsboven met een pieptoon en een link
+  naar de juiste cliënt — zo hoeft niemand zelf de klok in de gaten te
+  houden. Dit werkt zolang er ergens een tablet, telefoon of computer met de
+  app open staat (bijvoorbeeld een iPad die op de post blijft liggen); is de
+  app nergens open, dan komt er ook geen melding. De eerste keer dat de app
+  in een browser wordt geopend, vraagt de browser mogelijk om toestemming
+  voor "meldingen" — dat mag je gerust toestaan, maar is niet verplicht: de
+  melding in de app zelf werkt sowieso.
 - **Aanwezigheid** is een blijvende status per cliënt, gedeeld tussen alle
   accounts en diensten: wat de laatste persoon instelt, blijft zo staan
   totdat iemand het weer wijzigt — er is geen dagelijkse reset.
@@ -248,10 +268,16 @@ door een admin of coördinator.
   apparaten die één keer het apparaat-wachtwoord hebben ingevoerd op
   `/apparaat`. Dit verving een eerdere versie op basis van IP-adres, die
   onbetrouwbaar bleek zodra het internetadres van het kantoor wisselt.
-- Bij **To-Do's** kan een taak optioneel een dag en "terugkerend (wekelijks)"
-  meekrijgen. Een afgeronde terugkerende taak verdwijnt niet — hij
-  verschijnt automatisch weer als nieuwe, open taak zodra de volgende week
-  begint (maandagochtend), zonder dat iemand hem opnieuw hoeft aan te maken.
+- Bij **To-Do's** kan een taak optioneel een tijdstip en één of meerdere
+  dagen meekrijgen (of "Elke dag" voor dagelijks), en desgewenst
+  "terugkerend" — de lijst met openstaande taken staat automatisch
+  gesorteerd op tijdstip. Een afgeronde terugkerende taak verdwijnt niet: hij
+  verschijnt vanzelf weer als nieuwe, open taak zodra een volgende dag uit
+  zijn eigen dagpatroon aanbreekt, zonder dat iemand hem opnieuw hoeft aan te
+  maken. Een admin kan elke taak met het potlood-icoon wijzigen of met het
+  prullenbak-icoon verwijderen (dit kan altijd, ook bij een afgeronde taak —
+  in tegenstelling tot medewerkers en medicatie hierboven zit hier geen
+  historie aan vast om te beschermen).
 - De overige menu's (Rapportage, Overdracht, Agenda) gebruikt iedereen
   dagelijks — zie ook `README.md` voor een korte beschrijving van elk
   onderdeel.

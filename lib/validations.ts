@@ -79,17 +79,20 @@ export const handoverSchema = z.object({
   content: z.string().trim().min(3).max(5000),
 });
 
+const timeOfDay = /^([01]\d|2[0-3]):[0-5]\d$/;
+
 export const todoSchema = z
   .object({
     title: z.string().trim().min(1).max(300),
     description: z.string().trim().max(2000).optional().or(z.literal("")),
     priority: z.enum(["LOW", "MEDIUM", "HIGH"]),
-    dayOfWeek: z.number().int().min(0).max(6).optional(),
+    daysOfWeek: z.array(z.number().int().min(0).max(6)).max(7).optional(),
+    time: z.string().regex(timeOfDay, "Gebruik het formaat UU:MM").optional().or(z.literal("")),
     recurring: z.boolean().optional(),
   })
-  .refine((data) => !data.recurring || data.dayOfWeek !== undefined, {
-    message: "Kies een dag voor een terugkerende taak",
-    path: ["dayOfWeek"],
+  .refine((data) => !data.recurring || (data.daysOfWeek && data.daysOfWeek.length > 0), {
+    message: "Kies minstens één dag voor een terugkerende taak",
+    path: ["daysOfWeek"],
   });
 
 export const todoCompleteSchema = z.object({

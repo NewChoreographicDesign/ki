@@ -12,28 +12,40 @@ import type { TodoData } from "./todo-types";
 // under the header — no full-height "add" form pushed above them pushing
 // them below the fold. Adding one is a single tap on a compact trigger that
 // expands the same form inline, and completing/creating updates this
-// component's own state directly (see onCreated/onComplete below) instead
-// of calling router.refresh(), which would re-run every query on the page
-// for a second server round trip just to show one changed row.
+// component's own state directly (see handleCreated/handleComplete below)
+// instead of calling router.refresh(), which would re-run every query on
+// the page for a second server round trip just to show one changed row.
 export function TodoBoard({
   initialOpen,
   initialCompleted,
+  canManage = false,
 }: {
   initialOpen: TodoData[];
   initialCompleted: TodoData[];
+  /** Admin-only: shows edit/delete controls on every task. */
+  canManage?: boolean;
 }) {
-  const [open, setOpen] = React.useState(initialOpen);
+  const [open, setOpen] = React.useState(() => [...initialOpen].sort(sortByTime));
   const [completed, setCompleted] = React.useState(initialCompleted);
   const [formOpen, setFormOpen] = React.useState(false);
 
   function handleCreated(todo: TodoData) {
-    setOpen((prev) => [...prev, todo].sort(sortOpen));
+    setOpen((prev) => [...prev, todo].sort(sortByTime));
     setFormOpen(false);
+  }
+
+  function handleUpdated(todo: TodoData) {
+    setOpen((prev) => prev.map((t) => (t.id === todo.id ? todo : t)).sort(sortByTime));
   }
 
   function handleComplete(todo: TodoData) {
     setOpen((prev) => prev.filter((t) => t.id !== todo.id));
     setCompleted((prev) => [todo, ...prev].slice(0, 10));
+  }
+
+  function handleDelete(id: string) {
+    setOpen((prev) => prev.filter((t) => t.id !== id));
+    setCompleted((prev) => prev.filter((t) => t.id !== id));
   }
 
   return (
@@ -54,7 +66,7 @@ export function TodoBoard({
               <CardTitle>Nieuwe taak</CardTitle>
             </CardHeader>
             <CardContent>
-              <TodoForm onCreated={handleCreated} onCancel={() => setFormOpen(false)} />
+              <TodoForm onSaved={handleCreated} onCancel={() => setFormOpen(false)} />
             </CardContent>
           </Card>
         )}
@@ -64,7 +76,14 @@ export function TodoBoard({
         ) : (
           <div className="flex flex-col gap-3">
             {open.map((t) => (
-              <TodoItem key={t.id} todo={t} onComplete={handleComplete} />
+              <TodoItem
+                key={t.id}
+                todo={t}
+                canManage={canManage}
+                onComplete={handleComplete}
+                onUpdate={handleUpdated}
+                onDelete={handleDelete}
+              />
             ))}
           </div>
         )}
@@ -77,7 +96,7 @@ export function TodoBoard({
         ) : (
           <div className="flex flex-col gap-3">
             {completed.map((t) => (
-              <TodoItem key={t.id} todo={t} />
+              <TodoItem key={t.id} todo={t} canManage={canManage} onDelete={handleDelete} />
             ))}
           </div>
         )}
@@ -86,7 +105,11 @@ export function TodoBoard({
   );
 }
 
-function sortOpen(a: TodoData, b: TodoData): number {
+/** Tasks with a scheduled time sort earliest-first; untimed tasks follow, by priority. */
+function sortByTime(a: TodoData, b: TodoData): number {
+  if (a.time && b.time) return a.time.localeCompare(b.time);
+  if (a.time && !b.time) return -1;
+  if (!a.time && b.time) return 1;
   const priorityRank = { HIGH: 0, MEDIUM: 1, LOW: 2 };
   const byPriority = priorityRank[a.priority] - priorityRank[b.priority];
   if (byPriority !== 0) return byPriority;

@@ -38,9 +38,9 @@ export function formatDDMMYYYY(date: Date): string {
 // Europe/Amsterdam rather than relying on the server's local time — otherwise
 // shift windows and day boundaries silently drift by 1-2 hours (DST-dependent).
 
-const AMSTERDAM_TZ = "Europe/Amsterdam";
+export const AMSTERDAM_TZ = "Europe/Amsterdam";
 
-function getZonedParts(date: Date, timeZone: string) {
+export function getZonedParts(date: Date, timeZone: string) {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,
     hourCycle: "h23",
@@ -191,7 +191,7 @@ export function isoWeekOf(date: Date): { isoYear: number; isoWeek: number } {
   return { isoYear, isoWeek };
 }
 
-/** Dutch day names, index 0=Monday..6=Sunday — matches WeekPlan.dayOfWeek and Todo.dayOfWeek. */
+/** Dutch day names, index 0=Monday..6=Sunday — matches WeekPlan.dayOfWeek and Todo.daysOfWeek. */
 export const DAYS_OF_WEEK = [
   "Maandag",
   "Dinsdag",
@@ -201,6 +201,30 @@ export const DAYS_OF_WEEK = [
   "Zaterdag",
   "Zondag",
 ] as const;
+
+/** Short Dutch day labels for compact badges/buttons. */
+export const DAYS_OF_WEEK_SHORT = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"] as const;
+
+/** Parses Todo.daysOfWeek ("0,2,4") into a sorted, deduplicated array of weekday indices. */
+export function parseDaysOfWeek(value: string): number[] {
+  if (!value.trim()) return [];
+  return Array.from(
+    new Set(
+      value
+        .split(",")
+        .map((v) => Number(v.trim()))
+        .filter((n) => Number.isInteger(n) && n >= 0 && n <= 6)
+    )
+  ).sort((a, b) => a - b);
+}
+
+/** Inverse of parseDaysOfWeek — array of weekday indices back into the stored string form. */
+export function formatDaysOfWeek(days: number[]): string {
+  return Array.from(new Set(days))
+    .filter((n) => Number.isInteger(n) && n >= 0 && n <= 6)
+    .sort((a, b) => a - b)
+    .join(",");
+}
 
 /**
  * Placeholder birthdate for a newly created employee (Backend → Medewerkers)

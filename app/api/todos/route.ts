@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { handleApiError } from "@/lib/api";
 import { todoSchema } from "@/lib/validations";
+import { formatDaysOfWeek } from "@/lib/utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +16,8 @@ export async function POST(request: NextRequest) {
         title: data.title,
         description: data.description || null,
         priority: data.priority,
-        dayOfWeek: data.dayOfWeek ?? null,
+        daysOfWeek: formatDaysOfWeek(data.daysOfWeek ?? []),
+        time: data.time || null,
         recurring: data.recurring ?? false,
         createdById: session.sub,
       },

@@ -87,14 +87,14 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
 | --- | --- | --- |
 | Overzicht | `/dashboard` | "Vandaag per kamer" (weekplanning + agenda-afspraken van vandaag, gegroepeerd per cliëntkamer) bovenaan, daaronder stats + snelle acties |
 | Rapportage | `/rapportage` | Rapportage per cliënt/dienst. "Recente rapportages" toont alleen sinds de laatste donderdag |
-| Medicatie | `/medicatie` | Per cliënt registreren: Afvinken, Verlof of Niet ingenomen (onomkeerbaar). Weekoverzicht reset elke maandag (zie Weekrapport) |
+| Medicatie | `/medicatie` | Per cliënt registreren: Afvinken, Verlof of Niet ingenomen (onomkeerbaar). Weekoverzicht reset elke maandag (zie Weekrapport). Er verschijnt automatisch een melding met geluid 5 minuten voor een geplande inname (zie [Medicatie-herinneringen](#medicatie-herinneringen)) |
 | Aanwezigheid | `/aanwezigheid` | Aanwezig/afwezig per cliënt, gedeeld tussen alle accounts en diensten — blijft staan tot iemand het weer wijzigt (geen dagelijkse reset) |
 | Overdracht | `/overdracht` | Notities die 1 uur na diensteinde verlopen |
-| To-Do's | `/todos` | Openstaande taken direct bovenaan zichtbaar; "+ Nieuwe taak" is een compacte knop die het formulier inklapt/uitklapt in plaats van er altijd ruimte voor in te nemen. Optioneel een dag en "terugkerend (wekelijks)" instellen — een afgeronde terugkerende taak verschijnt automatisch weer als open taak zodra de nieuwe week begint (maandagochtend, via dezelfde cron als het weekrapport). Afronden/aanmaken update de lijst direct, zonder paginaherlading. Voor iedereen zichtbaar |
+| To-Do's | `/todos` | Openstaande taken direct bovenaan zichtbaar, gesorteerd op tijd; "+ Nieuwe taak" is een compacte knop die het formulier inklapt/uitklapt. Optioneel een tijd en één of meer dagen instellen (of "Elke dag" voor een dagelijkse taak) — een afgeronde terugkerende taak verschijnt automatisch weer open zodra de volgende gekozen dag aanbreekt. Afronden/aanmaken update de lijst direct, zonder paginaherlading. Voor iedereen zichtbaar; bewerken/verwijderen is alleen voor admin |
 | Agenda | `/agenda` | Aankomende afspraken bovenaan, daaronder het formulier voor een nieuwe afspraak |
 | Protocollen | `/protocollen` | Algemene en cliëntspecifieke protocollen, als tekst en/of geüpload bestand, voor iedereen |
 | Weekrapport | `/weekrapport` | Automatisch archief van één PDF per kalenderweek (alle acties van die week), 1 jaar bewaard, plus een live overzicht van de lopende week. Admin + coördinator |
-| Backend | `/backend` | Cliënten, medewerkers (incl. geboortedatum resetten), medicatie beheer, weekplanning, instellingen, auditlog (alleen admin) |
+| Backend | `/backend` | Cliënten, medewerkers (incl. geboortedatum resetten of verwijderen), medicatie beheer (incl. wijzigen of verwijderen), weekplanning, instellingen, auditlog (alleen admin) |
 | Mijn account | `/account` | Eigen geboortedatum (het inloggegeven) wijzigen — vereist de huidige geboortedatum ter bevestiging. Voor iedereen, bereikbaar via de eigen naam onderin de zijbalk |
 
 ## Vereisten
@@ -300,21 +300,60 @@ kopie heeft de 1-jaar-bewaartermijn. Zie
 [Bewaartermijnen](#bewaartermijnen-retention) hieronder voor de afweging
 achter dat onderscheid.
 
-**Terugkerende to-do's delen dezelfde cron:** dezelfde
-`/api/cron/weekly-report`-run roept ook `regenerateRecurringTodos()`
-(`lib/recurring-todos.ts`) aan — niet als apart cron-endpoint, om binnen de
-limiet van het aantal cron-jobs op het gratis Vercel-plan te blijven, en
-omdat het inhoudelijk hetzelfde moment is: "het begin van een nieuwe week".
-Bij het aanmaken van een taak op `/todos` kan optioneel een dag (maandag t/m
-zondag) en "terugkerend (wekelijks)" worden gekozen; is "terugkerend"
-aangevinkt, dan is een dag verplicht. Zodra zo'n taak wordt afgerond, blijft
-hij die week gewoon als afgerond staan — pas bij de eerstvolgende
-maandagochtend-cron wordt automatisch een nieuwe, open kopie aangemaakt met
-dezelfde titel, omschrijving, prioriteit en dag. Elke afgeronde taak
-regenereert maar één keer (een `regenerated`-vlag voorkomt dubbele
-aanmaak bij een herhaalde cron-run).
+**Terugkerende to-do's regenereren bij elke paginabezoek, niet via een
+cron.** Bij het aanmaken van een taak op `/todos` kan optioneel een tijd en
+één of meer dagen worden gekozen (of "Elke dag" voor een dagelijkse taak);
+`Todo.daysOfWeek` slaat dit op als een kommagescheiden string ("0,2,4" voor
+Ma/Wo/Vr), niet als een native array-kolom — dat houdt lokale ontwikkeling
+op SQLite werkend, niet alleen Postgres (zie
+`scripts/prepare-datasource.js`). Is "terugkerend" aangevinkt, dan is
+minstens één dag verplicht. Omdat een taak nu op een willekeurige
+combinatie van dagen kan terugkomen (dagelijks, of bv. alleen Ma/Wo/Vrij),
+kan een cron die maar één keer per week (of zelfs één keer per dag) draait
+dit niet correct timen binnen de crontellling-limiet van Vercel's gratis
+plan. In plaats daarvan checkt `regenerateRecurringTodos()`
+(`lib/recurring-todos.ts`) dit bij elk bezoek aan `/todos` zelf: een
+afgeronde terugkerende taak waarvan een van de gekozen dagen vandaag is, én
+die niet vandaag zelf is afgerond, krijgt een nieuwe open kopie (met
+dezelfde titel, omschrijving, prioriteit, dagen en tijd). Dat "niet vandaag
+zelf afgerond"-criterium voorkomt dat een Ma/Wo/Vrij-taak die net op maandag
+is afgerond meteen weer een kopie voor maandag zelf spawnt. Een
+`regenerated`-vlag zorgt dat elke afgeronde taak maar één keer een kopie
+maakt, ook als `/todos` diezelfde dag nog vaker bezocht wordt.
 
-### Apparaatbeveiliging
+### Medicatie-herinneringen
+
+`components/medication-reminder-watcher.tsx` draait in de hoofdlayout —
+dus zichtbaar op elke pagina, niet alleen `/medicatie` — en pollt elke 30
+seconden `/api/medication-reminders/due`
+(`lib/medication-reminders.ts`) voor medicatie die over hooguit 5 minuten
+gepland staat (en blijft die daarna nog tot een uur als "te laat" tonen, in
+plaats van de melding stil te laten verdwijnen zodra het exacte tijdstip
+voorbij is). Bij een nieuwe melding: een gesynthetiseerde pieptoon (Web
+Audio API, geen los geluidsbestand nodig), een opvallende banner rechtsboven
+met een link naar de juiste cliënt, en — waar toestemming is gegeven — een
+losstaande OS-notificatie.
+
+**`Medication.times` is niet gekoppeld aan specifieke `MedicationCheck`-rijen**
+(een registratie legt vast wanneer iemand heeft gehandeld, niet voor welk
+gepland tijdstip). Om toch te bepalen welke tijden vandaag nog "open" staan,
+worden de tijden van een medicatie gesorteerd en één-op-één gekoppeld aan de
+registraties van vandaag (in volgorde): de eerste registratie "verbruikt"
+het vroegste tijdstip, de tweede het volgende, enzovoort. Zodra er evenveel
+registraties zijn als geplande tijden, is er voor die medicatie niets meer
+open die dag. Dit is een benadering voor de melding zelf — de eigenlijke
+registratiehistorie (voor het weekrapport en de compliance-boekhouding)
+wordt hier niet door beïnvloed.
+
+**Alleen zolang de app open staat.** Dit werkt via een lopende browsertab
+(of geïnstalleerde PWA) — precies hoe de app in de praktijk draait (een
+iPad die op de post blijft openstaan). Een melding die ook binnenkomt
+wanneer de app volledig gesloten is, zou een service worker + Web Push-
+abonnementen vereisen; bovendien kan Vercel's cron op het gratis plan sowieso
+niet vaker dan één keer per dag draaien, dus een 5-minuten-nauwkeurige
+achtergrondmelding zou toch buiten Vercel om moeten. Dat is bewust niet
+gebouwd — de kosten/baten daarvan wogen niet op tegen de al-werkende
+oplossing hierboven.
 
 Optionele functie die de hele app (inclusief `/login`) beperkt tot apparaten
 die één keer een wachtwoord hebben ingevoerd op `/apparaat`. Uitgeschakeld is
@@ -532,6 +571,19 @@ volgende, concreet geïmplementeerde maatregelen:
   (`lib/file-upload.ts`) — bewust laag omdat uploads via onze eigen server
   naar Cloudinary lopen, niet rechtstreeks van de browser naar externe
   opslag; zie de "Uploads"-sectie hierboven voor waarom.
+- **Hard delete blokkeert zichzelf zodra er historie aan vastzit.** `User` en
+  `Medication` hebben relaties met `onDelete: Cascade` naar zorg-/audit-
+  kritieke records (rapportages, medicatie-registraties, aanwezigheid,
+  aangemaakte to-do's/afspraken, diensten voor User; registraties voor
+  Medication) — een onvoorwaardelijke delete zou die geruisloos en
+  onomkeerbaar meeslepen. `app/api/backend/users/[id]/route.ts` en
+  `app/api/backend/medications/[id]/route.ts` tellen daarom eerst de
+  gerelateerde rijen; is dat aantal > 0, dan geeft de route HTTP 409 met een
+  duidelijke boodschap terug in plaats van te verwijderen, en verwijst naar
+  de bestaande **Deactiveren**-actie. Alleen een medewerker of medicatie
+  zonder enige geregistreerde historie kan echt hard verwijderd worden. Een
+  `Todo` heeft geen onderliggende relaties, dus die kan een admin altijd
+  vrij verwijderen — open of afgerond, met of zonder historie.
 
 **Wat nog aandacht verdient bij een echte productie-uitrol — dit is geen
 juridisch advies, raadpleeg bij twijfel een deskundige:** roteer

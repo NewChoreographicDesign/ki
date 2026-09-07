@@ -21,6 +21,7 @@ export default async function BackendMedicatiePage() {
           id: m.id,
           name: m.name,
           dosage: m.dosage,
+          instructions: m.instructions,
           times: m.times,
           active: m.active,
           clientName: fullName(m.client),

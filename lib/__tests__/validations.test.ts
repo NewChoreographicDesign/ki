@@ -120,7 +120,17 @@ describe("todoSchema", () => {
     const result = todoSchema.safeParse({
       title: "Vuilnis buiten zetten",
       priority: "MEDIUM",
-      dayOfWeek: 2,
+      daysOfWeek: [2],
+      recurring: true,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a recurring todo with multiple days set", () => {
+    const result = todoSchema.safeParse({
+      title: "Vuilnis buiten zetten",
+      priority: "MEDIUM",
+      daysOfWeek: [0, 2, 4],
       recurring: true,
     });
     expect(result.success).toBe(true);
@@ -132,6 +142,16 @@ describe("todoSchema", () => {
       priority: "MEDIUM",
       recurring: true,
     });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts a valid time", () => {
+    const result = todoSchema.safeParse({ title: "Ontbijt geven", priority: "MEDIUM", time: "08:30" });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an invalid time", () => {
+    const result = todoSchema.safeParse({ title: "Ontbijt geven", priority: "MEDIUM", time: "25:99" });
     expect(result.success).toBe(false);
   });
 });
