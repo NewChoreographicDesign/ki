@@ -14,7 +14,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { startOfToday, todayDayOfWeek, formatDateTime, formatTime, fullName } from "@/lib/utils";
+import { startOfToday, todayDayOfWeek, formatDateTime, formatTime, fullName, cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -133,8 +133,8 @@ export default async function DashboardPage() {
           <p className="text-slate-500">Geen weekplanning of afspraken voor vandaag.</p>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {roomsToday.map(({ room, entries }) => (
-              <Card key={room}>
+            {roomsToday.map(({ room, entries }, i) => (
+              <Card key={room} className="animate-fade-in-up" style={{ animationDelay: `${i * 50}ms` }}>
                 <CardHeader className="flex-row items-center gap-2 space-y-0 pb-2">
                   <DoorOpen className="h-5 w-5 text-slate-500" />
                   <CardTitle className="text-base font-semibold text-slate-100">{room}</CardTitle>
@@ -159,14 +159,15 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        <StatCard icon={Users} label="Actieve cliënten" value={stats.activeClients} />
-        <StatCard icon={CheckSquare} label="Open to-do's" value={stats.openTodos} />
-        <StatCard icon={UserCheck} label="Nu aanwezig" value={stats.presentNow} />
-        <StatCard icon={Calendar} label="Afspraken (7 dagen)" value={stats.upcomingAppointments} />
+        <StatCard icon={Users} label="Actieve cliënten" value={stats.activeClients} delay={0} />
+        <StatCard icon={CheckSquare} label="Open to-do's" value={stats.openTodos} delay={40} />
+        <StatCard icon={UserCheck} label="Nu aanwezig" value={stats.presentNow} delay={80} />
+        <StatCard icon={Calendar} label="Afspraken (7 dagen)" value={stats.upcomingAppointments} delay={120} />
         <StatCard
           icon={ArrowLeftRight}
           label="Actieve overdrachten"
           value={stats.activeHandovers}
+          delay={160}
           className="col-span-2 lg:col-span-1"
         />
       </div>
@@ -174,18 +175,23 @@ export default async function DashboardPage() {
       <div>
         <h2 className="mb-3 text-lg font-semibold text-slate-100">Snelle acties</h2>
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-          {QUICK_ACTIONS.map((action) => {
+          {QUICK_ACTIONS.map((action, i) => {
             const Icon = action.icon;
             return (
-              <Link key={action.href} href={action.href}>
-                <Card className="h-full transition-colors hover:border-sky-500/50 hover:bg-surface2">
+              <Link key={action.href} href={action.href} className="group">
+                <Card
+                  interactive
+                  className="h-full animate-fade-in-up"
+                  style={{ animationDelay: `${i * 40}ms` }}
+                >
                   <CardContent className="flex items-center gap-4 p-5">
                     <div
-                      className={
+                      className={cn(
+                        "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105",
                         action.variant === "sky"
-                          ? "flex h-12 w-12 items-center justify-center rounded-xl bg-sky-500/15 text-sky-400"
-                          : "flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400"
-                      }
+                          ? "bg-sky-500/15 text-sky-400"
+                          : "bg-emerald-500/15 text-emerald-400"
+                      )}
                     >
                       <Icon className="h-6 w-6" />
                     </div>
@@ -226,15 +232,17 @@ function StatCard({
   icon: Icon,
   label,
   value,
+  delay = 0,
   className,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: number;
+  delay?: number;
   className?: string;
 }) {
   return (
-    <Card className={className}>
+    <Card className={cn("animate-fade-in-up", className)} style={{ animationDelay: `${delay}ms` }}>
       <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-slate-400">{label}</CardTitle>
         <Icon className="h-5 w-5 text-slate-500" />

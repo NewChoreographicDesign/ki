@@ -9,6 +9,29 @@
 body {
   @apply bg-background text-slate-100 antialiased;
   -webkit-tap-highlight-color: transparent;
+  /* A very low-opacity glow, fixed to the viewport so it reads as ambient
+     depth behind the UI rather than a decoration on any one page — subtle
+     enough to stay out of the way of a clinical, professional dark theme. */
+  background-image:
+    radial-gradient(60rem 40rem at 100% -10%, rgba(56, 189, 248, 0.07), transparent 60%),
+    radial-gradient(50rem 36rem at -10% 110%, rgba(52, 211, 153, 0.05), transparent 60%);
+  background-attachment: fixed;
+}
+
+/* Skeleton/shimmer surface for loading states (route loading.tsx, etc.) */
+.shimmer-bg {
+  background: linear-gradient(90deg, theme("colors.surface2") 25%, theme("colors.border") 50%, theme("colors.surface2") 75%);
+  background-size: 200% 100%;
+  @apply animate-shimmer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 * {

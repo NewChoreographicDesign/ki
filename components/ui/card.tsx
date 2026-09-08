@@ -1,10 +1,21 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+export function Card({
+  className,
+  interactive = false,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & {
+  /** Adds a hover lift + border glow for cards that are themselves a click target (e.g. wrapped in a Link). */
+  interactive?: boolean;
+}) {
   return (
     <div
-      className={cn("rounded-2xl border border-border bg-surface shadow-sm", className)}
+      className={cn(
+        "rounded-2xl border border-border bg-surface shadow-sm transition-[transform,box-shadow,border-color] duration-200",
+        interactive && "hover:-translate-y-0.5 hover:border-sky-500/40 hover:shadow-lift",
+        className
+      )}
       {...props}
     />
   );

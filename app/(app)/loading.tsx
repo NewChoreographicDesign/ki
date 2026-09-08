@@ -6,7 +6,7 @@
 // replaces the <main> content, per the (app) layout), so navigation still
 // feels immediate even while this skeleton is up.
 function SkeletonBlock({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse rounded-xl bg-surface2 ${className}`} />;
+  return <div className={`shimmer-bg rounded-xl ${className}`} />;
 }
 
 export default function AppLoading() {

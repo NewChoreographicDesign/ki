@@ -43,6 +43,8 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/backend", label: "Backend", icon: Settings, backendOnly: true },
 ];
 
+const MENU_TRANSITION_MS = 250;
+
 export function AppNav({
   userName,
   canAccessBackend,
@@ -54,12 +56,25 @@ export function AppNav({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [mounted, setMounted] = React.useState(false);
   const [open, setOpen] = React.useState(false);
 
   const items = NAV_ITEMS.filter(
     (item) =>
       (!item.backendOnly || canAccessBackend) && (!item.weeklyReportOnly || canAccessWeeklyReport)
   );
+
+  function openMenu() {
+    setMounted(true);
+    // Mount closed first, then flip to open on the next frame so the
+    // opening state actually transitions instead of snapping in already-open.
+    requestAnimationFrame(() => setOpen(true));
+  }
+
+  function closeMenu() {
+    setOpen(false);
+    setTimeout(() => setMounted(false), MENU_TRANSITION_MS);
+  }
 
   async function handleLogout() {
     const res = await fetch("/api/auth/logout", { method: "POST" });
@@ -72,39 +87,14 @@ export function AppNav({
     }
   }
 
-  const NavList = (
-    <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
-      {items.map((item) => {
-        const active = pathname === item.href || pathname.startsWith(item.href + "/");
-        const Icon = item.icon;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={() => setOpen(false)}
-            className={cn(
-              "flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium transition-colors",
-              active
-                ? "bg-sky-500/15 text-sky-400"
-                : "text-slate-300 hover:bg-surface2 hover:text-slate-100"
-            )}
-          >
-            <Icon className="h-5 w-5 shrink-0" />
-            {item.label}
-          </Link>
-        );
-      })}
-    </nav>
-  );
-
   return (
     <>
       {/* Mobile / iPad top bar */}
       <div className="flex items-center justify-between border-b border-border bg-surface px-4 py-3 md:hidden">
         <button
           aria-label="Menu"
-          onClick={() => setOpen(true)}
-          className="flex h-11 w-11 items-center justify-center rounded-xl hover:bg-surface2"
+          onClick={openMenu}
+          className="flex h-11 w-11 items-center justify-center rounded-xl transition-colors hover:bg-surface2"
         >
           <Menu className="h-6 w-6" />
         </button>
@@ -113,22 +103,32 @@ export function AppNav({
       </div>
 
       {/* Overlay for iPad / mobile */}
-      {open && (
+      {mounted && (
         <div className="fixed inset-0 z-40 flex md:hidden">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setOpen(false)} />
-          <div className="relative z-50 flex h-full w-80 max-w-[85vw] flex-col bg-surface">
+          <div
+            className="absolute inset-0 bg-black/60 transition-opacity ease-out"
+            style={{ opacity: open ? 1 : 0, transitionDuration: `${MENU_TRANSITION_MS}ms` }}
+            onClick={closeMenu}
+          />
+          <div
+            className="relative z-50 flex h-full w-80 max-w-[85vw] flex-col bg-surface shadow-lift transition-transform ease-out"
+            style={{
+              transform: open ? "translateX(0)" : "translateX(-100%)",
+              transitionDuration: `${MENU_TRANSITION_MS}ms`,
+            }}
+          >
             <div className="flex items-center justify-between p-4">
               <span className="text-lg font-semibold">Woongroep Admin</span>
               <button
                 aria-label="Sluiten"
-                onClick={() => setOpen(false)}
-                className="flex h-11 w-11 items-center justify-center rounded-xl hover:bg-surface2"
+                onClick={closeMenu}
+                className="flex h-11 w-11 items-center justify-center rounded-xl transition-colors hover:bg-surface2"
               >
                 <X className="h-6 w-6" />
               </button>
             </div>
-            {NavList}
-            <UserFooter userName={userName} onLogout={handleLogout} onNavigate={() => setOpen(false)} />
+            <NavLinks items={items} pathname={pathname} onNavigate={closeMenu} />
+            <UserFooter userName={userName} onLogout={handleLogout} onNavigate={closeMenu} />
           </div>
         </div>
       )}
@@ -138,10 +138,72 @@ export function AppNav({
         <div className="p-5">
           <span className="text-lg font-semibold">Woongroep Admin</span>
         </div>
-        {NavList}
+        <NavLinks items={items} pathname={pathname} onNavigate={() => {}} />
         <UserFooter userName={userName} onLogout={handleLogout} />
       </aside>
     </>
+  );
+}
+
+// A single pill slides between items as the active route changes, rather
+// than each link just swapping its own background color — a small touch
+// that makes the sidebar read as one coherent surface instead of a plain
+// list of buttons. Position is measured from the actual rendered links
+// (not hardcoded row heights) so it stays correct regardless of font
+// rendering differences between browsers/devices.
+function NavLinks({
+  items,
+  pathname,
+  onNavigate,
+}: {
+  items: NavItem[];
+  pathname: string;
+  onNavigate: () => void;
+}) {
+  const itemRefs = React.useRef<(HTMLAnchorElement | null)[]>([]);
+  const activeIndex = items.findIndex((item) => pathname === item.href || pathname.startsWith(item.href + "/"));
+  const [pill, setPill] = React.useState({ top: 0, height: 0, opacity: 0 });
+
+  React.useLayoutEffect(() => {
+    const el = activeIndex >= 0 ? itemRefs.current[activeIndex] : null;
+    if (!el) {
+      setPill((p) => ({ ...p, opacity: 0 }));
+      return;
+    }
+    setPill({ top: el.offsetTop, height: el.offsetHeight, opacity: 1 });
+  }, [activeIndex, items]);
+
+  return (
+    <nav className="flex flex-1 flex-col overflow-y-auto p-3">
+      <div className="relative flex flex-col gap-1">
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 rounded-xl bg-brand-gradient-soft ring-1 ring-inset ring-sky-400/30 transition-[top,height,opacity] duration-300 ease-out"
+          style={{ top: pill.top, height: pill.height, opacity: pill.opacity }}
+        />
+        {items.map((item, i) => {
+          const active = i === activeIndex;
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              ref={(el) => {
+                itemRefs.current[i] = el;
+              }}
+              onClick={onNavigate}
+              className={cn(
+                "relative z-10 flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium transition-colors duration-200",
+                active ? "text-sky-400" : "text-slate-300 hover:bg-surface2 hover:text-slate-100"
+              )}
+            >
+              <Icon className="h-5 w-5 shrink-0" />
+              {item.label}
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
   );
 }
 
@@ -160,7 +222,7 @@ function UserFooter({
         <Link
           href="/account"
           onClick={onNavigate}
-          className="truncate text-sm text-slate-300 hover:text-slate-100 hover:underline"
+          className="truncate text-sm text-slate-300 transition-colors hover:text-slate-100 hover:underline"
           title="Mijn account — geboortedatum wijzigen"
         >
           {userName}
