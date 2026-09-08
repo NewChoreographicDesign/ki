@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db";
-import { mostRecentMondayStart, formatDate, formatDateTime, fullName, PRIORITY_LABELS } from "@/lib/utils";
+import { mostRecentMondayStart, formatDate, formatDateTime, formatTime, fullName, todayDayOfWeek, DAYS_OF_WEEK, PRIORITY_LABELS } from "@/lib/utils";
 
 const STATUS_LABELS: Record<string, string> = {
   TAKEN: "Afgevinkt",
@@ -52,6 +52,30 @@ export async function getWeeklyReportData(weekStart: Date, weekEnd: Date = new D
 
 export type WeeklyReportData = Awaited<ReturnType<typeof getWeeklyReportData>>;
 
+/**
+ * Groups a week's medication checks by calendar day (Europe/Amsterdam), each
+ * with a Dutch day name + date header, instead of one flat chronological
+ * list — a week of multiple-times-a-day registrations across several
+ * clients otherwise reads as an undifferentiated wall of lines. Checks are
+ * already fetched in ascending checkedAt order, so groups come out in
+ * chronological day order for free.
+ */
+export function groupMedicationChecksByDay(checks: WeeklyReportData["medicationChecks"]) {
+  const groups: { dayLabel: string; dateLabel: string; checks: WeeklyReportData["medicationChecks"] }[] = [];
+  const indexByDate = new Map<string, number>();
+  for (const check of checks) {
+    const dateLabel = formatDate(check.checkedAt);
+    let index = indexByDate.get(dateLabel);
+    if (index === undefined) {
+      index = groups.length;
+      indexByDate.set(dateLabel, index);
+      groups.push({ dayLabel: DAYS_OF_WEEK[todayDayOfWeek(check.checkedAt)], dateLabel, checks: [] });
+    }
+    groups[index].checks.push(check);
+  }
+  return groups;
+}
+
 export function renderWeeklyReportText(data: WeeklyReportData): string {
   const lines: string[] = [];
   const add = (line = "") => lines.push(line);
@@ -81,11 +105,15 @@ export function renderWeeklyReportText(data: WeeklyReportData): string {
   if (data.medicationChecks.length === 0) {
     add("Geen medicatieregistraties deze week.");
   } else {
-    for (const c of data.medicationChecks) {
-      const status = STATUS_LABELS[c.status] ?? c.status;
-      add(
-        `${formatDateTime(c.checkedAt)} · ${fullName(c.medication.client)} · ${c.medication.name} · ${status} · door ${c.user.name}${c.comment ? ` · ${c.comment}` : ""}`
-      );
+    for (const day of groupMedicationChecksByDay(data.medicationChecks)) {
+      add(`${day.dayLabel} ${day.dateLabel}`);
+      for (const c of day.checks) {
+        const status = STATUS_LABELS[c.status] ?? c.status;
+        add(
+          `  ${formatTime(c.checkedAt)} · ${fullName(c.medication.client)} · ${c.medication.name} · ${status} · door ${c.user.name}${c.comment ? ` · ${c.comment}` : ""}`
+        );
+      }
+      add("");
     }
   }
 

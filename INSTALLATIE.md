@@ -251,7 +251,7 @@ coördinator.
   - **Backend → Auditlog**: overzicht van wie wat heeft gedaan (inloggen,
     cliënten/accounts aanmaken, wijzigen of verwijderen, medicatie wijzigen
     of verwijderen, to-do's wijzigen of verwijderen, protocollen verwijderen,
-    instellingen wijzigen).
+    overdracht verwijderen, instellingen wijzigen).
 - **Weekrapport** (zichtbaar voor admin en coördinator): elke maandagochtend
   legt de app automatisch de afgelopen week vast als PDF (rapportages,
   medicatie, to-do's en afspraken) — geen handmatige actie nodig. Deze PDF's
@@ -260,8 +260,13 @@ coördinator.
   de automatische e-mails die de app vroeger verstuurde.
 - **Medicatie**: per cliënt drie knoppen — **Afvinken** (ingenomen),
   **Verlof** (cliënt afwezig) of **Niet ingenomen**. Kan niet ongedaan
-  gemaakt worden. "Registraties deze week" reset elke maandag (de
-  geschiedenis verdwijnt niet, die verhuist naar het Weekrapport-archief).
+  gemaakt worden. Onder "Vandaag" staat elke geplande innametijd als eigen
+  badge — open, of afgevinkt met status en naam van wie het deed — en dat
+  blijft zo zichtbaar staan tot middernacht. Zodra alle tijden van vandaag
+  geregistreerd zijn, verdwijnen de knoppen vanzelf tot de volgende dag, dus
+  er is geen risico op een dubbele registratie voor dezelfde dosis.
+  "Registraties deze week" reset elke maandag (de geschiedenis verdwijnt
+  niet, die verhuist naar het Weekrapport-archief, per dag gesplitst).
   Vanaf 5 minuten vóór een geplande innametijd verschijnt automatisch, op elke
   pagina, een opvallende melding rechtsboven met een pieptoon en een link
   naar de juiste cliënt — zo hoeft niemand zelf de klok in de gaten te
@@ -292,16 +297,21 @@ coördinator.
   prullenbak-icoon verwijderen (dit kan altijd, ook bij een afgeronde taak —
   in tegenstelling tot medewerkers en medicatie hierboven zit hier geen
   historie aan vast om te beschermen).
-- De overige menu's (Rapportage, Overdracht, Agenda) gebruikt iedereen
-  dagelijks — zie ook `README.md` voor een korte beschrijving van elk
-  onderdeel.
+- **Overdracht** staat, net als Protocollen, per kamer in een inklapbare
+  sectie, plus één sectie "Algemeen" voor een overdracht die niet aan een
+  specifieke cliënt hangt. Klik op **+ Nieuwe overdracht** om een notitie te
+  schrijven — kies een kamer/cliënt of laat "Algemeen" staan. Een notitie
+  vervalt automatisch 7 dagen na aanmaak; een admin kan er met het
+  prullenbak-icoon ook eerder één verwijderen.
+- De overige menu's (Rapportage, Agenda) gebruikt iedereen dagelijks — zie
+  ook `README.md` voor een korte beschrijving van elk onderdeel.
 - **Mijn account** (klik op je eigen naam onderin de zijbalk): hier stelt
   iedereen zelf zijn geboortedatum in — dat is je inloggegeven, er is geen
   apart wachtwoord. Nodig na een eerste keer inloggen met de standaard
   `01-01-2001`, of wanneer je je geboortedatum wilt wijzigen. Vereist de
   huidige geboortedatum ter bevestiging.
 - Wie een tijdje niets doet op een gedeeld toestel (bijv. een iPad die
-  meerdere collega's gebruiken) wordt na 15 minuten automatisch uitgelogd.
+  meerdere collega's gebruiken) wordt na 5 minuten automatisch uitgelogd.
 
 ---
 

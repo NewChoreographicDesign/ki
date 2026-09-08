@@ -77,6 +77,7 @@ export const presenceSchema = z.object({
 
 export const handoverSchema = z.object({
   content: z.string().trim().min(3).max(5000),
+  clientId: z.string().optional().or(z.literal("")),
 });
 
 const timeOfDay = /^([01]\d|2[0-3]):[0-5]\d$/;

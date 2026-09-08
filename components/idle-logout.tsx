@@ -10,7 +10,7 @@ import { toast } from "sonner";
 // for a full shift (12h, see lib/auth.ts) — this is a separate, client-side
 // control that forces a fresh login after a period of no interaction at all,
 // regardless of how much of the JWT's lifetime remains.
-const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
+const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 const ACTIVITY_EVENTS = ["mousedown", "keydown", "touchstart", "scroll"] as const;
 
 export function IdleLogout() {
@@ -23,7 +23,7 @@ export function IdleLogout() {
       try {
         await fetch("/api/auth/logout", { method: "POST" });
       } finally {
-        toast.info("Automatisch uitgelogd na 15 minuten inactiviteit");
+        toast.info("Automatisch uitgelogd na 5 minuten inactiviteit");
         router.push("/login");
         router.refresh();
       }

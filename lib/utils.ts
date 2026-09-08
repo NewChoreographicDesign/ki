@@ -227,6 +227,24 @@ export function formatDaysOfWeek(days: number[]): string {
 }
 
 /**
+ * Parses Medication.times ("08:00,20:00") into a sorted, deduplicated list of
+ * "HH:MM" strings. Shared by lib/medication-reminders.ts (which times are
+ * still due) and the medicatie check flow (which times are already done
+ * today, and — since a check isn't linked to a specific slot — how many more
+ * registrations are even allowed today).
+ */
+export function parseMedicationTimes(value: string): string[] {
+  return Array.from(
+    new Set(
+      value
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean)
+    )
+  ).sort();
+}
+
+/**
  * Placeholder birthdate for a newly created employee (Backend → Medewerkers)
  * — the admin doesn't have to know a new hire's real birthdate up front.
  * The employee logs in once with this value and immediately changes it to

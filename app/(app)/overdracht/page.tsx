@@ -1,63 +1,45 @@
-import { Clock } from "lucide-react";
+import { Role } from "@prisma/client";
 import { db } from "@/lib/db";
-import { formatDateTime } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { HandoverForm } from "./handover-form";
+import { fullName } from "@/lib/utils";
+import { getSession } from "@/lib/auth";
+import { OverdrachtManager } from "./overdracht-manager";
 
 export const dynamic = "force-dynamic";
 
 export default async function OverdrachtPage() {
-  const handovers = await db.handover.findMany({
-    where: { expiresAt: { gt: new Date() } },
-    include: { user: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const [handovers, clients, session] = await Promise.all([
+    db.handover.findMany({
+      where: { expiresAt: { gt: new Date() } },
+      include: { user: true, client: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    db.client.findMany({ where: { active: true }, orderBy: { firstName: "asc" } }),
+    getSession(),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-50">Overdracht</h1>
         <p className="mt-1 text-slate-400">
-          Notities worden automatisch gewist 1 uur na het einde van de dienst.
+          Per kamer gegroepeerd, plus een apart overzicht voor algemene overdrachten. Notities
+          vervallen automatisch 7 dagen na aanmaak.
         </p>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Nieuwe overdracht</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <HandoverForm />
-        </CardContent>
-      </Card>
-
-      <div className="flex flex-col gap-3">
-        {handovers.length === 0 ? (
-          <p className="text-slate-500">Geen actieve overdrachtnotities.</p>
-        ) : (
-          handovers.map((h) => (
-            <Card key={h.id}>
-              <CardContent className="flex flex-col gap-2 p-5">
-                <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
-                  <Badge variant={h.shift === "MORNING" ? "sky" : "emerald"}>
-                    {h.shift === "MORNING" ? "Ochtend" : "Avond"}
-                  </Badge>
-                  <span>{h.user.name}</span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5" />
-                    {formatDateTime(h.createdAt)}
-                  </span>
-                  <span className="text-slate-600">
-                    verloopt {formatDateTime(h.expiresAt)}
-                  </span>
-                </div>
-                <p className="whitespace-pre-wrap text-slate-200">{h.content}</p>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+      <OverdrachtManager
+        handovers={handovers.map((h) => ({
+          id: h.id,
+          content: h.content,
+          shift: h.shift,
+          userName: h.user.name,
+          createdAt: h.createdAt.toISOString(),
+          expiresAt: h.expiresAt.toISOString(),
+          clientName: h.client ? fullName(h.client) : null,
+          room: h.client ? h.client.room || "Geen kamer" : null,
+        }))}
+        clients={clients.map((c) => ({ id: c.id, name: fullName(c), room: c.room }))}
+        canDelete={session?.role === Role.ADMIN}
+      />
     </div>
   );
 }

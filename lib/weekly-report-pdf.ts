@@ -1,7 +1,7 @@
 import "server-only";
 import PDFDocument from "pdfkit";
-import type { WeeklyReportData } from "@/lib/weekly-report";
-import { formatDate, formatDateTime, fullName, isoWeekOf, PRIORITY_LABELS } from "@/lib/utils";
+import { groupMedicationChecksByDay, type WeeklyReportData } from "@/lib/weekly-report";
+import { formatDate, formatDateTime, formatTime, fullName, isoWeekOf, PRIORITY_LABELS } from "@/lib/utils";
 
 const STATUS_LABELS: Record<string, string> = {
   TAKEN: "Afgevinkt",
@@ -53,12 +53,15 @@ export function renderWeeklyReportPdf(data: WeeklyReportData): Promise<Buffer> {
     if (data.medicationChecks.length === 0) {
       item(doc, "Geen medicatieregistraties deze week.");
     } else {
-      for (const c of data.medicationChecks) {
-        const status = STATUS_LABELS[c.status] ?? c.status;
-        item(
-          doc,
-          `${formatDateTime(c.checkedAt)} · ${fullName(c.medication.client)} · ${c.medication.name} · ${status} · door ${c.user.name}${c.comment ? ` · ${c.comment}` : ""}`
-        );
+      for (const day of groupMedicationChecksByDay(data.medicationChecks)) {
+        subsection(doc, `${day.dayLabel} ${day.dateLabel}`);
+        for (const c of day.checks) {
+          const status = STATUS_LABELS[c.status] ?? c.status;
+          item(
+            doc,
+            `${formatTime(c.checkedAt)} · ${fullName(c.medication.client)} · ${c.medication.name} · ${status} · door ${c.user.name}${c.comment ? ` · ${c.comment}` : ""}`
+          );
+        }
       }
     }
 
@@ -94,6 +97,15 @@ function section(doc: PDFKit.PDFDocument, title: string) {
   doc.fontSize(13).fillColor("#0f172a").text(title, { underline: true });
   doc.fontSize(10).fillColor("#000000");
   doc.moveDown(0.3);
+}
+
+/** A day-name + date header within a section, e.g. splitting Medicatie by day. */
+function subsection(doc: PDFKit.PDFDocument, title: string) {
+  if (doc.y > doc.page.height - doc.page.margins.bottom - 50) doc.addPage();
+  doc.moveDown(0.2);
+  doc.fontSize(11).fillColor("#1e293b").text(title, { indent: 0 });
+  doc.fontSize(10).fillColor("#000000");
+  doc.moveDown(0.15);
 }
 
 function item(doc: PDFKit.PDFDocument, header: string, body?: string) {

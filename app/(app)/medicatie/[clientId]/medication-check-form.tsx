@@ -34,13 +34,21 @@ export function MedicationCheckForm({ medicationId }: { medicationId: string }) 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ medicationId, status, comment }),
       });
-      if (!res.ok) throw new Error();
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Registreren mislukt");
+        // A 409 here means another device just registered the last open
+        // slot for today — refresh so this form disappears in sync with
+        // reality instead of staying open and inviting a retry.
+        if (res.status === 409) router.refresh();
+        return;
+      }
       toast.success(STATUS_OPTIONS.find((o) => o.status === status)?.label + " geregistreerd");
       setComment("");
       setShowComment(false);
       router.refresh();
     } catch {
-      toast.error("Registreren mislukt");
+      toast.error("Er is iets misgegaan");
     } finally {
       setLoading(null);
     }

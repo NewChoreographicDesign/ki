@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db";
-import { amsterdamDate, getZonedParts, startOfToday, fullName, AMSTERDAM_TZ } from "@/lib/utils";
+import { amsterdamDate, getZonedParts, startOfToday, fullName, parseMedicationTimes, AMSTERDAM_TZ } from "@/lib/utils";
 
 export type DueReminder = {
   medicationId: string;
@@ -47,14 +47,7 @@ export async function getDueMedicationReminders(): Promise<DueReminder[]> {
 
   const due: DueReminder[] = [];
   for (const med of medications) {
-    const times = Array.from(
-      new Set(
-        med.times
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean)
-      )
-    ).sort();
+    const times = parseMedicationTimes(med.times);
     const pendingTimes = times.slice(med.checks.length);
 
     for (const time of pendingTimes) {

@@ -32,13 +32,13 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Overzicht", icon: LayoutDashboard },
-  { href: "/rapportage", label: "Rapportage", icon: FileText },
-  { href: "/medicatie", label: "Medicatie", icon: Pill },
   { href: "/aanwezigheid", label: "Aanwezigheid", icon: UserCheck },
-  { href: "/overdracht", label: "Overdracht", icon: ArrowLeftRight },
+  { href: "/medicatie", label: "Medicatie", icon: Pill },
   { href: "/todos", label: "To-Do's", icon: CheckSquare },
   { href: "/agenda", label: "Agenda", icon: Calendar },
+  { href: "/overdracht", label: "Overdracht", icon: ArrowLeftRight },
   { href: "/protocollen", label: "Protocollen", icon: ShieldCheck },
+  { href: "/rapportage", label: "Rapportage", icon: FileText },
   { href: "/weekrapport", label: "Weekrapport", icon: Download, weeklyReportOnly: true },
   { href: "/backend", label: "Backend", icon: Settings, backendOnly: true },
 ];

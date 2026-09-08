@@ -52,12 +52,12 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
   [Weekrapport](#weekrapport-vervangt-e-mail) hieronder.
 - **Security** — Zod-validatie op elke input, `requireAuth()` op alle API's,
   géén update/delete op `MedicationCheck` (onomkeerbaar), overdracht wist
-  zichzelf (`expiresAt = shiftEinde + 1u`), rolcontrole (alleen admin ziet
-  Backend en beheert accounts; Protocollen toevoegen mag iedereen, verwijderen
-  blijft admin/coördinator), HTTPS via Vercel, een auditlog van gevoelige
-  acties (Backend → Auditlog), automatisch uitloggen na 15 minuten
-  inactiviteit, en een optionele apparaatbeveiliging die de app beperkt tot
-  vrijgegeven apparaten. Zie
+  zichzelf (`expiresAt = aanmaakmoment + 7 dagen`, admin kan ook eerder
+  verwijderen), rolcontrole (alleen admin ziet Backend en beheert accounts;
+  Protocollen toevoegen mag iedereen, verwijderen blijft admin/coördinator),
+  HTTPS via Vercel, een auditlog van gevoelige acties (Backend → Auditlog),
+  automatisch uitloggen na 5 minuten inactiviteit, en een optionele
+  apparaatbeveiliging die de app beperkt tot vrijgegeven apparaten. Zie
   [Security &amp; privacy](#security--privacy) hieronder voor het volledige
   overzicht van getroffen maatregelen.
 - **UI/UX** — dark mode standaard, sky/emerald accenten, grote touch-targets,
@@ -86,14 +86,14 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
 | Module | Route | Omschrijving |
 | --- | --- | --- |
 | Overzicht | `/dashboard` | "Vandaag per kamer" (weekplanning + agenda-afspraken van vandaag, gegroepeerd per cliëntkamer) bovenaan, daaronder stats + snelle acties |
-| Rapportage | `/rapportage` | Rapportage per cliënt/dienst. "Recente rapportages" toont alleen sinds de laatste donderdag |
-| Medicatie | `/medicatie` | Per cliënt registreren: Afvinken, Verlof of Niet ingenomen (onomkeerbaar). Weekoverzicht reset elke maandag (zie Weekrapport). Er verschijnt automatisch een melding met geluid 5 minuten voor een geplande inname (zie [Medicatie-herinneringen](#medicatie-herinneringen)) |
 | Aanwezigheid | `/aanwezigheid` | Aanwezig/afwezig per cliënt, gedeeld tussen alle accounts en diensten — blijft staan tot iemand het weer wijzigt (geen dagelijkse reset) |
-| Overdracht | `/overdracht` | Notities die 1 uur na diensteinde verlopen |
+| Medicatie | `/medicatie` | Per cliënt registreren: Afvinken, Verlof of Niet ingenomen (onomkeerbaar). Per medicatie toont "Vandaag" elke geplande tijd als eigen badge — open, of afgevinkt met status + naam — en blijft zo staan tot middernacht; zodra alle tijden van vandaag geregistreerd zijn, verdwijnen de knoppen tot de volgende dag (en de server weigert sowieso een extra registratie zodra dat aantal is bereikt, dus geen dubbele logs). Weekoverzicht reset elke maandag (zie Weekrapport). Er verschijnt automatisch een melding met geluid 5 minuten voor een geplande inname (zie [Medicatie-herinneringen](#medicatie-herinneringen)) |
 | To-Do's | `/todos` | Toont onder "Vandaag" alleen taken zonder dag of met vandaag in hun dagen — taken voor een andere dag staan ingeklapt onder "Alle weektaken tonen", per dag gegroepeerd. "+ Nieuwe taak" is een compacte knop die het formulier inklapt/uitklapt. Optioneel een tijd en één of meer dagen instellen (of "Elke dag" voor een dagelijkse taak) — een afgeronde terugkerende taak verschijnt automatisch weer open zodra de volgende gekozen dag aanbreekt. Afronden/aanmaken update de lijst direct, zonder paginaherlading. Voor iedereen zichtbaar; bewerken/verwijderen is alleen voor admin |
 | Agenda | `/agenda` | Aankomende afspraken bovenaan, daaronder het formulier voor een nieuwe afspraak |
+| Overdracht | `/overdracht` | Per kamer gegroepeerd in een inklapbare sectie, plus één aparte sectie "Algemeen" voor overdrachten zonder cliënt — zelfde indeling als Protocollen. "+ Nieuwe overdracht" is de compacte inklap-knop. Notities vervallen automatisch 7 dagen na aanmaak; een admin kan er ook eerder één verwijderen |
 | Protocollen | `/protocollen` | Per kamer gegroepeerd in een inklapbare sectie, plus één aparte sectie "Algemeen" voor protocollen zonder cliënt. "+ Nieuw protocol" is dezelfde compacte inklap-knop als bij To-Do's. Tekst en/of geüpload bestand, voor iedereen |
-| Weekrapport | `/weekrapport` | Automatisch archief van één PDF per kalenderweek (alle acties van die week), 1 jaar bewaard, plus een live overzicht van de lopende week. Admin + coördinator |
+| Rapportage | `/rapportage` | Rapportage per cliënt/dienst. "Recente rapportages" toont alleen sinds de laatste donderdag |
+| Weekrapport | `/weekrapport` | Automatisch archief van één PDF per kalenderweek (alle acties van die week), 1 jaar bewaard, plus een live overzicht van de lopende week. De Medicatie-sectie is per dag gesplitst (dagnaam + datum als kop) in plaats van één doorlopende lijst. Admin + coördinator |
 | Backend | `/backend` | Cliënten, medewerkers (incl. geboortedatum resetten of verwijderen), medicatie beheer (incl. wijzigen of verwijderen), weekplanning, archief (gedeactiveerde medewerkers/medicatie), instellingen, auditlog (alleen admin) |
 | Mijn account | `/account` | Eigen geboortedatum (het inloggegeven) wijzigen — vereist de huidige geboortedatum ter bevestiging. Voor iedereen, bereikbaar via de eigen naam onderin de zijbalk |
 
@@ -185,8 +185,10 @@ Kort samengevat voor ontwikkelaars:
 `vercel.json` bevat de cron-configuratie:
 
 - `/api/cron/retention-purge` — maandelijks (1e van de maand, 04:00 UTC),
-  verwijdert `AuditLog`-rijen ouder dan ~2 jaar. Raakt geen cliëntgegevens
-  (rapportages, medicatie, protocollen, ...) — zie
+  verwijdert `AuditLog`-rijen ouder dan ~2 jaar, en `Handover`-rijen waarvan
+  `expiresAt` al voorbij is (die zijn toch al onzichtbaar op `/overdracht`
+  zodra ze vervallen zijn — dit ruimt ze ook echt uit de database op).
+  Raakt geen cliëntgegevens (rapportages, medicatie, protocollen, ...) — zie
   [Bewaartermijnen](#bewaartermijnen-retention) hieronder voor waarom.
 - `/api/cron/weekly-report` — elke maandag 02:00 UTC, archiveert de afgelopen
   week als PDF en ruimt PDF's ouder dan ~1 jaar op — zie
@@ -283,6 +285,15 @@ afgelopen week vast als PDF** — geen handmatige download/opmaak meer nodig:
   telling als de gangbare Nederlandse kalenderweken), inclusief de
   jaarwisseling-edge case waarbij eind december in ISO-week 1 van het
   volgende jaar kan vallen.
+- **Medicatie staat per dag gesplitst**, niet als één doorlopende lijst:
+  `groupMedicationChecksByDay()` (`lib/weekly-report.ts`) groepeert de al
+  chronologisch opgehaalde registraties per kalenderdag (Europe/Amsterdam) en
+  zet er een kop met dagnaam + datum boven — dezelfde groepering wordt
+  gebruikt in de live weergave op `/weekrapport`, de `.txt`-export
+  (`renderWeeklyReportText()`) én de gearchiveerde PDF
+  (`renderWeeklyReportPdf()`), zodat een week met meerdere cliënten en
+  meerdere innamemomenten per dag overzichtelijk blijft in plaats van één
+  ononderbroken muur van regels.
 - `/weekrapport` (`app/(app)/weekrapport/page.tsx`, zichtbaar voor ADMIN en
   COORDINATOR — `canAccessWeeklyReport()` in `lib/auth.ts`) toont dit archief
   met een downloadknop per week (`app/api/weekrapport/archive/[id]/route.ts`),
@@ -359,6 +370,18 @@ open die dag. Dit is een benadering voor de melding zelf — de eigenlijke
 registratiehistorie (voor het weekrapport en de compliance-boekhouding)
 wordt hier niet door beïnvloed.
 
+**Dezelfde heuristiek (`parseMedicationTimes()` in `lib/utils.ts`) stuurt ook
+het registratieformulier zelf** op `/medicatie/[clientId]`: per medicatie
+toont "Vandaag" elke geplande tijd als losse badge — open, of afgevinkt met
+status en naam, en dat blijft zo zichtbaar staan tot middernacht. Zodra het
+aantal registraties van vandaag het aantal geplande tijden bereikt,
+verdwijnen de Afvinken/Verlof/Niet ingenomen-knoppen tot de volgende dag.
+Dit is niet alleen een UI-gemak: `app/api/medication-checks/route.ts` telt
+zelf ook hoeveel registraties er vandaag al zijn en weigert (HTTP 409) een
+nieuwe zodra dat aantal de geplande tijden bereikt — dus zelfs een direct
+API-verzoek (of twee apparaten die tegelijk dezelfde laatste dosis
+registreren) kan geen dubbele log voor dezelfde dag veroorzaken.
+
 **Alleen zolang de app open staat.** Dit werkt via een lopende browsertab
 (of geïnstalleerde PWA) — precies hoe de app in de praktijk draait (een
 iPad die op de post blijft openstaan). Een melding die ook binnenkomt
@@ -368,6 +391,8 @@ niet vaker dan één keer per dag draaien, dus een 5-minuten-nauwkeurige
 achtergrondmelding zou toch buiten Vercel om moeten. Dat is bewust niet
 gebouwd — de kosten/baten daarvan wogen niet op tegen de al-werkende
 oplossing hierboven.
+
+### Apparaatbeveiliging
 
 Optionele functie die de hele app (inclusief `/login`) beperkt tot apparaten
 die één keer een wachtwoord hebben ingevoerd op `/apparaat`. Uitgeschakeld is
@@ -418,10 +443,16 @@ Cron heeft toch geen `device_token`-cookie).
 
 ### Bewaartermijnen (retention)
 
-Twee dingen worden hier automatisch verwijderd, allebei bewust beperkt tot
-**afgeleide/gearchiveerde** data, nooit de brongegevens zelf:
+Drie dingen worden hier automatisch verwijderd — twee ervan afgeleide/
+gearchiveerde data, nooit de brongegevens zelf, en één die van meet af aan
+al bedoeld was om na een paar dagen te verdwijnen:
 
 - `/api/cron/retention-purge` (maandelijks) — oude `AuditLog`-rijen (~2 jaar).
+- `/api/cron/retention-purge` (dezelfde run) — `Handover`-rijen waarvan
+  `expiresAt` (aanmaakmoment + 7 dagen) al voorbij is. Een overdrachtnotitie
+  is geen dossierstuk maar operationele "wat moet de volgende dienst weten"-
+  communicatie — `/overdracht` verbergt een vervallen notitie toch al, dit
+  ruimt hem ook echt uit de database op.
 - `/api/cron/weekly-report` (wekelijks) — `WeeklyReportPdf`-rijen ouder dan
   ~1 jaar (zie [Weekrapport](#weekrapport-automatisch-pdf-archief) hierboven).
   Dit is een **gegenereerde kopie** (een PDF-samenvatting) van gegevens die
@@ -455,16 +486,16 @@ gericht toe.
 1. Open de app in Safari → "Zet op beginscherm" voor een app-gevoel (PWA-metadata is al geconfigureerd).
 2. Log in met naam + geboortedatum.
 3. Dashboard toont bovenaan "Vandaag per kamer" (weekplanning + afspraken van vandaag, per cliëntkamer), daaronder stats + snelle knoppen.
-4. **Rapportage** → kies cliënt + dienst + datum → typ → verstuur. "Recente rapportages" toont alleen wat sinds afgelopen donderdag is toegevoegd; het volledige overzicht staat ook in het **Weekrapport**.
-5. **Medicatie** → open cliënt → kies Afvinken, Verlof of Niet ingenomen (kan niet ongedaan worden gemaakt). "Registraties deze week" reset elke maandag; het volledige overzicht staat daarna in het Weekrapport-archief.
-6. **Aanwezigheid** → tik Aanwezig/Afwezig (met optioneel commentaar). Gedeeld tussen iedereen die inlogt en alle diensten; blijft staan totdat iemand het weer aanpast (geen dagelijkse reset).
-7. **Overdracht** → typ notitie → wordt 1 uur na diensteinde automatisch gewist.
-8. **To-Do's** → "Vandaag" toont alleen taken zonder dag of met vandaag als dag; andere taken staan onder "Alle weektaken tonen". "+ Nieuwe taak" klapt het formulier open. Voor iedereen zichtbaar.
-9. **Agenda** → formulier voor een nieuwe afspraak bovenaan, aankomende afspraken eronder.
-10. **Protocollen** → per kamer een inklapbare sectie, plus één sectie "Algemeen". "+ Nieuw protocol" klapt het formulier open. Voor iedereen; verwijderen alleen voor admin/coördinator.
-11. **Weekrapport** (admin + coördinator) → automatisch archief van één PDF per kalenderweek (1 jaar bewaard), plus een live voortgangsoverzicht van de lopende week.
+4. **Aanwezigheid** → tik Aanwezig/Afwezig (met optioneel commentaar). Gedeeld tussen iedereen die inlogt en alle diensten; blijft staan totdat iemand het weer aanpast (geen dagelijkse reset).
+5. **Medicatie** → open cliënt → "Vandaag" toont elke geplande tijd als badge (open, of afgevinkt met status); kies Afvinken, Verlof of Niet ingenomen (kan niet ongedaan worden gemaakt). Zodra alle tijden van vandaag geregistreerd zijn verdwijnen de knoppen tot morgen. "Registraties deze week" reset elke maandag; het volledige overzicht staat daarna in het Weekrapport-archief.
+6. **To-Do's** → "Vandaag" toont alleen taken zonder dag of met vandaag als dag; andere taken staan onder "Alle weektaken tonen". "+ Nieuwe taak" klapt het formulier open. Voor iedereen zichtbaar.
+7. **Agenda** → formulier voor een nieuwe afspraak bovenaan, aankomende afspraken eronder.
+8. **Overdracht** → per kamer een inklapbare sectie, plus één sectie "Algemeen". "+ Nieuwe overdracht" klapt het formulier open. Vervalt automatisch na 7 dagen; een admin kan een notitie ook eerder verwijderen.
+9. **Protocollen** → per kamer een inklapbare sectie, plus één sectie "Algemeen". "+ Nieuw protocol" klapt het formulier open. Voor iedereen; verwijderen alleen voor admin/coördinator.
+10. **Rapportage** → kies cliënt + dienst + datum → typ → verstuur. "Recente rapportages" toont alleen wat sinds afgelopen donderdag is toegevoegd; het volledige overzicht staat ook in het **Weekrapport**.
+11. **Weekrapport** (admin + coördinator) → automatisch archief van één PDF per kalenderweek (1 jaar bewaard, medicatie per dag gesplitst), plus een live voortgangsoverzicht van de lopende week.
 12. **Backend** (alleen admin) → cliënten (incl. kamer), medewerkers, instellingen, auditlog, medicatie, weekplanning. Eén wijziging = overal doorgevoerd.
-13. Uitloggen rechtsonder in de zijbalk, of automatisch na 15 minuten inactiviteit.
+13. Uitloggen rechtsonder in de zijbalk, of automatisch na 5 minuten inactiviteit.
 
 Diensttijd wordt automatisch bijgehouden bij login.
 
@@ -548,7 +579,7 @@ volgende, concreet geïmplementeerde maatregelen:
 - **Automatisch uitloggen na inactiviteit.** Gedeelde iPads in een
   zorgomgeving zijn een reëel risico: iemand loopt weg bij een ontgrendelde
   sessie en de volgende die het scherm aanraakt ziet cliëntgegevens.
-  `components/idle-logout.tsx` logt na 15 minuten zonder muis/toetsenbord/
+  `components/idle-logout.tsx` logt na 5 minuten zonder muis/toetsenbord/
   touch-interactie automatisch uit, los van de 12-uurs JWT-sessieduur.
 - **Optionele apparaatbeveiliging.** Beperk de hele app tot vrijgegeven
   apparaten, env-var-gestuurd (bewust geen in-app schakelaar die zelf tot

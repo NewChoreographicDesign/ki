@@ -72,6 +72,7 @@ model Client {
   weekPlans    WeekPlan[]
   presences    Presence[]
   appointments Appointment[]
+  handovers    Handover[]
 
   @@index([active])
 }
@@ -245,17 +246,23 @@ model Presence {
   @@index([date])
 }
 
-// Handover notes auto-expire 1 hour after the shift they belong to ends.
+// Handover notes are written per room (client) — or with clientId left empty
+// for a general, not-room-specific note — and auto-expire 7 days after
+// creation (see app/api/handovers/route.ts). An admin can also delete one
+// outright before that.
 model Handover {
   id        String    @id @default(cuid())
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId  String?
+  client    Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
   shift     ShiftType
   content   String
   createdAt DateTime  @default(now())
   expiresAt DateTime
 
   @@index([expiresAt])
+  @@index([clientId])
 }
 
 model Appointment {

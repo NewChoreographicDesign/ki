@@ -21,6 +21,7 @@ const ACTION_LABELS: Record<string, string> = {
   "medication.delete": "Medicatie verwijderd",
   "todo.update": "Taak gewijzigd",
   "todo.delete": "Taak verwijderd",
+  "handover.delete": "Overdracht verwijderd",
   "setting.update": "Instelling gewijzigd",
 };
 

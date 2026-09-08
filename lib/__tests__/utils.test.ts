@@ -13,6 +13,7 @@ import {
   isoWeekOf,
   parseDaysOfWeek,
   formatDaysOfWeek,
+  parseMedicationTimes,
 } from "@/lib/utils";
 import { ShiftType } from "@prisma/client";
 
@@ -183,5 +184,23 @@ describe("parseDaysOfWeek / formatDaysOfWeek", () => {
   it("round-trips every day of the week", () => {
     const allDays = [0, 1, 2, 3, 4, 5, 6];
     expect(parseDaysOfWeek(formatDaysOfWeek(allDays))).toEqual(allDays);
+  });
+});
+
+describe("parseMedicationTimes", () => {
+  it("sorts and dedupes comma-separated times", () => {
+    expect(parseMedicationTimes("20:00,08:00,08:00")).toEqual(["08:00", "20:00"]);
+  });
+
+  it("trims whitespace around each time", () => {
+    expect(parseMedicationTimes(" 08:00 , 20:00 ")).toEqual(["08:00", "20:00"]);
+  });
+
+  it("drops empty entries", () => {
+    expect(parseMedicationTimes("08:00,,20:00")).toEqual(["08:00", "20:00"]);
+  });
+
+  it("returns an empty array for an empty string", () => {
+    expect(parseMedicationTimes("")).toEqual([]);
   });
 });

@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import { Download, Archive } from "lucide-react";
 import { getSession, canAccessWeeklyReport } from "@/lib/auth";
-import { getWeeklyReportData } from "@/lib/weekly-report";
+import { getWeeklyReportData, groupMedicationChecksByDay } from "@/lib/weekly-report";
 import { db } from "@/lib/db";
-import { formatDate, formatDateTime, fullName, mostRecentMondayStart, PRIORITY_LABELS } from "@/lib/utils";
+import { formatDate, formatDateTime, formatTime, fullName, mostRecentMondayStart, PRIORITY_LABELS } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -117,16 +117,25 @@ export default async function WeekrapportPage() {
         <CardHeader>
           <CardTitle className="text-base">Medicatie ({data.medicationChecks.length})</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2">
+        <CardContent className="flex flex-col gap-4">
           {data.medicationChecks.length === 0 ? (
             <p className="text-slate-500">Geen medicatieregistraties deze week.</p>
           ) : (
-            data.medicationChecks.map((c) => (
-              <p key={c.id} className="text-sm text-slate-300">
-                {formatDateTime(c.checkedAt)} · {fullName(c.medication.client)} · {c.medication.name} ·{" "}
-                {MEDICATION_STATUS_LABELS[c.status] ?? c.status} · door {c.user.name}
-                {c.comment ? ` · ${c.comment}` : ""}
-              </p>
+            groupMedicationChecksByDay(data.medicationChecks).map((day) => (
+              <div key={day.dateLabel}>
+                <p className="mb-1.5 text-sm font-semibold text-slate-200">
+                  {day.dayLabel} <span className="font-normal text-slate-500">{day.dateLabel}</span>
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  {day.checks.map((c) => (
+                    <p key={c.id} className="text-sm text-slate-300">
+                      {formatTime(c.checkedAt)} · {fullName(c.medication.client)} · {c.medication.name} ·{" "}
+                      {MEDICATION_STATUS_LABELS[c.status] ?? c.status} · door {c.user.name}
+                      {c.comment ? ` · ${c.comment}` : ""}
+                    </p>
+                  ))}
+                </div>
+              </div>
             ))
           )}
         </CardContent>
