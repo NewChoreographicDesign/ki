@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { LogoMark } from "@/components/brand/logo";
 import { toast } from "sonner";
 
 type NavItem = {
@@ -98,7 +99,10 @@ export function AppNav({
         >
           <Menu className="h-6 w-6" />
         </button>
-        <span className="text-base font-semibold">Woongroep Admin</span>
+        <div className="flex items-center gap-2">
+          <LogoMark size="sm" />
+          <span className="text-sm font-semibold text-slate-100">Woongroep Admin</span>
+        </div>
         <div className="w-11" />
       </div>
 
@@ -118,7 +122,10 @@ export function AppNav({
             }}
           >
             <div className="flex items-center justify-between p-4">
-              <span className="text-lg font-semibold">Woongroep Admin</span>
+              <div className="flex items-center gap-2.5">
+                <LogoMark size="sm" />
+                <span className="text-base font-semibold text-slate-100">Woongroep Admin</span>
+              </div>
               <button
                 aria-label="Sluiten"
                 onClick={closeMenu}
@@ -135,8 +142,9 @@ export function AppNav({
 
       {/* Desktop / iPad landscape sidebar */}
       <aside className="hidden w-72 shrink-0 flex-col border-r border-border bg-surface md:flex">
-        <div className="p-5">
-          <span className="text-lg font-semibold">Woongroep Admin</span>
+        <div className="flex items-center gap-2.5 p-5">
+          <LogoMark size="sm" />
+          <span className="text-base font-semibold text-slate-100">Woongroep Admin</span>
         </div>
         <NavLinks items={items} pathname={pathname} onNavigate={() => {}} />
         <UserFooter userName={userName} onLogout={handleLogout} />

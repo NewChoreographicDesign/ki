@@ -3,7 +3,7 @@ import { Toaster } from "sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Woongroep Admin",
+  title: "110G",
   description: "Beheeromgeving voor de woongroep",
   manifest: "/manifest.json",
   icons: {
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Woongroep Admin",
+    title: "110G",
   },
 };
 

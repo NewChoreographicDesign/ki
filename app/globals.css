@@ -25,6 +25,16 @@ body {
   @apply animate-shimmer;
 }
 
+/* Faint dot-grid, faded out toward the edges — sits behind the login/setup
+   hero for the same reason those pages get the brand-gradient glow: an
+   otherwise empty dark page reads as unfinished rather than deliberate. */
+.bg-brand-grid {
+  background-image: radial-gradient(circle at 1px 1px, rgba(148, 163, 184, 0.16) 1px, transparent 0);
+  background-size: 28px 28px;
+  -webkit-mask-image: radial-gradient(ellipse 60% 55% at 50% 35%, black 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse 60% 55% at 50% 35%, black 30%, transparent 75%);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;

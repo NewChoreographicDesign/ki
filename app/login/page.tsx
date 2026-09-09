@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { LogoMark } from "@/components/brand/logo";
 import { LoginForm } from "./login-form";
 
 export default async function LoginPage() {
@@ -14,17 +15,24 @@ export default async function LoginPage() {
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-brand-grid" />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[28rem] w-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-gradient opacity-[0.08] blur-3xl"
+        className="pointer-events-none absolute left-1/2 top-1/2 h-[28rem] w-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-gradient opacity-[0.1] blur-3xl"
       />
-      <div className="relative flex w-full max-w-md flex-col items-center gap-6 animate-fade-in-up">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-gradient shadow-glow-sky">
-          <span className="text-xl font-bold text-white">W</span>
+      <div className="relative flex w-full max-w-md flex-col items-center gap-8">
+        <div className="flex flex-col items-center gap-3">
+          <LogoMark size="lg" className="animate-scale-in" />
+          <p
+            className="text-sm text-slate-500 animate-fade-in-up"
+            style={{ animationDelay: "80ms" }}
+          >
+            Woongroep Admin
+          </p>
         </div>
-        <Card className="w-full">
+        <Card className="w-full animate-fade-in-up" style={{ animationDelay: "160ms" }}>
           <CardHeader>
-            <CardTitle className="text-2xl">Woongroep Admin</CardTitle>
+            <CardTitle className="text-2xl">Welkom terug</CardTitle>
             <CardDescription>Log in met je naam en geboortedatum</CardDescription>
           </CardHeader>
           <CardContent>

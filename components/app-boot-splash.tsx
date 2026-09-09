@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { LogoMark } from "@/components/brand/logo";
 
 const SESSION_KEY = "ki-booted";
 const HOLD_MS = 500;
@@ -44,10 +45,8 @@ export function AppBootSplash() {
         transitionDuration: `${FADE_MS}ms`,
       }}
     >
-      <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-gradient shadow-glow-sky animate-pulse-ring">
-        <span className="text-2xl font-bold text-white">W</span>
-      </div>
-      <p className="animate-fade-in text-sm font-medium text-slate-400">Woongroep Admin</p>
+      <LogoMark size="lg" className="animate-pulse-ring" />
+      <p className="animate-fade-in text-sm font-medium text-slate-500">Woongroep Admin</p>
     </div>
   );
 }
