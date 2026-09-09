@@ -76,20 +76,36 @@ const config: Config = {
           "0%, 100%": { opacity: "0.55" },
           "50%": { opacity: "1" },
         },
-        // A one-shot flourish, not a progress indicator: a bright accent
-        // sweeps across and fades, timed to the same beat as fade-in-up, so
-        // arriving somewhere new gets a little flash of brand color instead
-        // of nothing — purely decorative, never tied to how long anything
-        // actually took to load.
-        "sweep-in": {
-          "0%": { transform: "scaleX(0)", opacity: "1" },
-          "55%": { transform: "scaleX(1)", opacity: "0.9" },
-          "100%": { transform: "scaleX(1)", opacity: "0" },
-        },
         "pop-in": {
           "0%": { opacity: "0", transform: "scale(0.5)" },
           "60%": { opacity: "1", transform: "scale(1.15)" },
           "100%": { opacity: "1", transform: "scale(1)" },
+        },
+        // The full-page route transition (components/route-transition.tsx):
+        // two rings slide in from opposite edges and meet at the logo's own
+        // proportions, hold, then the black curtain and the new page
+        // crossfade together — all four animations below share the same
+        // 1.5s timeline (0%/46.7%/66.7%/100% = 0ms/700ms/1000ms/1500ms) so
+        // they stay in lockstep without any JS keeping them in sync.
+        "curtain-ring-left": {
+          "0%": { transform: "translate(-50%, -50%) translateX(calc(-50vw - 10rem))" },
+          "46.7%": { transform: "translate(-50%, -50%) translateX(-2.25rem)" },
+          "100%": { transform: "translate(-50%, -50%) translateX(-2.25rem)" },
+        },
+        "curtain-ring-right": {
+          "0%": { transform: "translate(-50%, -50%) translateX(calc(50vw + 10rem))" },
+          "46.7%": { transform: "translate(-50%, -50%) translateX(2.25rem)" },
+          "100%": { transform: "translate(-50%, -50%) translateX(2.25rem)" },
+        },
+        "curtain-overlay": {
+          "0%": { opacity: "1" },
+          "66.7%": { opacity: "1" },
+          "100%": { opacity: "0" },
+        },
+        "curtain-content": {
+          "0%": { opacity: "0", filter: "blur(20px)", transform: "scale(1.04)" },
+          "66.7%": { opacity: "0", filter: "blur(20px)", transform: "scale(1.04)" },
+          "100%": { opacity: "1", filter: "blur(0px)", transform: "scale(1)" },
         },
       },
       animation: {
@@ -98,8 +114,11 @@ const config: Config = {
         "scale-in": "scale-in 0.3s cubic-bezier(0.22,1,0.36,1) both",
         "pulse-ring": "pulse-ring 1.6s cubic-bezier(0.4,0,0.6,1) infinite",
         "pulse-glow": "pulse-glow 3.5s ease-in-out infinite",
-        "sweep-in": "sweep-in 0.6s cubic-bezier(0.22,1,0.36,1) both",
         "pop-in": "pop-in 0.4s cubic-bezier(0.34,1.56,0.64,1) both",
+        "curtain-ring-left": "curtain-ring-left 1.5s cubic-bezier(0.34,1.56,0.64,1) both",
+        "curtain-ring-right": "curtain-ring-right 1.5s cubic-bezier(0.34,1.56,0.64,1) both",
+        "curtain-overlay": "curtain-overlay 1.5s cubic-bezier(0.22,1,0.36,1) both",
+        "curtain-content": "curtain-content 1.5s cubic-bezier(0.22,1,0.36,1) both",
       },
     },
   },

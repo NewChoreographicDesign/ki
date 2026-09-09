@@ -3,7 +3,6 @@ import { getSession, canAccessBackend, canAccessWeeklyReport } from "@/lib/auth"
 import { AppNav } from "@/components/app-nav";
 import { IdleLogout } from "@/components/idle-logout";
 import { MedicationReminderWatcher } from "@/components/medication-reminder-watcher";
-import { AppBootSplash } from "@/components/app-boot-splash";
 import { RouteTransition } from "@/components/route-transition";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -12,7 +11,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
-      <AppBootSplash />
       <IdleLogout />
       <MedicationReminderWatcher />
       <AppNav
