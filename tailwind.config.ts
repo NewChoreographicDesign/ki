@@ -51,9 +51,14 @@ const config: Config = {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
       },
       keyframes: {
+        // The blur is the point: content doesn't just slide up, it comes
+        // into focus, which reads as "arriving" rather than "popping in" —
+        // the one animation that plays on every route change (see
+        // components/route-transition.tsx), so it carries a lot of the
+        // app's "does this feel alive" weight on its own.
         "fade-in-up": {
-          "0%": { opacity: "0", transform: "translateY(8px)" },
-          "100%": { opacity: "1", transform: "translateY(0)" },
+          "0%": { opacity: "0", transform: "translateY(8px)", filter: "blur(4px)" },
+          "100%": { opacity: "1", transform: "translateY(0)", filter: "blur(0)" },
         },
         "fade-in": {
           "0%": { opacity: "0" },
@@ -67,14 +72,9 @@ const config: Config = {
           "0%": { boxShadow: "0 0 0 0 rgba(56,189,248,0.45)" },
           "100%": { boxShadow: "0 0 0 18px rgba(56,189,248,0)" },
         },
-        shimmer: {
-          "0%": { backgroundPosition: "-200% 0" },
-          "100%": { backgroundPosition: "200% 0" },
-        },
-        "loading-bar": {
-          "0%": { width: "0%", opacity: "1" },
-          "55%": { width: "72%", opacity: "1" },
-          "100%": { width: "88%", opacity: "0.7" },
+        "pulse-glow": {
+          "0%, 100%": { opacity: "0.55" },
+          "50%": { opacity: "1" },
         },
       },
       animation: {
@@ -82,8 +82,7 @@ const config: Config = {
         "fade-in": "fade-in 0.35s ease-out both",
         "scale-in": "scale-in 0.3s cubic-bezier(0.22,1,0.36,1) both",
         "pulse-ring": "pulse-ring 1.6s cubic-bezier(0.4,0,0.6,1) infinite",
-        shimmer: "shimmer 1.8s linear infinite",
-        "loading-bar": "loading-bar 1.1s cubic-bezier(0.22,1,0.36,1) both",
+        "pulse-glow": "pulse-glow 3.5s ease-in-out infinite",
       },
     },
   },

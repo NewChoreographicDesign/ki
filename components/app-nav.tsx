@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
@@ -45,6 +45,24 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const MENU_TRANSITION_MS = 250;
+
+// There's no route loading.tsx any more (see app/(app)/loading.tsx removal) —
+// the previous page just stays put while the next one streams in, which
+// reads as an instant, clean switch for the vast majority of navigations.
+// This dot is the one bit of feedback that survives that change: a subtly
+// pulsing marker on whichever nav item was just clicked, so a genuinely slow
+// load (a cold serverless function, a slow query) never reads as the app
+// having silently ignored the tap.
+function NavPendingDot() {
+  const { pending } = useLinkStatus();
+  if (!pending) return null;
+  return (
+    <span
+      aria-hidden="true"
+      className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 animate-pulse rounded-full bg-sky-400"
+    />
+  );
+}
 
 export function AppNav({
   userName,
@@ -198,7 +216,10 @@ function NavLinks({
                 active ? "text-sky-400" : "text-slate-300 hover:bg-surface2 hover:text-slate-100"
               )}
             >
-              <Icon className="h-5 w-5 shrink-0" />
+              <span className="relative shrink-0">
+                <Icon className="h-5 w-5" />
+                <NavPendingDot />
+              </span>
               {item.label}
             </Link>
           );

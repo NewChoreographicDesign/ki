@@ -39,7 +39,7 @@ export function AppBootSplash() {
   return (
     <div
       aria-hidden="true"
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-background transition-opacity ease-out"
+      className="pointer-events-none fixed inset-0 z-[100] flex items-center justify-center bg-background transition-opacity ease-out"
       style={{
         opacity: phase === "leaving" ? 0 : 1,
         transitionDuration: `${FADE_MS}ms`,

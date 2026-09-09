@@ -18,13 +18,6 @@ body {
   background-attachment: fixed;
 }
 
-/* Skeleton/shimmer surface for loading states (route loading.tsx, etc.) */
-.shimmer-bg {
-  background: linear-gradient(90deg, theme("colors.surface2") 25%, theme("colors.border") 50%, theme("colors.surface2") 75%);
-  background-size: 200% 100%;
-  @apply animate-shimmer;
-}
-
 /* Faint dot-grid, faded out toward the edges — sits behind the login/setup
    hero for the same reason those pages get the brand-gradient glow: an
    otherwise empty dark page reads as unfinished rather than deliberate. */
