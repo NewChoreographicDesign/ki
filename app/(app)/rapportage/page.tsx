@@ -23,7 +23,7 @@ export default async function RapportagePage() {
     }),
   ]);
 
-  const clientOptions = clients.map((c) => ({ id: c.id, name: fullName(c) }));
+  const clientOptions = clients.map((c) => ({ id: c.id, name: fullName(c), room: c.room }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -56,6 +56,7 @@ export default async function RapportagePage() {
                 <CardContent className="flex flex-col gap-2 p-5">
                   <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
                     <span className="font-medium text-slate-200">{fullName(r.client)}</span>
+                    <Badge variant="slate">{r.client.room || "Geen kamer"}</Badge>
                     <Badge variant={r.shift === "MORNING" ? "sky" : "emerald"}>
                       {r.shift === "MORNING" ? "Ochtend" : "Avond"}
                     </Badge>
