@@ -83,28 +83,28 @@ const config: Config = {
         },
         // The full-page route transition (components/route-transition.tsx):
         // two rings slide in from opposite edges and meet at the logo's own
-        // proportions, hold, then the black curtain and the new page
-        // crossfade together — all four animations below share the same
-        // 1.5s timeline (0%/46.7%/66.7%/100% = 0ms/700ms/1000ms/1500ms) so
-        // they stay in lockstep without any JS keeping them in sync.
+        // proportions, then the black curtain and the new page crossfade
+        // together — all four animations below share the same 1.2s timeline
+        // (0%/75%/100% = 0ms/900ms/1200ms) so they stay in lockstep without
+        // any JS keeping them in sync.
         "curtain-ring-left": {
           "0%": { transform: "translate(-50%, -50%) translateX(calc(-50vw - 10rem))" },
-          "46.7%": { transform: "translate(-50%, -50%) translateX(-2.25rem)" },
+          "75%": { transform: "translate(-50%, -50%) translateX(-2.25rem)" },
           "100%": { transform: "translate(-50%, -50%) translateX(-2.25rem)" },
         },
         "curtain-ring-right": {
           "0%": { transform: "translate(-50%, -50%) translateX(calc(50vw + 10rem))" },
-          "46.7%": { transform: "translate(-50%, -50%) translateX(2.25rem)" },
+          "75%": { transform: "translate(-50%, -50%) translateX(2.25rem)" },
           "100%": { transform: "translate(-50%, -50%) translateX(2.25rem)" },
         },
         "curtain-overlay": {
           "0%": { opacity: "1" },
-          "66.7%": { opacity: "1" },
+          "75%": { opacity: "1" },
           "100%": { opacity: "0" },
         },
         "curtain-content": {
           "0%": { opacity: "0", filter: "blur(20px)", transform: "scale(1.04)" },
-          "66.7%": { opacity: "0", filter: "blur(20px)", transform: "scale(1.04)" },
+          "75%": { opacity: "0", filter: "blur(20px)", transform: "scale(1.04)" },
           "100%": { opacity: "1", filter: "blur(0px)", transform: "scale(1)" },
         },
       },
@@ -115,10 +115,10 @@ const config: Config = {
         "pulse-ring": "pulse-ring 1.6s cubic-bezier(0.4,0,0.6,1) infinite",
         "pulse-glow": "pulse-glow 3.5s ease-in-out infinite",
         "pop-in": "pop-in 0.4s cubic-bezier(0.34,1.56,0.64,1) both",
-        "curtain-ring-left": "curtain-ring-left 1.5s cubic-bezier(0.34,1.56,0.64,1) both",
-        "curtain-ring-right": "curtain-ring-right 1.5s cubic-bezier(0.34,1.56,0.64,1) both",
-        "curtain-overlay": "curtain-overlay 1.5s cubic-bezier(0.22,1,0.36,1) both",
-        "curtain-content": "curtain-content 1.5s cubic-bezier(0.22,1,0.36,1) both",
+        "curtain-ring-left": "curtain-ring-left 1.2s cubic-bezier(0.34,1.56,0.64,1) both",
+        "curtain-ring-right": "curtain-ring-right 1.2s cubic-bezier(0.34,1.56,0.64,1) both",
+        "curtain-overlay": "curtain-overlay 1.2s cubic-bezier(0.22,1,0.36,1) both",
+        "curtain-content": "curtain-content 1.2s cubic-bezier(0.22,1,0.36,1) both",
       },
     },
   },
