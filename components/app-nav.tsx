@@ -59,7 +59,7 @@ function NavPendingDot() {
   return (
     <span
       aria-hidden="true"
-      className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 animate-pulse rounded-full bg-sky-400"
+      className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 animate-pop-in rounded-full bg-sky-400 shadow-glow-sky"
     />
   );
 }
@@ -154,8 +154,9 @@ export function AppNav({
 
       {/* Desktop / iPad landscape sidebar */}
       <aside className="hidden w-72 shrink-0 flex-col border-r border-border bg-surface md:flex">
-        <div className="p-5">
+        <div className="flex items-center gap-3 p-5">
           <LogoMark size="md" />
+          <span className="text-lg font-bold tracking-tight text-slate-50">110G</span>
         </div>
         <NavLinks items={items} pathname={pathname} onNavigate={() => {}} />
         <UserFooter userName={userName} onLogout={handleLogout} />
