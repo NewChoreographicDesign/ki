@@ -14,7 +14,7 @@ export function ReportForm({
   clients,
   defaultShift,
 }: {
-  clients: { id: string; name: string }[];
+  clients: { id: string; name: string; room: string | null }[];
   defaultShift: "MORNING" | "EVENING";
 }) {
   const router = useRouter();
@@ -56,7 +56,7 @@ export function ReportForm({
           <Select id="client" value={clientId} onChange={(e) => setClientId(e.target.value)} required>
             {clients.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name}
+                {c.room ? `${c.room} · ${c.name}` : c.name}
               </option>
             ))}
           </Select>
