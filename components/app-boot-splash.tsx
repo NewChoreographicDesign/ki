@@ -39,14 +39,13 @@ export function AppBootSplash() {
   return (
     <div
       aria-hidden="true"
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-background transition-opacity ease-out"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-background transition-opacity ease-out"
       style={{
         opacity: phase === "leaving" ? 0 : 1,
         transitionDuration: `${FADE_MS}ms`,
       }}
     >
       <LogoMark size="lg" className="animate-pulse-ring" />
-      <p className="animate-fade-in text-sm font-medium text-slate-500">Woongroep Admin</p>
     </div>
   );
 }

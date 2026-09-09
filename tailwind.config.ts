@@ -31,6 +31,12 @@ const config: Config = {
         // rather than a different blue on every element.
         "brand-gradient": "linear-gradient(135deg, #38bdf8 0%, #22d3ee 100%)",
         "brand-gradient-soft": "linear-gradient(135deg, rgba(56,189,248,0.16) 0%, rgba(34,211,238,0.10) 100%)",
+        // The gradient badge mark gets its own token: the base brand gradient
+        // plus a soft highlight in the upper-left, like light catching a
+        // glossy surface — reads as a considered app icon rather than a flat
+        // color swatch.
+        "brand-gradient-sheen":
+          "radial-gradient(120% 130% at 22% 15%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 45%), linear-gradient(135deg, #38bdf8 0%, #22d3ee 100%)",
       },
       boxShadow: {
         "glow-sky": "0 0 0 1px rgba(56,189,248,0.25), 0 8px 24px -6px rgba(56,189,248,0.45)",
@@ -65,6 +71,11 @@ const config: Config = {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
         },
+        "loading-bar": {
+          "0%": { width: "0%", opacity: "1" },
+          "55%": { width: "72%", opacity: "1" },
+          "100%": { width: "88%", opacity: "0.7" },
+        },
       },
       animation: {
         "fade-in-up": "fade-in-up 0.45s cubic-bezier(0.22,1,0.36,1) both",
@@ -72,6 +83,7 @@ const config: Config = {
         "scale-in": "scale-in 0.3s cubic-bezier(0.22,1,0.36,1) both",
         "pulse-ring": "pulse-ring 1.6s cubic-bezier(0.4,0,0.6,1) infinite",
         shimmer: "shimmer 1.8s linear infinite",
+        "loading-bar": "loading-bar 1.1s cubic-bezier(0.22,1,0.36,1) both",
       },
     },
   },

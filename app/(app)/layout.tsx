@@ -21,7 +21,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         canAccessWeeklyReport={canAccessWeeklyReport(session.role)}
       />
       <div className="flex min-h-screen flex-1 flex-col">
-        <main className="flex-1 p-4 lg:p-8">
+        <main className="relative flex-1 p-4 lg:p-8">
           <RouteTransition>{children}</RouteTransition>
         </main>
       </div>

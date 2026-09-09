@@ -99,10 +99,7 @@ export function AppNav({
         >
           <Menu className="h-6 w-6" />
         </button>
-        <div className="flex items-center gap-2">
-          <LogoMark size="sm" />
-          <span className="text-sm font-semibold text-slate-100">Woongroep Admin</span>
-        </div>
+        <LogoMark size="sm" />
         <div className="w-11" />
       </div>
 
@@ -122,10 +119,7 @@ export function AppNav({
             }}
           >
             <div className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-2.5">
-                <LogoMark size="sm" />
-                <span className="text-base font-semibold text-slate-100">Woongroep Admin</span>
-              </div>
+              <LogoMark size="sm" />
               <button
                 aria-label="Sluiten"
                 onClick={closeMenu}
@@ -142,9 +136,8 @@ export function AppNav({
 
       {/* Desktop / iPad landscape sidebar */}
       <aside className="hidden w-72 shrink-0 flex-col border-r border-border bg-surface md:flex">
-        <div className="flex items-center gap-2.5 p-5">
-          <LogoMark size="sm" />
-          <span className="text-base font-semibold text-slate-100">Woongroep Admin</span>
+        <div className="p-5">
+          <LogoMark size="md" />
         </div>
         <NavLinks items={items} pathname={pathname} onNavigate={() => {}} />
         <UserFooter userName={userName} onLogout={handleLogout} />

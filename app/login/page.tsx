@@ -21,16 +21,8 @@ export default async function LoginPage() {
         className="pointer-events-none absolute left-1/2 top-1/2 h-[28rem] w-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-gradient opacity-[0.1] blur-3xl"
       />
       <div className="relative flex w-full max-w-md flex-col items-center gap-8">
-        <div className="flex flex-col items-center gap-3">
-          <LogoMark size="lg" className="animate-scale-in" />
-          <p
-            className="text-sm text-slate-500 animate-fade-in-up"
-            style={{ animationDelay: "80ms" }}
-          >
-            Woongroep Admin
-          </p>
-        </div>
-        <Card className="w-full animate-fade-in-up" style={{ animationDelay: "160ms" }}>
+        <LogoMark size="lg" className="animate-scale-in" />
+        <Card className="w-full animate-fade-in-up" style={{ animationDelay: "120ms" }}>
           <CardHeader>
             <CardTitle className="text-2xl">Welkom terug</CardTitle>
             <CardDescription>Log in met je naam en geboortedatum</CardDescription>
