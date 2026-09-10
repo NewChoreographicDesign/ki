@@ -57,7 +57,9 @@ export function LoginForm() {
         <Label htmlFor="birthDate">Geboortedatum</Label>
         <Input
           id="birthDate"
+          type="password"
           inputMode="numeric"
+          autoComplete="current-password"
           placeholder="DD-MM-JJJJ"
           value={birthDate}
           onChange={(e) => setBirthDate(formatBirthDateInput(e.target.value))}
