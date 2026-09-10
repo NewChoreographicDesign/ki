@@ -7,6 +7,7 @@ import {
   CheckSquare,
   Calendar,
   DoorOpen,
+  ExternalLink,
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
@@ -100,6 +101,13 @@ const QUICK_ACTIONS = [
   { href: "/overdracht", label: "Overdracht", icon: ArrowLeftRight, variant: "emerald" },
   { href: "/todos", label: "Werklijst", icon: CheckSquare, variant: "sky" },
   { href: "/agenda", label: "Afspraak plannen", icon: Calendar, variant: "emerald" },
+  {
+    href: "https://mijnidb.sharepoint.com",
+    label: "Mijn IDB",
+    icon: ExternalLink,
+    variant: "sky",
+    external: true,
+  },
 ] as const;
 
 export default async function DashboardPage() {
@@ -157,38 +165,6 @@ export default async function DashboardPage() {
         <StatCard icon={Calendar} label="Afspraken (7 dagen)" value={stats.upcomingAppointments} delay={40} />
       </div>
 
-      <div>
-        <h2 className="mb-3 text-lg font-semibold text-slate-100">Snelle acties</h2>
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-          {QUICK_ACTIONS.map((action, i) => {
-            const Icon = action.icon;
-            return (
-              <Link key={action.href} href={action.href} className="group">
-                <Card
-                  interactive
-                  className="h-full animate-fade-in-up"
-                  style={{ animationDelay: `${i * 40}ms` }}
-                >
-                  <CardContent className="flex items-center gap-4 p-5">
-                    <div
-                      className={cn(
-                        "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105",
-                        action.variant === "sky"
-                          ? "bg-sky-500/15 text-sky-400"
-                          : "bg-emerald-500/15 text-emerald-400"
-                      )}
-                    >
-                      <Icon className="h-6 w-6" />
-                    </div>
-                    <span className="font-medium text-slate-100">{action.label}</span>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-
       <RecentHandovers
         handovers={recentHandovers.map((h) => ({
           id: h.id,
@@ -197,6 +173,44 @@ export default async function DashboardPage() {
           userName: h.user.name,
         }))}
       />
+
+      <div>
+        <h2 className="mb-3 text-lg font-semibold text-slate-100">Snelle acties</h2>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+          {QUICK_ACTIONS.map((action, i) => {
+            const Icon = action.icon;
+            const content = (
+              <CardContent className="flex items-center gap-4 p-5">
+                <div
+                  className={cn(
+                    "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105",
+                    action.variant === "sky"
+                      ? "bg-sky-500/15 text-sky-400"
+                      : "bg-emerald-500/15 text-emerald-400"
+                  )}
+                >
+                  <Icon className="h-6 w-6" />
+                </div>
+                <span className="font-medium text-slate-100">{action.label}</span>
+              </CardContent>
+            );
+            return (
+              <Link
+                key={action.href}
+                href={action.href}
+                className="group"
+                {...("external" in action && action.external
+                  ? { target: "_blank", rel: "noreferrer noopener" }
+                  : {})}
+              >
+                <Card interactive className="h-full animate-fade-in-up" style={{ animationDelay: `${i * 40}ms` }}>
+                  {content}
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

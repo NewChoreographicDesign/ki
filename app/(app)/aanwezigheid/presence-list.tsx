@@ -61,24 +61,7 @@ function ClientRow({
       <CardContent className="flex flex-col gap-3 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="text-lg font-medium text-slate-100">{client.name}</span>
-          <div className="flex gap-2">
-            <Button
-              size="lg"
-              variant={client.present === true ? "secondary" : "outline"}
-              onClick={() => onUpdate(client.id, true, comment)}
-              className={cn(client.present === true && "ring-2 ring-emerald-400")}
-            >
-              <Check className="h-5 w-5" /> Aanwezig
-            </Button>
-            <Button
-              size="lg"
-              variant={client.present === false ? "danger" : "outline"}
-              onClick={() => onUpdate(client.id, false, comment)}
-              className={cn(client.present === false && "ring-2 ring-red-400")}
-            >
-              <X className="h-5 w-5" /> Afwezig
-            </Button>
-          </div>
+          <PresenceToggle present={client.present} onChange={(present) => onUpdate(client.id, present, comment)} />
         </div>
         <button
           type="button"
@@ -108,5 +91,65 @@ function ClientRow({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * A single sliding switch instead of two separate buttons — the thumb slides
+ * to whichever side is active and the whole control tints green (aanwezig)
+ * or red (afwezig), so status reads at a glance from color and position
+ * alone, not just label text. Unset (present === null, never registered)
+ * shows a neutral, centered thumb until a side is picked.
+ */
+function PresenceToggle({
+  present,
+  onChange,
+}: {
+  present: boolean | null;
+  onChange: (present: boolean) => void;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label="Aanwezigheid"
+      className={cn(
+        "relative flex h-12 w-60 shrink-0 items-center rounded-full border p-1 transition-colors duration-300",
+        present === true && "border-emerald-500/50 bg-emerald-500/10",
+        present === false && "border-red-500/50 bg-red-500/10",
+        present === null && "border-border bg-surface2"
+      )}
+    >
+      <div
+        aria-hidden="true"
+        className={cn(
+          "absolute top-1 h-10 w-[calc(50%-4px)] rounded-full shadow-lift transition-all duration-300 ease-out",
+          present === true && "left-1 bg-emerald-500 opacity-100",
+          present === false && "left-[calc(50%+3px)] bg-red-500 opacity-100",
+          present === null && "left-1 bg-slate-500 opacity-0"
+        )}
+      />
+      <button
+        type="button"
+        onClick={() => onChange(true)}
+        aria-pressed={present === true}
+        className={cn(
+          "relative z-10 flex h-10 w-1/2 items-center justify-center gap-1.5 rounded-full text-sm font-semibold transition-colors",
+          present === true ? "text-white" : "text-slate-400 hover:text-slate-200"
+        )}
+      >
+        <Check className="h-4 w-4" /> Aanwezig
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange(false)}
+        aria-pressed={present === false}
+        className={cn(
+          "relative z-10 flex h-10 w-1/2 items-center justify-center gap-1.5 rounded-full text-sm font-semibold transition-colors",
+          present === false ? "text-white" : "text-slate-400 hover:text-slate-200"
+        )}
+      >
+        <X className="h-4 w-4" /> Afwezig
+      </button>
+    </div>
   );
 }
