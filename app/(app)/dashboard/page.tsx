@@ -6,15 +6,15 @@ import {
   ArrowLeftRight,
   CheckSquare,
   Calendar,
-  Users,
-  Clock,
   DoorOpen,
+  ExternalLink,
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { startOfToday, todayDayOfWeek, formatDateTime, formatTime, fullName, cn } from "@/lib/utils";
+import { startOfToday, todayDayOfWeek, formatTime, fullName, cn } from "@/lib/utils";
+import { RecentHandovers } from "./recent-handovers";
 
 export const dynamic = "force-dynamic";
 
@@ -85,17 +85,13 @@ async function getStats() {
   // Presence isn't scoped to "today" (see app/(app)/aanwezigheid/page.tsx) —
   // "present" here means each client's current status, i.e. whatever their
   // most recent presence row says, not just rows written today.
-  const [activeClients, openTodos, latestPresences, upcomingAppointments, activeHandovers] =
-    await Promise.all([
-      db.client.count({ where: { active: true } }),
-      db.todo.count({ where: { completed: false } }),
-      db.presence.findMany({ orderBy: { date: "desc" }, distinct: ["clientId"], select: { present: true } }),
-      db.appointment.count({ where: { startAt: { gte: today, lt: weekEnd } } }),
-      db.handover.count({ where: { expiresAt: { gt: new Date() } } }),
-    ]);
+  const [latestPresences, upcomingAppointments] = await Promise.all([
+    db.presence.findMany({ orderBy: { date: "desc" }, distinct: ["clientId"], select: { present: true } }),
+    db.appointment.count({ where: { startAt: { gte: today, lt: weekEnd } } }),
+  ]);
   const presentNow = latestPresences.filter((p) => p.present).length;
 
-  return { activeClients, openTodos, presentNow, upcomingAppointments, activeHandovers };
+  return { presentNow, upcomingAppointments };
 }
 
 const QUICK_ACTIONS = [
@@ -103,8 +99,15 @@ const QUICK_ACTIONS = [
   { href: "/medicatie", label: "Medicatie afvinken", icon: Pill, variant: "emerald" },
   { href: "/aanwezigheid", label: "Aanwezigheid", icon: UserCheck, variant: "sky" },
   { href: "/overdracht", label: "Overdracht", icon: ArrowLeftRight, variant: "emerald" },
-  { href: "/todos", label: "To-Do toevoegen", icon: CheckSquare, variant: "sky" },
+  { href: "/todos", label: "Werklijst", icon: CheckSquare, variant: "sky" },
   { href: "/agenda", label: "Afspraak plannen", icon: Calendar, variant: "emerald" },
+  {
+    href: "https://mijnidb.sharepoint.com",
+    label: "Mijn IDB",
+    icon: ExternalLink,
+    variant: "sky",
+    external: true,
+  },
 ] as const;
 
 export default async function DashboardPage() {
@@ -113,10 +116,9 @@ export default async function DashboardPage() {
     getStats(),
     getTodayByRoom(),
     db.handover.findMany({
-      where: { expiresAt: { gt: new Date() } },
       include: { user: true },
       orderBy: { createdAt: "desc" },
-      take: 3,
+      take: 20,
     }),
   ]);
 
@@ -158,71 +160,56 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        <StatCard icon={Users} label="Actieve cliënten" value={stats.activeClients} delay={0} />
-        <StatCard icon={CheckSquare} label="Open to-do's" value={stats.openTodos} delay={40} />
-        <StatCard icon={UserCheck} label="Nu aanwezig" value={stats.presentNow} delay={80} />
-        <StatCard icon={Calendar} label="Afspraken (7 dagen)" value={stats.upcomingAppointments} delay={120} />
-        <StatCard
-          icon={ArrowLeftRight}
-          label="Actieve overdrachten"
-          value={stats.activeHandovers}
-          delay={160}
-          className="col-span-2 lg:col-span-1"
-        />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <StatCard icon={UserCheck} label="Nu aanwezig" value={stats.presentNow} delay={0} />
+        <StatCard icon={Calendar} label="Afspraken (7 dagen)" value={stats.upcomingAppointments} delay={40} />
       </div>
+
+      <RecentHandovers
+        handovers={recentHandovers.map((h) => ({
+          id: h.id,
+          content: h.content,
+          createdAt: h.createdAt.toISOString(),
+          userName: h.user.name,
+        }))}
+      />
 
       <div>
         <h2 className="mb-3 text-lg font-semibold text-slate-100">Snelle acties</h2>
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
           {QUICK_ACTIONS.map((action, i) => {
             const Icon = action.icon;
-            return (
-              <Link key={action.href} href={action.href} className="group">
-                <Card
-                  interactive
-                  className="h-full animate-fade-in-up"
-                  style={{ animationDelay: `${i * 40}ms` }}
+            const content = (
+              <CardContent className="flex items-center gap-4 p-5">
+                <div
+                  className={cn(
+                    "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105",
+                    action.variant === "sky"
+                      ? "bg-sky-500/15 text-sky-400"
+                      : "bg-emerald-500/15 text-emerald-400"
+                  )}
                 >
-                  <CardContent className="flex items-center gap-4 p-5">
-                    <div
-                      className={cn(
-                        "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105",
-                        action.variant === "sky"
-                          ? "bg-sky-500/15 text-sky-400"
-                          : "bg-emerald-500/15 text-emerald-400"
-                      )}
-                    >
-                      <Icon className="h-6 w-6" />
-                    </div>
-                    <span className="font-medium text-slate-100">{action.label}</span>
-                  </CardContent>
+                  <Icon className="h-6 w-6" />
+                </div>
+                <span className="font-medium text-slate-100">{action.label}</span>
+              </CardContent>
+            );
+            return (
+              <Link
+                key={action.href}
+                href={action.href}
+                className="group"
+                {...("external" in action && action.external
+                  ? { target: "_blank", rel: "noreferrer noopener" }
+                  : {})}
+              >
+                <Card interactive className="h-full animate-fade-in-up" style={{ animationDelay: `${i * 40}ms` }}>
+                  {content}
                 </Card>
               </Link>
             );
           })}
         </div>
-      </div>
-
-      <div>
-        <h2 className="mb-3 text-lg font-semibold text-slate-100">Recente overdracht</h2>
-        {recentHandovers.length === 0 ? (
-          <p className="text-slate-500">Geen actieve overdrachtnotities.</p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {recentHandovers.map((h) => (
-              <Card key={h.id}>
-                <CardContent className="flex flex-col gap-1 p-5">
-                  <div className="flex items-center gap-2 text-sm text-slate-400">
-                    <Clock className="h-4 w-4" />
-                    {formatDateTime(h.createdAt)} &middot; {h.user.name}
-                  </div>
-                  <p className="text-slate-200">{h.content}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );

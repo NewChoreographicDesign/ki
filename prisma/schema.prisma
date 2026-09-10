@@ -23,6 +23,7 @@ enum ShiftType {
 }
 
 enum Priority {
+  NONE
   LOW
   MEDIUM
   HIGH

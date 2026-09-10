@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, ChevronDown, Trash2, FileText } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, Trash2, FileText, DoorOpen } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -140,44 +140,91 @@ function RoomSection({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 p-5 text-left"
+        className="flex w-full items-center justify-between gap-3 bg-brand-gradient-soft p-5 text-left ring-1 ring-inset ring-sky-400/20 transition-colors hover:bg-sky-500/10"
       >
-        <span className="font-semibold text-slate-100">
-          {title} <span className="font-normal text-slate-500">({items.length})</span>
+        <span className="flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-500/15 text-sky-400">
+            <DoorOpen className="h-5 w-5" />
+          </span>
+          <span className="flex flex-col">
+            <span className="font-semibold text-slate-100">{title}</span>
+            <span className="text-xs text-slate-500">
+              {items.length} protocol{items.length === 1 ? "" : "len"}
+            </span>
+          </span>
         </span>
         <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <CardContent className="flex flex-col gap-3 pt-0">
+        <CardContent className="flex flex-col gap-2 pt-3">
           {items.map((p) => (
-            <div key={p.id} className="flex flex-col gap-2 rounded-lg border border-border bg-surface2/50 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <span className="font-medium text-slate-100">
-                  {p.title}{" "}
-                  {p.clientName && <span className="text-sm text-slate-500">({p.clientName})</span>}
-                </span>
-                {canDelete && (
-                  <Button size="icon" variant="ghost" onClick={() => handleDelete(p.id)} aria-label="Verwijderen">
-                    <Trash2 className="h-5 w-5 text-red-400" />
-                  </Button>
-                )}
-              </div>
-              {p.content && <p className="whitespace-pre-wrap text-sm text-slate-400">{p.content}</p>}
-              {p.url && (
-                <a
-                  href={p.url}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="flex w-fit items-center gap-2 text-sm text-sky-400 hover:underline"
-                >
-                  <FileText className="h-4 w-4" /> Bestand openen
-                </a>
-              )}
-            </div>
+            <ProtocolRowItem key={p.id} protocol={p} canDelete={canDelete} onDelete={handleDelete} />
           ))}
         </CardContent>
       )}
     </Card>
+  );
+}
+
+// Expanding a room only reveals protocol names first — the actual content
+// (which can be long, or just a file link) stays folded until a specific
+// name is clicked, so scanning "which protocols exist for this room" never
+// requires scrolling past everyone else's full text first.
+function ProtocolRowItem({
+  protocol,
+  canDelete,
+  onDelete,
+}: {
+  protocol: ProtocolRow;
+  canDelete: boolean;
+  onDelete: (id: string) => void;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const hasContent = Boolean(protocol.content || protocol.url);
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-surface2/50 transition-colors hover:border-sky-500/30">
+      <div className="flex items-center gap-2 p-3.5">
+        <button
+          type="button"
+          onClick={() => hasContent && setOpen((v) => !v)}
+          disabled={!hasContent}
+          className="flex flex-1 items-center gap-2.5 text-left disabled:cursor-default"
+        >
+          {hasContent ? (
+            <ChevronRight
+              className={`h-4 w-4 shrink-0 text-sky-400 transition-transform ${open ? "rotate-90" : ""}`}
+            />
+          ) : (
+            <span className="w-4 shrink-0" />
+          )}
+          <span className="font-medium text-slate-100">
+            {protocol.title}{" "}
+            {protocol.clientName && <span className="text-sm text-slate-500">({protocol.clientName})</span>}
+          </span>
+        </button>
+        {canDelete && (
+          <Button size="icon" variant="ghost" onClick={() => onDelete(protocol.id)} aria-label="Verwijderen">
+            <Trash2 className="h-5 w-5 text-red-400" />
+          </Button>
+        )}
+      </div>
+      {open && hasContent && (
+        <div className="flex flex-col gap-2 border-t border-border bg-surface p-4">
+          {protocol.content && <p className="whitespace-pre-wrap text-sm text-slate-400">{protocol.content}</p>}
+          {protocol.url && (
+            <a
+              href={protocol.url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="flex w-fit items-center gap-2 text-sm text-sky-400 hover:underline"
+            >
+              <FileText className="h-4 w-4" /> Bestand openen
+            </a>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 

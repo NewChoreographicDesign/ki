@@ -256,7 +256,8 @@ export function parseMedicationTimes(value: string): string[] {
 export const DEFAULT_EMPLOYEE_BIRTH_DATE = "01-01-2001";
 
 /** Dutch labels for Todo/priority, shared by the UI and the weekly report text/PDF. */
-export const PRIORITY_LABELS: Record<"LOW" | "MEDIUM" | "HIGH", string> = {
+export const PRIORITY_LABELS: Record<"NONE" | "LOW" | "MEDIUM" | "HIGH", string> = {
+  NONE: "Geen",
   LOW: "Laag",
   MEDIUM: "Gemiddeld",
   HIGH: "Hoog",

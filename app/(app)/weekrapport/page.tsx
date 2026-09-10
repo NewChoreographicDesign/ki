@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import { Download, Archive } from "lucide-react";
 import { getSession, canAccessWeeklyReport } from "@/lib/auth";
-import { getWeeklyReportData, groupMedicationChecksByDay } from "@/lib/weekly-report";
+import { getWeeklyReportData, groupMedicationChecksByDay, formatTodoDueLabel } from "@/lib/weekly-report";
 import { db } from "@/lib/db";
-import { formatDate, formatDateTime, formatTime, fullName, mostRecentMondayStart, PRIORITY_LABELS } from "@/lib/utils";
+import { formatDate, formatDateTime, formatTime, fullName, mostRecentMondayStart } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -29,6 +29,8 @@ export default async function WeekrapportPage() {
       select: { id: true, isoYear: true, isoWeek: true, weekStart: true, createdAt: true },
     }),
   ]);
+  const todosNotDone = data.todos.filter((t) => !t.completed);
+  const todosDone = data.todos.filter((t) => t.completed);
 
   return (
     <div className="flex flex-col gap-6">
@@ -143,19 +145,36 @@ export default async function WeekrapportPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">To-do&apos;s ({data.todos.length})</CardTitle>
+          <CardTitle className="text-base">Werklijst ({data.todos.length})</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2">
+        <CardContent className="flex flex-col gap-4">
           {data.todos.length === 0 ? (
-            <p className="text-slate-500">Geen to-do&apos;s aangemaakt of afgerond deze week.</p>
+            <p className="text-slate-500">Geen taken aangemaakt of afgerond deze week.</p>
           ) : (
-            data.todos.map((t) => (
-              <p key={t.id} className="text-sm text-slate-300">
-                {t.title} ({PRIORITY_LABELS[t.priority]}) ·{" "}
-                {t.completed ? `afgerond door ${t.completedBy?.name ?? "?"}` : "open"} · aangemaakt door{" "}
-                {t.createdBy.name}
-              </p>
-            ))
+            <>
+              {todosNotDone.length > 0 ? (
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Nog niet gedaan</p>
+                  {todosNotDone.map((t) => (
+                    <p key={t.id} className="text-sm text-slate-300">
+                      {t.title} <span className="text-slate-500">· moest klaar zijn: {formatTodoDueLabel(t)}</span>
+                    </p>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-emerald-400">Alle taken zijn afgerond.</p>
+              )}
+              {todosDone.length > 0 && (
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Afgerond</p>
+                  {todosDone.map((t) => (
+                    <p key={t.id} className="text-sm text-slate-300">
+                      {t.title} <span className="text-slate-500">· door {t.completedBy?.name ?? "?"}</span>
+                    </p>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

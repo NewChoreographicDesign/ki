@@ -86,7 +86,7 @@ export const todoSchema = z
   .object({
     title: z.string().trim().min(1).max(300),
     description: z.string().trim().max(2000).optional().or(z.literal("")),
-    priority: z.enum(["LOW", "MEDIUM", "HIGH"]),
+    priority: z.enum(["NONE", "LOW", "MEDIUM", "HIGH"]),
     daysOfWeek: z.array(z.number().int().min(0).max(6)).max(7).optional(),
     time: z.string().regex(timeOfDay, "Gebruik het formaat UU:MM").optional().or(z.literal("")),
     recurring: z.boolean().optional(),
