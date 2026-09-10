@@ -1,11 +1,14 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { Role } from "@prisma/client";
 import { ArrowLeft, Clock } from "lucide-react";
 import { db } from "@/lib/db";
-import { fullName, formatDateTime, mostRecentMondayStart, startOfToday, parseMedicationTimes } from "@/lib/utils";
+import { getSession } from "@/lib/auth";
+import { fullName, mostRecentMondayStart, startOfToday, parseMedicationTimes } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MedicationCheckForm } from "./medication-check-form";
+import { MedicationCheckList, type MedicationCheckRow } from "./medication-check-list";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +24,8 @@ export default async function ClientMedicationPage({
   params: Promise<{ clientId: string }>;
 }) {
   const { clientId } = await params;
+  const session = await getSession();
+  const canManage = session?.role === Role.ADMIN;
   // "Laatste registraties" only shows the current week (since Monday) — the
   // full history isn't deleted, it just moves into the automatically
   // generated weekly PDF archive (see /weekrapport) once a week completes,
@@ -119,22 +124,18 @@ export default async function ClientMedicationPage({
                   )}
                   <div className="border-t border-border pt-3">
                     <p className="mb-2 text-sm font-medium text-slate-400">Registraties deze week</p>
-                    {med.checks.length === 0 ? (
-                      <p className="text-sm text-slate-500">Nog niets geregistreerd deze week.</p>
-                    ) : (
-                      <ul className="flex flex-col gap-1.5">
-                        {med.checks.map((c) => {
-                          const status = STATUS_LABELS[c.status] ?? STATUS_LABELS.TAKEN;
-                          return (
-                            <li key={c.id} className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
-                              <Badge variant={status.variant}>{status.label}</Badge>
-                              {formatDateTime(c.checkedAt)} &middot; {c.user.name}
-                              {c.comment ? ` — ${c.comment}` : ""}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
+                    <MedicationCheckList
+                      canManage={canManage}
+                      checks={med.checks.map(
+                        (c): MedicationCheckRow => ({
+                          id: c.id,
+                          status: c.status,
+                          comment: c.comment,
+                          checkedAt: c.checkedAt.toISOString(),
+                          userName: c.user.name,
+                        })
+                      )}
+                    />
                   </div>
                 </CardContent>
               </Card>

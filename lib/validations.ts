@@ -68,6 +68,25 @@ export const medicationCheckSchema = z.object({
   comment: z.string().trim().max(1000).optional().or(z.literal("")),
 });
 
+// Anyone can annotate an existing check with a comment (e.g. flagging that a
+// button was tapped by mistake) — this never touches the status itself.
+export const medicationCheckCommentSchema = z.object({
+  comment: z.string().trim().max(1000),
+});
+
+// Admin-only status correction — requires the admin's own birthdate as
+// step-up confirmation, same reasoning as changeBirthDateSchema: a valid
+// session cookie on a shared device doesn't prove who's at the keyboard.
+export const medicationCheckStatusSchema = z.object({
+  status: z.enum(["TAKEN", "LEAVE", "NOT_TAKEN"]),
+  birthDate: z.string().regex(ddmmyyyy, "Gebruik het formaat DD-MM-JJJJ"),
+});
+
+// Admin-only reset (delete) of a wrongly logged check, same birthdate gate.
+export const medicationCheckResetSchema = z.object({
+  birthDate: z.string().regex(ddmmyyyy, "Gebruik het formaat DD-MM-JJJJ"),
+});
+
 export const presenceSchema = z.object({
   clientId: z.string().min(1),
   date: z.string().regex(ddmmyyyy),

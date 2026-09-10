@@ -75,12 +75,12 @@ export function ProtocolManager({
           <p className="text-slate-500">Nog geen protocollen.</p>
         ) : (
           <>
-            {grouped.rooms.map(({ room, items }) => (
-              <RoomSection key={room} title={room} items={items} canDelete={canDelete} router={router} />
-            ))}
             {grouped.algemeen.length > 0 && (
               <RoomSection title={ALGEMEEN} items={grouped.algemeen} canDelete={canDelete} router={router} />
             )}
+            {grouped.rooms.map(({ room, items }) => (
+              <RoomSection key={room} title={room} items={items} canDelete={canDelete} router={router} />
+            ))}
           </>
         )}
       </div>

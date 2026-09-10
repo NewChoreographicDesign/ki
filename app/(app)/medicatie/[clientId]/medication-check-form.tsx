@@ -3,21 +3,45 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { CheckCircle2, Plane, XCircle, AlertTriangle, X } from "lucide-react";
+import { CheckCircle2, Plane, XCircle, AlertTriangle, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 type MedicationCheckStatus = "TAKEN" | "LEAVE" | "NOT_TAKEN";
 
+// Same color language as the status badges shown after registration
+// (emerald/amber/red) and the icon-badge cards used for Snelle acties and
+// room headers elsewhere in the app — a plain solid/outline/danger Button
+// trio read as three unrelated widgets rather than one coherent choice.
 const STATUS_OPTIONS: {
   status: MedicationCheckStatus;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  variant: "secondary" | "outline" | "danger";
+  badge: string;
+  hover: string;
 }[] = [
-  { status: "TAKEN", label: "Afvinken", icon: CheckCircle2, variant: "secondary" },
-  { status: "LEAVE", label: "Verlof", icon: Plane, variant: "outline" },
-  { status: "NOT_TAKEN", label: "Niet ingenomen", icon: XCircle, variant: "danger" },
+  {
+    status: "TAKEN",
+    label: "Afvinken",
+    icon: CheckCircle2,
+    badge: "bg-emerald-500/15 text-emerald-400",
+    hover: "hover:border-emerald-500/40 hover:bg-emerald-500/5",
+  },
+  {
+    status: "LEAVE",
+    label: "Verlof",
+    icon: Plane,
+    badge: "bg-amber-500/15 text-amber-400",
+    hover: "hover:border-amber-500/40 hover:bg-amber-500/5",
+  },
+  {
+    status: "NOT_TAKEN",
+    label: "Niet ingenomen",
+    icon: XCircle,
+    badge: "bg-red-500/15 text-red-400",
+    hover: "hover:border-red-500/40 hover:bg-red-500/5",
+  },
 ];
 
 export function MedicationCheckForm({
@@ -95,27 +119,34 @@ export function MedicationCheckForm({
           className="min-h-[70px]"
         />
       )}
-      <div className="grid grid-cols-1 gap-2 min-[480px]:flex min-[480px]:flex-wrap">
-        {STATUS_OPTIONS.map(({ status, label, icon: Icon, variant }) => (
-          <Button
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {STATUS_OPTIONS.map(({ status, label, icon: Icon, badge, hover }) => (
+          <button
             key={status}
-            size="lg"
-            variant={variant}
-            loading={loading === status}
-            disabled={loading !== null && loading !== status}
+            type="button"
+            disabled={loading !== null}
             onClick={() => handleCheck(status)}
+            className={cn(
+              "flex items-center gap-3 rounded-xl border border-border bg-surface2/50 p-3.5 text-left transition-colors",
+              "disabled:pointer-events-none disabled:opacity-50",
+              hover
+            )}
           >
-            {loading !== status && <Icon className="h-5 w-5" />} {label}
-          </Button>
+            <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", badge)}>
+              {loading === status ? <Loader2 className="h-5 w-5 animate-spin" /> : <Icon className="h-5 w-5" />}
+            </span>
+            <span className="font-medium text-slate-100">{label}</span>
+          </button>
         ))}
-        {!showComment && (
-          <Button size="lg" variant="ghost" onClick={() => setShowComment(true)}>
-            Commentaar
-          </Button>
-        )}
       </div>
+      {!showComment && (
+        <Button size="sm" variant="ghost" onClick={() => setShowComment(true)} className="self-start text-slate-400">
+          + Commentaar
+        </Button>
+      )}
       <p className="text-xs text-slate-500">
-        Let op: een registratie kan niet ongedaan worden gemaakt.
+        Let op: dit kan zelf niet ongedaan worden gemaakt. Per ongeluk de verkeerde knop geraakt? Voeg
+        hieronder een commentaar toe — een beheerder kan de registratie daarna corrigeren.
       </p>
 
       {showVmsModal && (
