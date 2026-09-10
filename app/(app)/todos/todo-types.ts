@@ -9,7 +9,7 @@ export type TodoData = {
   id: string;
   title: string;
   description: string | null;
-  priority: "LOW" | "MEDIUM" | "HIGH";
+  priority: "NONE" | "LOW" | "MEDIUM" | "HIGH";
   daysOfWeek: number[];
   time: string | null;
   recurring: boolean;
@@ -25,7 +25,7 @@ type RawTodo = {
   id: string;
   title: string;
   description: string | null;
-  priority: "LOW" | "MEDIUM" | "HIGH";
+  priority: "NONE" | "LOW" | "MEDIUM" | "HIGH";
   daysOfWeek: string;
   time: string | null;
   recurring: boolean;

@@ -24,7 +24,9 @@ export function TodoForm({
 }) {
   const [title, setTitle] = React.useState(initial?.title ?? "");
   const [description, setDescription] = React.useState(initial?.description ?? "");
-  const [priority, setPriority] = React.useState<"LOW" | "MEDIUM" | "HIGH">(initial?.priority ?? "MEDIUM");
+  const [priority, setPriority] = React.useState<"NONE" | "LOW" | "MEDIUM" | "HIGH">(
+    initial?.priority ?? "MEDIUM"
+  );
   const [days, setDays] = React.useState<number[]>(initial?.daysOfWeek ?? []);
   const [time, setTime] = React.useState(initial?.time ?? "");
   const [recurring, setRecurring] = React.useState(initial?.recurring ?? false);
@@ -95,8 +97,9 @@ export function TodoForm({
           <Select
             id="priority"
             value={priority}
-            onChange={(e) => setPriority(e.target.value as "LOW" | "MEDIUM" | "HIGH")}
+            onChange={(e) => setPriority(e.target.value as "NONE" | "LOW" | "MEDIUM" | "HIGH")}
           >
+            <option value="NONE">Geen</option>
             <option value="LOW">Laag</option>
             <option value="MEDIUM">Gemiddeld</option>
             <option value="HIGH">Hoog</option>

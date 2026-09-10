@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, ChevronDown, Trash2, Clock } from "lucide-react";
+import { Plus, ChevronDown, Trash2, Clock, DoorOpen } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -140,17 +140,28 @@ function RoomSection({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 p-5 text-left"
+        className="flex w-full items-center justify-between gap-3 bg-brand-gradient-soft p-5 text-left ring-1 ring-inset ring-sky-400/20 transition-colors hover:bg-sky-500/10"
       >
-        <span className="font-semibold text-slate-100">
-          {title} <span className="font-normal text-slate-500">({items.length})</span>
+        <span className="flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-500/15 text-sky-400">
+            <DoorOpen className="h-5 w-5" />
+          </span>
+          <span className="flex flex-col">
+            <span className="font-semibold text-slate-100">{title}</span>
+            <span className="text-xs text-slate-500">
+              {items.length} overdracht{items.length === 1 ? "" : "en"}
+            </span>
+          </span>
         </span>
         <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <CardContent className="flex flex-col gap-3 pt-0">
+        <CardContent className="flex flex-col gap-3 pt-3">
           {items.map((h) => (
-            <div key={h.id} className="flex flex-col gap-2 rounded-lg border border-border bg-surface2/50 p-4">
+            <div
+              key={h.id}
+              className="flex flex-col gap-2 rounded-xl border border-border bg-surface2/50 p-4 transition-colors hover:border-sky-500/30"
+            >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
                   <Badge variant={h.shift === "MORNING" ? "sky" : "emerald"}>

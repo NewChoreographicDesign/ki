@@ -11,9 +11,8 @@
   </defs>
   <rect width="512" height="512" rx="112" fill="url(#base)"/>
   <rect width="512" height="512" rx="112" fill="url(#sheen)"/>
-  <g transform="translate(136 15) scale(2.4)">
+  <g transform="translate(96 96) scale(3.2)">
     <circle cx="37" cy="50" r="23" stroke="#ffffff" stroke-width="9"/>
     <circle cx="63" cy="50" r="23" stroke="#ffffff" stroke-opacity="0.75" stroke-width="9"/>
   </g>
-  <text x="256" y="432" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="102" letter-spacing="-3" fill="#ffffff">110G</text>
 </svg>

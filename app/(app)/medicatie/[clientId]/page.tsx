@@ -111,7 +111,11 @@ export default async function ClientMedicationPage({
                       morgen.
                     </p>
                   ) : (
-                    <MedicationCheckForm medicationId={med.id} />
+                    <MedicationCheckForm
+                      medicationId={med.id}
+                      medicationName={med.name}
+                      clientName={fullName(client)}
+                    />
                   )}
                   <div className="border-t border-border pt-3">
                     <p className="mb-2 text-sm font-medium text-slate-400">Registraties deze week</p>

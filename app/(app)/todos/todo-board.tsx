@@ -161,7 +161,7 @@ function sortByTime(a: TodoData, b: TodoData): number {
   if (a.time && b.time) return a.time.localeCompare(b.time);
   if (a.time && !b.time) return -1;
   if (!a.time && b.time) return 1;
-  const priorityRank = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+  const priorityRank = { HIGH: 0, MEDIUM: 1, LOW: 2, NONE: 3 };
   const byPriority = priorityRank[a.priority] - priorityRank[b.priority];
   if (byPriority !== 0) return byPriority;
   return a.createdAt.localeCompare(b.createdAt);

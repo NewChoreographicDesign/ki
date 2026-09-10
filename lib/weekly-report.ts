@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db";
-import { mostRecentMondayStart, formatDate, formatDateTime, formatTime, fullName, todayDayOfWeek, DAYS_OF_WEEK, PRIORITY_LABELS } from "@/lib/utils";
+import { mostRecentMondayStart, formatDate, formatDateTime, formatTime, fullName, todayDayOfWeek, DAYS_OF_WEEK, parseDaysOfWeek } from "@/lib/utils";
 
 const STATUS_LABELS: Record<string, string> = {
   TAKEN: "Afgevinkt",
@@ -76,6 +76,18 @@ export function groupMedicationChecksByDay(checks: WeeklyReportData["medicationC
   return groups;
 }
 
+/**
+ * "Wanneer had dit klaar moeten zijn?" for a not-yet-done Werklijst task —
+ * shared by the live web view, the .txt download, and the archived PDF so
+ * the three surfaces never drift into describing the same task differently.
+ */
+export function formatTodoDueLabel(todo: { daysOfWeek: string; time: string | null }): string {
+  const days = parseDaysOfWeek(todo.daysOfWeek);
+  const dayLabel = days.length === 0 ? "" : days.length === 7 ? "elke dag" : days.map((d) => DAYS_OF_WEEK[d]).join(", ");
+  const parts = [dayLabel, todo.time ?? ""].filter(Boolean);
+  return parts.length > 0 ? parts.join(" ") : "geen vaste dag/tijd";
+}
+
 export function renderWeeklyReportText(data: WeeklyReportData): string {
   const lines: string[] = [];
   const add = (line = "") => lines.push(line);
@@ -118,14 +130,27 @@ export function renderWeeklyReportText(data: WeeklyReportData): string {
   }
 
   add("");
-  add(`TO-DO'S (${data.todos.length})`);
+  add(`WERKLIJST (${data.todos.length})`);
   add("-".repeat(60));
   if (data.todos.length === 0) {
-    add("Geen to-do's aangemaakt of afgerond deze week.");
+    add("Geen taken aangemaakt of afgerond deze week.");
   } else {
-    for (const t of data.todos) {
-      const status = t.completed ? `afgerond door ${t.completedBy?.name ?? "?"}` : "open";
-      add(`${t.title} (${PRIORITY_LABELS[t.priority]}) · ${status} · aangemaakt door ${t.createdBy.name}`);
+    const notDone = data.todos.filter((t) => !t.completed);
+    const done = data.todos.filter((t) => t.completed);
+    if (notDone.length === 0) {
+      add("Alle taken zijn afgerond.");
+    } else {
+      add("Nog niet gedaan:");
+      for (const t of notDone) {
+        add(`  ${t.title} · moest klaar zijn: ${formatTodoDueLabel(t)}`);
+      }
+    }
+    if (done.length > 0) {
+      add("");
+      add("Afgerond:");
+      for (const t of done) {
+        add(`  ${t.title} · door ${t.completedBy?.name ?? "?"}`);
+      }
     }
   }
 

@@ -1,7 +1,7 @@
 import "server-only";
 import PDFDocument from "pdfkit";
-import { groupMedicationChecksByDay, type WeeklyReportData } from "@/lib/weekly-report";
-import { formatDate, formatDateTime, formatTime, fullName, isoWeekOf, PRIORITY_LABELS } from "@/lib/utils";
+import { groupMedicationChecksByDay, formatTodoDueLabel, type WeeklyReportData } from "@/lib/weekly-report";
+import { formatDate, formatDateTime, formatTime, fullName, isoWeekOf } from "@/lib/utils";
 
 const STATUS_LABELS: Record<string, string> = {
   TAKEN: "Afgevinkt",
@@ -65,13 +65,25 @@ export function renderWeeklyReportPdf(data: WeeklyReportData): Promise<Buffer> {
       }
     }
 
-    section(doc, `To-do's (${data.todos.length})`);
+    section(doc, `Werklijst (${data.todos.length})`);
     if (data.todos.length === 0) {
-      item(doc, "Geen to-do's aangemaakt of afgerond deze week.");
+      item(doc, "Geen taken aangemaakt of afgerond deze week.");
     } else {
-      for (const t of data.todos) {
-        const status = t.completed ? `afgerond door ${t.completedBy?.name ?? "?"}` : "open";
-        item(doc, `${t.title} (${PRIORITY_LABELS[t.priority]}) · ${status} · aangemaakt door ${t.createdBy.name}`);
+      const notDone = data.todos.filter((t) => !t.completed);
+      const done = data.todos.filter((t) => t.completed);
+      if (notDone.length === 0) {
+        item(doc, "Alle taken zijn afgerond.");
+      } else {
+        subsection(doc, "Nog niet gedaan");
+        for (const t of notDone) {
+          item(doc, `${t.title} · moest klaar zijn: ${formatTodoDueLabel(t)}`);
+        }
+      }
+      if (done.length > 0) {
+        subsection(doc, "Afgerond");
+        for (const t of done) {
+          item(doc, `${t.title} · door ${t.completedBy?.name ?? "?"}`);
+        }
       }
     }
 

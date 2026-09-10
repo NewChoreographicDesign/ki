@@ -2,27 +2,36 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Repeat, Clock, Pencil, Trash2 } from "lucide-react";
+import { CheckCircle2, Clock, Pencil, Trash2, Flag, Minus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDateTime, DAYS_OF_WEEK_SHORT, PRIORITY_LABELS } from "@/lib/utils";
+import { formatDateTime, PRIORITY_LABELS } from "@/lib/utils";
 import { serializeTodo, type TodoData } from "./todo-types";
 import { TodoForm } from "./todo-form";
 
-const PRIORITY_VARIANT = { LOW: "slate", MEDIUM: "sky", HIGH: "red" } as const;
+// Days/time and repeat details live only in the edit form now — the compact
+// list just needs an at-a-glance urgency signal, so priority renders as a
+// colored icon instead of a text badge. Days-recurring info is unaffected;
+// it's simply no longer shown here.
+const PRIORITY_ICON: Record<TodoData["priority"], { icon: React.ComponentType<{ className?: string }>; className: string }> = {
+  NONE: { icon: Minus, className: "text-slate-500" },
+  LOW: { icon: Flag, className: "text-sky-400" },
+  MEDIUM: { icon: Flag, className: "text-amber-400" },
+  HIGH: { icon: Flag, className: "text-red-400" },
+};
 
-function DaysBadge({ days }: { days: number[] }) {
-  if (days.length === 0) return null;
-  if (days.length === 7) {
-    return (
-      <Badge variant="slate" className="gap-1">
-        <Repeat className="h-3 w-3" /> Elke dag
-      </Badge>
-    );
-  }
-  return <Badge variant="slate">{days.map((d) => DAYS_OF_WEEK_SHORT[d]).join(" ")}</Badge>;
+function PriorityIcon({ priority }: { priority: TodoData["priority"] }) {
+  const { icon: Icon, className } = PRIORITY_ICON[priority];
+  return (
+    <span
+      title={`Prioriteit: ${PRIORITY_LABELS[priority]}`}
+      aria-label={`Prioriteit: ${PRIORITY_LABELS[priority]}`}
+      className="inline-flex shrink-0"
+    >
+      <Icon className={`h-4 w-4 ${className}`} />
+    </span>
+  );
 }
 
 export function TodoItem({
@@ -112,13 +121,7 @@ export function TodoItem({
             <span className={todo.completed ? "text-slate-500 line-through" : "font-medium text-slate-100"}>
               {todo.title}
             </span>
-            <Badge variant={PRIORITY_VARIANT[todo.priority]}>{PRIORITY_LABELS[todo.priority]}</Badge>
-            <DaysBadge days={todo.daysOfWeek} />
-            {todo.recurring && todo.daysOfWeek.length !== 7 && (
-              <Badge variant="emerald" className="gap-1">
-                <Repeat className="h-3 w-3" /> Terugkerend
-              </Badge>
-            )}
+            <PriorityIcon priority={todo.priority} />
           </div>
           <div className="flex gap-2">
             {!todo.completed && !showComment && (
