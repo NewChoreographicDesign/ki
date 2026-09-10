@@ -112,15 +112,28 @@ const QUICK_ACTIONS = [
 
 export default async function DashboardPage() {
   const session = await getSession();
-  const [stats, roomsToday, recentHandovers] = await Promise.all([
+  const [stats, roomsToday, rawHandovers] = await Promise.all([
     getStats(),
     getTodayByRoom(),
     db.handover.findMany({
-      include: { user: true },
+      include: { user: true, client: true },
       orderBy: { createdAt: "desc" },
-      take: 20,
+      take: 50,
     }),
   ]);
+
+  // One entry per room — the most recent note in it — rather than every
+  // handover, so a room that's had several updates doesn't crowd out rooms
+  // that haven't been touched in a while. rawHandovers is already newest
+  // first, so the first hit per room is its most recent.
+  const seenRooms = new Set<string>();
+  const recentHandovers: ((typeof rawHandovers)[number] & { room: string })[] = [];
+  for (const h of rawHandovers) {
+    const room = h.client ? h.client.room || "Geen kamer" : "Algemeen";
+    if (seenRooms.has(room)) continue;
+    seenRooms.add(room);
+    recentHandovers.push({ ...h, room });
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -136,20 +149,30 @@ export default async function DashboardPage() {
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {roomsToday.map(({ room, entries }, i) => (
-              <Card key={room} className="animate-fade-in-up" style={{ animationDelay: `${i * 50}ms` }}>
-                <CardHeader className="flex-row items-center gap-2 space-y-0 pb-2">
-                  <DoorOpen className="h-5 w-5 text-slate-500" />
-                  <CardTitle className="text-base font-semibold text-slate-100">{room}</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-2">
+              <Card key={room} className="animate-fade-in-up overflow-hidden" style={{ animationDelay: `${i * 50}ms` }}>
+                <div className="flex items-center gap-3 bg-brand-gradient-soft p-4 ring-1 ring-inset ring-sky-400/20">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-500/15 text-sky-400">
+                    <DoorOpen className="h-5 w-5" />
+                  </span>
+                  <span className="flex flex-col">
+                    <span className="font-semibold text-slate-100">{room}</span>
+                    <span className="text-xs text-slate-500">
+                      {entries.length} item{entries.length === 1 ? "" : "s"}
+                    </span>
+                  </span>
+                </div>
+                <CardContent className="flex flex-col gap-2 pt-3">
                   {entries.map((entry, i) => (
-                    <div key={i} className="flex items-start gap-2 text-sm">
+                    <div
+                      key={i}
+                      className="flex items-start gap-3 rounded-xl border border-border bg-surface2/50 p-3"
+                    >
                       <Badge variant="slate" className="shrink-0">
                         {entry.time}
                       </Badge>
                       <div>
-                        <p className="text-slate-200">{entry.label}</p>
-                        {entry.clientName && <p className="text-slate-500">{entry.clientName}</p>}
+                        <p className="text-sm text-slate-200">{entry.label}</p>
+                        {entry.clientName && <p className="text-xs text-slate-500">{entry.clientName}</p>}
                       </div>
                     </div>
                   ))}
@@ -168,6 +191,7 @@ export default async function DashboardPage() {
       <RecentHandovers
         handovers={recentHandovers.map((h) => ({
           id: h.id,
+          room: h.room,
           content: h.content,
           createdAt: h.createdAt.toISOString(),
           userName: h.user.name,
