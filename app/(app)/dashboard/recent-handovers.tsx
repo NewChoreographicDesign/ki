@@ -3,10 +3,12 @@
 import * as React from "react";
 import { ChevronDown, Clock, ArrowLeftRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/utils";
 
 export type RecentHandover = {
   id: string;
+  room: string;
   content: string;
   createdAt: string;
   userName: string;
@@ -15,8 +17,9 @@ export type RecentHandover = {
 /**
  * Replaces both the old "Actieve overdrachten" stat card and the always-open
  * 3-item preview list with a single collapsible section — closed by default
- * so the dashboard stays scannable, but opening it reveals every recent
- * handover instead of just the last 3.
+ * so the dashboard stays scannable, but opening it reveals the most recent
+ * handover from every room (one per room, not the full history — see
+ * DashboardPage) with the room visible on each entry.
  */
 export function RecentHandovers({ handovers }: { handovers: RecentHandover[] }) {
   const [open, setOpen] = React.useState(false);
@@ -49,10 +52,14 @@ export function RecentHandovers({ handovers }: { handovers: RecentHandover[] }) 
             <p className="text-slate-500">Geen actieve overdrachtnotities.</p>
           ) : (
             handovers.map((h) => (
-              <div key={h.id} className="flex flex-col gap-1 rounded-lg border border-border bg-surface2/50 p-4">
-                <div className="flex items-center gap-2 text-sm text-slate-400">
-                  <Clock className="h-4 w-4" />
-                  {formatDateTime(new Date(h.createdAt))} &middot; {h.userName}
+              <div key={h.id} className="flex flex-col gap-1.5 rounded-lg border border-border bg-surface2/50 p-4">
+                <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
+                  <Badge variant="slate">{h.room}</Badge>
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-4 w-4" />
+                    {formatDateTime(new Date(h.createdAt))}
+                  </span>
+                  <span>&middot; {h.userName}</span>
                 </div>
                 <p className="text-slate-200">{h.content}</p>
               </div>

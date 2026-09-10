@@ -5,7 +5,10 @@ import { handleApiError } from "@/lib/api";
 import { medicationCheckSchema } from "@/lib/validations";
 import { startOfToday, parseMedicationTimes } from "@/lib/utils";
 
-// Intentionally no PUT/DELETE: medication checks are an irreversible audit log.
+// Regular staff can only create a check here, never edit or remove one — the
+// only corrections allowed are an admin's status fix or reset, both gated by
+// re-entering their own birthdate (see [id]/route.ts), so a mistaken tap
+// can't quietly rewrite history without a trace.
 export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth();
