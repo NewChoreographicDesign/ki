@@ -32,7 +32,7 @@ export default async function TodosPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-50">To-Do&apos;s</h1>
+        <h1 className="text-2xl font-semibold text-slate-50">Werklijst</h1>
         <p className="mt-1 text-slate-400">
           Voor iedereen zichtbaar, gesorteerd op tijd. Taken voor een andere dag staan onder
           &quot;Alle weektaken&quot;. Terugkerende taken verschijnen automatisch weer open op de

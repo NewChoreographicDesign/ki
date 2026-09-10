@@ -35,7 +35,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Overzicht", icon: LayoutDashboard },
   { href: "/aanwezigheid", label: "Aanwezigheid", icon: UserCheck },
   { href: "/medicatie", label: "Medicatie", icon: Pill },
-  { href: "/todos", label: "To-Do's", icon: CheckSquare },
+  { href: "/todos", label: "Werklijst", icon: CheckSquare },
   { href: "/agenda", label: "Agenda", icon: Calendar },
   { href: "/overdracht", label: "Overdracht", icon: ArrowLeftRight },
   { href: "/protocollen", label: "Protocollen", icon: ShieldCheck },
