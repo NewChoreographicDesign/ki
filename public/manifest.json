@@ -1,6 +1,6 @@
 {
-  "name": "Woongroep Admin",
-  "short_name": "Woongroep",
+  "name": "110G",
+  "short_name": "110G",
   "description": "Beheeromgeving voor de woongroep",
   "start_url": "/dashboard",
   "display": "standalone",

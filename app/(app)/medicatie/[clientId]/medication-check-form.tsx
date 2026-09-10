@@ -64,7 +64,7 @@ export function MedicationCheckForm({ medicationId }: { medicationId: string }) 
           className="min-h-[70px]"
         />
       )}
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-1 gap-2 min-[480px]:flex min-[480px]:flex-wrap">
         {STATUS_OPTIONS.map(({ status, label, icon: Icon, variant }) => (
           <Button
             key={status}

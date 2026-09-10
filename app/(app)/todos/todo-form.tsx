@@ -156,7 +156,7 @@ export function TodoForm({
           type="checkbox"
           checked={recurring}
           onChange={(e) => setRecurring(e.target.checked)}
-          className="h-4 w-4 rounded border-slate-600 bg-surface2"
+          className="h-4 w-4 rounded border-slate-600 bg-surface2 accent-sky-500"
         />
         Terugkerende taak — bij afronden verschijnt hij automatisch weer open op de volgende
         gekozen dag

@@ -24,12 +24,101 @@ const config: Config = {
           600: "#059669",
         },
       },
+      backgroundImage: {
+        // The one recurring "signature" gradient for this app — primary CTAs,
+        // the active nav pill, and the boot splash mark all pull from this
+        // single definition so the accent reads as one deliberate choice
+        // rather than a different blue on every element.
+        "brand-gradient": "linear-gradient(135deg, #38bdf8 0%, #22d3ee 100%)",
+        "brand-gradient-soft": "linear-gradient(135deg, rgba(56,189,248,0.16) 0%, rgba(34,211,238,0.10) 100%)",
+        // The gradient badge mark gets its own token: the base brand gradient
+        // plus a soft highlight in the upper-left, like light catching a
+        // glossy surface — reads as a considered app icon rather than a flat
+        // color swatch.
+        "brand-gradient-sheen":
+          "radial-gradient(120% 130% at 22% 15%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 45%), linear-gradient(135deg, #38bdf8 0%, #22d3ee 100%)",
+      },
+      boxShadow: {
+        "glow-sky": "0 0 0 1px rgba(56,189,248,0.25), 0 8px 24px -6px rgba(56,189,248,0.45)",
+        "glow-emerald": "0 0 0 1px rgba(52,211,153,0.25), 0 8px 24px -6px rgba(52,211,153,0.4)",
+        lift: "0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -10px rgba(0,0,0,0.55)",
+      },
       borderRadius: {
         xl: "1rem",
         "2xl": "1.25rem",
       },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+      },
+      keyframes: {
+        // A slight overshoot (the "back out" easing below) instead of a flat
+        // ease-out is the whole difference between "content updated" and
+        // "content arrived" — it's the one animation that plays on every
+        // route change (see components/route-transition.tsx), so it carries
+        // a lot of the app's "does this feel alive" weight on its own.
+        "fade-in-up": {
+          "0%": { opacity: "0", transform: "translateY(16px) scale(0.97)" },
+          "100%": { opacity: "1", transform: "translateY(0) scale(1)" },
+        },
+        "fade-in": {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
+        "scale-in": {
+          "0%": { opacity: "0", transform: "scale(0.96)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
+        "pulse-ring": {
+          "0%": { boxShadow: "0 0 0 0 rgba(56,189,248,0.45)" },
+          "100%": { boxShadow: "0 0 0 18px rgba(56,189,248,0)" },
+        },
+        "pulse-glow": {
+          "0%, 100%": { opacity: "0.55" },
+          "50%": { opacity: "1" },
+        },
+        "pop-in": {
+          "0%": { opacity: "0", transform: "scale(0.5)" },
+          "60%": { opacity: "1", transform: "scale(1.15)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
+        // The full-page route transition (components/route-transition.tsx):
+        // two rings slide in from opposite edges and meet at the logo's own
+        // proportions, then the black curtain and the new page crossfade
+        // together — all four animations below share the same 1.2s timeline
+        // (0%/75%/100% = 0ms/900ms/1200ms) so they stay in lockstep without
+        // any JS keeping them in sync.
+        "curtain-ring-left": {
+          "0%": { transform: "translate(-50%, -50%) translateX(calc(-50vw - 10rem))" },
+          "75%": { transform: "translate(-50%, -50%) translateX(-2.25rem)" },
+          "100%": { transform: "translate(-50%, -50%) translateX(-2.25rem)" },
+        },
+        "curtain-ring-right": {
+          "0%": { transform: "translate(-50%, -50%) translateX(calc(50vw + 10rem))" },
+          "75%": { transform: "translate(-50%, -50%) translateX(2.25rem)" },
+          "100%": { transform: "translate(-50%, -50%) translateX(2.25rem)" },
+        },
+        "curtain-overlay": {
+          "0%": { opacity: "1" },
+          "75%": { opacity: "1" },
+          "100%": { opacity: "0" },
+        },
+        "curtain-content": {
+          "0%": { opacity: "0", filter: "blur(20px)", transform: "scale(1.04)" },
+          "75%": { opacity: "0", filter: "blur(20px)", transform: "scale(1.04)" },
+          "100%": { opacity: "1", filter: "blur(0px)", transform: "scale(1)" },
+        },
+      },
+      animation: {
+        "fade-in-up": "fade-in-up 0.55s cubic-bezier(0.34,1.56,0.64,1) both",
+        "fade-in": "fade-in 0.35s ease-out both",
+        "scale-in": "scale-in 0.3s cubic-bezier(0.22,1,0.36,1) both",
+        "pulse-ring": "pulse-ring 1.6s cubic-bezier(0.4,0,0.6,1) infinite",
+        "pulse-glow": "pulse-glow 3.5s ease-in-out infinite",
+        "pop-in": "pop-in 0.4s cubic-bezier(0.34,1.56,0.64,1) both",
+        "curtain-ring-left": "curtain-ring-left 1.2s cubic-bezier(0.34,1.56,0.64,1) both",
+        "curtain-ring-right": "curtain-ring-right 1.2s cubic-bezier(0.34,1.56,0.64,1) both",
+        "curtain-overlay": "curtain-overlay 1.2s cubic-bezier(0.22,1,0.36,1) both",
+        "curtain-content": "curtain-content 1.2s cubic-bezier(0.22,1,0.36,1) both",
       },
     },
   },

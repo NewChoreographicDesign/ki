@@ -98,7 +98,7 @@ export default async function ClientMedicationPage({
                         }
                         const status = STATUS_LABELS[check.status] ?? STATUS_LABELS.TAKEN;
                         return (
-                          <Badge key={time} variant={status.variant}>
+                          <Badge key={time} variant={status.variant} className="animate-scale-in">
                             {time} — {status.label} ({check.user.name})
                           </Badge>
                         );
