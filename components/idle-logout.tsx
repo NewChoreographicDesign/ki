@@ -11,15 +11,27 @@ import { toast } from "sonner";
 // control that forces a fresh login after a period of no interaction at all,
 // regardless of how much of the JWT's lifetime remains.
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
+// A single long setTimeout is unreliable for this: browsers throttle or
+// fully suspend timers in a backgrounded tab or a locked/sleeping tablet,
+// so the timeout can silently never fire while the device sits idle — and
+// the next tap would just schedule a fresh 5 minutes via resetTimer(),
+// meaning the shared device never actually logs out. Tracking a real
+// timestamp and re-checking elapsed time on a short interval, and again the
+// moment the tab regains visibility/focus, catches idle time that piled up
+// while suspended instead of losing it.
+const CHECK_INTERVAL_MS = 5_000;
 const ACTIVITY_EVENTS = ["mousedown", "keydown", "touchstart", "scroll"] as const;
 
 export function IdleLogout() {
   const router = useRouter();
 
   React.useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>;
+    let lastActivity = Date.now();
+    let loggedOut = false;
 
     async function logout() {
+      if (loggedOut) return;
+      loggedOut = true;
       try {
         await fetch("/api/auth/logout", { method: "POST" });
       } finally {
@@ -29,17 +41,26 @@ export function IdleLogout() {
       }
     }
 
-    function resetTimer() {
-      clearTimeout(timer);
-      timer = setTimeout(logout, IDLE_TIMEOUT_MS);
+    function recordActivity() {
+      lastActivity = Date.now();
     }
 
-    resetTimer();
-    ACTIVITY_EVENTS.forEach((event) => window.addEventListener(event, resetTimer));
+    function checkIdle() {
+      if (Date.now() - lastActivity >= IDLE_TIMEOUT_MS) {
+        logout();
+      }
+    }
+
+    const interval = setInterval(checkIdle, CHECK_INTERVAL_MS);
+    ACTIVITY_EVENTS.forEach((event) => window.addEventListener(event, recordActivity));
+    document.addEventListener("visibilitychange", checkIdle);
+    window.addEventListener("focus", checkIdle);
 
     return () => {
-      clearTimeout(timer);
-      ACTIVITY_EVENTS.forEach((event) => window.removeEventListener(event, resetTimer));
+      clearInterval(interval);
+      ACTIVITY_EVENTS.forEach((event) => window.removeEventListener(event, recordActivity));
+      document.removeEventListener("visibilitychange", checkIdle);
+      window.removeEventListener("focus", checkIdle);
     };
   }, [router]);
 

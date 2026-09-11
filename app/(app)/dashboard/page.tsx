@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
 // A single scheduled item for the "today per room" overview — either a
 // weekplan block or an agenda appointment, normalized to one shape so both
 // can be sorted together on a single timeline per room.
-type RoomEntry = { sortMinutes: number; time: string; label: string; clientName: string };
+type RoomEntry = { sortMinutes: number; time: string; label: string; clientName: string; comment?: string };
 
 function parseHHMM(value: string): number {
   const [h, m] = value.split(":").map(Number);
@@ -66,6 +66,7 @@ async function getTodayByRoom() {
       time,
       label: `Afspraak: ${appt.title}`,
       clientName: appt.client ? fullName(appt.client) : "",
+      comment: appt.description || undefined,
     });
   }
 
@@ -173,6 +174,7 @@ export default async function DashboardPage() {
                       <div>
                         <p className="text-sm text-slate-200">{entry.label}</p>
                         {entry.clientName && <p className="text-xs text-slate-500">{entry.clientName}</p>}
+                        {entry.comment && <p className="text-xs text-slate-500 italic">{entry.comment}</p>}
                       </div>
                     </div>
                   ))}
