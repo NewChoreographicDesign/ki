@@ -28,14 +28,44 @@ function TransitionCurtain({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const timer = setTimeout(() => setCurtainUp(false), reduceMotion ? 0 : CURTAIN_MS);
-    return () => clearTimeout(timer);
+    if (reduceMotion) {
+      setCurtainUp(false);
+      return;
+    }
+    const dismiss = () => setCurtainUp(false);
+    const timer = setTimeout(dismiss, CURTAIN_MS);
+    // The overlay below is deliberately NOT pointer-events-none (it must
+    // block taps while it's up), which means it's also deliberately
+    // dangerous: if nothing ever calls dismiss(), the whole app is stuck
+    // unresponsive forever behind an overlay that, once its own fade
+    // finishes, is invisible — looking exactly like "the app opened but
+    // nothing reacts to touch". A single setTimeout isn't safe enough to
+    // be the only way out of that: iOS Safari/WKWebView can suspend or
+    // drop pending timers while a PWA is backgrounded (app-switched away,
+    // screen locked) and never fire them on return. Backing it up with
+    // visibilitychange/pageshow/focus means the moment the page is visible
+    // and interactive again, the curtain is guaranteed gone — it can never
+    // legitimately still be mid-transition after a background/foreground
+    // cycle anyway.
+    document.addEventListener("visibilitychange", dismiss);
+    window.addEventListener("pageshow", dismiss);
+    window.addEventListener("focus", dismiss);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", dismiss);
+      window.removeEventListener("pageshow", dismiss);
+      window.removeEventListener("focus", dismiss);
+    };
   }, []);
 
   return (
     <>
       {curtainUp && (
-        <div aria-hidden="true" className="fixed inset-0 z-[200] animate-curtain-overlay bg-background">
+        <div
+          aria-hidden="true"
+          className="fixed inset-0 z-[200] animate-curtain-overlay bg-background"
+          onAnimationEnd={() => setCurtainUp(false)}
+        >
           <div className="absolute left-1/2 top-1/2 h-32 w-32 animate-curtain-ring-left rounded-full border-[14px] border-white shadow-glow-sky" />
           <div className="absolute left-1/2 top-1/2 h-32 w-32 animate-curtain-ring-right rounded-full border-[14px] border-white/75" />
         </div>
