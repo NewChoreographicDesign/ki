@@ -19,7 +19,7 @@ const STATUS_LABELS: Record<string, string> = {
  *   week's data can't leak into an archived week's PDF.
  */
 export async function getWeeklyReportData(weekStart: Date, weekEnd: Date = new Date()) {
-  const [reports, medicationChecks, todos, appointments] = await Promise.all([
+  const [reports, medicationChecks, todos, appointments, appointmentEdits] = await Promise.all([
     db.report.findMany({
       where: { createdAt: { gte: weekStart, lt: weekEnd } },
       include: { client: true, user: true },
@@ -45,9 +45,22 @@ export async function getWeeklyReportData(weekStart: Date, weekEnd: Date = new D
       include: { client: true, createdBy: true },
       orderBy: { startAt: "asc" },
     }),
+    // Any staff member can edit a planned appointment (see
+    // app/api/appointments/[id]/route.ts) - this is the changelog that
+    // makes that safe: every edit lands here with who made it and what
+    // changed, even though the edit itself needed no special permission.
+    db.auditLog.findMany({
+      where: {
+        targetType: "Appointment",
+        action: { startsWith: "appointment.edited:" },
+        createdAt: { gte: weekStart, lt: weekEnd },
+      },
+      include: { user: true },
+      orderBy: { createdAt: "asc" },
+    }),
   ]);
 
-  return { weekStart, weekEnd, reports, medicationChecks, todos, appointments };
+  return { weekStart, weekEnd, reports, medicationChecks, todos, appointments, appointmentEdits };
 }
 
 export type WeeklyReportData = Awaited<ReturnType<typeof getWeeklyReportData>>;
@@ -81,6 +94,13 @@ export function groupMedicationChecksByDay(checks: WeeklyReportData["medicationC
  * shared by the live web view, the .txt download, and the archived PDF so
  * the three surfaces never drift into describing the same task differently.
  */
+const APPOINTMENT_EDIT_PREFIX = "appointment.edited:";
+
+/** Strips the audit-log action prefix, leaving just the human-readable diff. */
+export function formatAppointmentEditDetail(action: string): string {
+  return action.startsWith(APPOINTMENT_EDIT_PREFIX) ? action.slice(APPOINTMENT_EDIT_PREFIX.length) : action;
+}
+
 export function formatTodoDueLabel(todo: { daysOfWeek: string; time: string | null }): string {
   const days = parseDaysOfWeek(todo.daysOfWeek);
   const dayLabel = days.length === 0 ? "" : days.length === 7 ? "elke dag" : days.map((d) => DAYS_OF_WEEK[d]).join(", ");
@@ -164,6 +184,17 @@ export function renderWeeklyReportText(data: WeeklyReportData): string {
       add(
         `${formatDateTime(a.startAt)} · ${a.title}${a.client ? ` · ${fullName(a.client)}` : ""} · aangemaakt door ${a.createdBy.name}`
       );
+    }
+  }
+
+  add("");
+  add(`WIJZIGINGEN AGENDA - changelog (${data.appointmentEdits.length})`);
+  add("-".repeat(60));
+  if (data.appointmentEdits.length === 0) {
+    add("Geen wijzigingen aan afspraken deze week.");
+  } else {
+    for (const e of data.appointmentEdits) {
+      add(`${formatDateTime(e.createdAt)} · door ${e.user?.name ?? "onbekend"} · ${formatAppointmentEditDetail(e.action)}`);
     }
   }
 

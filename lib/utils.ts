@@ -110,6 +110,13 @@ export function formatTime(date: Date): string {
   }).format(date);
 }
 
+/** Formats a Date as a `datetime-local` input value in Europe/Amsterdam wall-clock time. */
+export function toDatetimeLocalValue(date: Date): string {
+  const p = getZonedParts(date, AMSTERDAM_TZ);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${p.year}-${pad(p.month)}-${pad(p.day)}T${pad(p.hour)}:${pad(p.minute)}`;
+}
+
 export function isSameDay(a: Date, b: Date): boolean {
   return (
     a.getFullYear() === b.getFullYear() &&

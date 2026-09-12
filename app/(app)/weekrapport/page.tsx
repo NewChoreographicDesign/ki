@@ -1,7 +1,12 @@
 import { redirect } from "next/navigation";
 import { Download, Archive } from "lucide-react";
 import { getSession, canAccessWeeklyReport } from "@/lib/auth";
-import { getWeeklyReportData, groupMedicationChecksByDay, formatTodoDueLabel } from "@/lib/weekly-report";
+import {
+  getWeeklyReportData,
+  groupMedicationChecksByDay,
+  formatTodoDueLabel,
+  formatAppointmentEditDetail,
+} from "@/lib/weekly-report";
 import { db } from "@/lib/db";
 import { formatDate, formatDateTime, formatTime, fullName, mostRecentMondayStart } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -191,6 +196,27 @@ export default async function WeekrapportPage() {
               <p key={a.id} className="text-sm text-slate-300">
                 {formatDateTime(a.startAt)} · {a.title}
                 {a.client ? ` · ${fullName(a.client)}` : ""} · aangemaakt door {a.createdBy.name}
+              </p>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Wijzigingen agenda · changelog ({data.appointmentEdits.length})</CardTitle>
+          <CardDescription>
+            Iedereen mag een geplande afspraak corrigeren; hier staat wie wat heeft aangepast.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          {data.appointmentEdits.length === 0 ? (
+            <p className="text-slate-500">Geen wijzigingen aan afspraken deze week.</p>
+          ) : (
+            data.appointmentEdits.map((e) => (
+              <p key={e.id} className="text-sm text-slate-300">
+                {formatDateTime(e.createdAt)} · door {e.user?.name ?? "onbekend"} ·{" "}
+                {formatAppointmentEditDetail(e.action)}
               </p>
             ))
           )}

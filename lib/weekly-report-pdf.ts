@@ -1,6 +1,11 @@
 import "server-only";
 import PDFDocument from "pdfkit";
-import { groupMedicationChecksByDay, formatTodoDueLabel, type WeeklyReportData } from "@/lib/weekly-report";
+import {
+  groupMedicationChecksByDay,
+  formatTodoDueLabel,
+  formatAppointmentEditDetail,
+  type WeeklyReportData,
+} from "@/lib/weekly-report";
 import { formatDate, formatDateTime, formatTime, fullName, isoWeekOf } from "@/lib/utils";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -96,6 +101,15 @@ export function renderWeeklyReportPdf(data: WeeklyReportData): Promise<Buffer> {
           doc,
           `${formatDateTime(a.startAt)} · ${a.title}${a.client ? ` · ${fullName(a.client)}` : ""} · aangemaakt door ${a.createdBy.name}`
         );
+      }
+    }
+
+    section(doc, `Wijzigingen agenda - changelog (${data.appointmentEdits.length})`);
+    if (data.appointmentEdits.length === 0) {
+      item(doc, "Geen wijzigingen aan afspraken deze week.");
+    } else {
+      for (const e of data.appointmentEdits) {
+        item(doc, `${formatDateTime(e.createdAt)} · door ${e.user?.name ?? "onbekend"} · ${formatAppointmentEditDetail(e.action)}`);
       }
     }
 

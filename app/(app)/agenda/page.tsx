@@ -1,8 +1,8 @@
-import { CalendarDays } from "lucide-react";
 import { db } from "@/lib/db";
-import { fullName, formatDateTime } from "@/lib/utils";
+import { fullName, formatDateTime, toDatetimeLocalValue } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AppointmentForm } from "./appointment-form";
+import { AppointmentList } from "./appointment-list";
 
 export const dynamic = "force-dynamic";
 
@@ -40,23 +40,18 @@ export default async function AgendaPage() {
         {appointments.length === 0 ? (
           <p className="text-slate-500">Geen aankomende afspraken.</p>
         ) : (
-          <div className="flex flex-col gap-3">
-            {appointments.map((a) => (
-              <Card key={a.id}>
-                <CardContent className="flex items-start gap-4 p-5">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-500/15 text-sky-400">
-                    <CalendarDays className="h-5 w-5" />
-                  </div>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-medium text-slate-100">{a.title}</span>
-                    <span className="text-sm text-slate-400">{formatDateTime(a.startAt)}</span>
-                    {a.client && <span className="text-sm text-slate-400">{fullName(a.client)}</span>}
-                    {a.description && <span className="text-sm text-slate-500">{a.description}</span>}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <AppointmentList
+            clients={clientOptions}
+            appointments={appointments.map((a) => ({
+              id: a.id,
+              title: a.title,
+              description: a.description,
+              clientId: a.clientId,
+              clientName: a.client ? fullName(a.client) : null,
+              startAtDisplay: formatDateTime(a.startAt),
+              startAtLocal: toDatetimeLocalValue(a.startAt),
+            }))}
+          />
         )}
       </div>
     </div>

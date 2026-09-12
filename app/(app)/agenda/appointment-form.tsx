@@ -9,20 +9,38 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-export function AppointmentForm({ clients }: { clients: { id: string; name: string }[] }) {
+export function AppointmentForm({
+  clients,
+  appointment,
+  onSaved,
+  onCancel,
+}: {
+  clients: { id: string; name: string }[];
+  /** Present only when editing an existing appointment; absent means "create new". */
+  appointment?: {
+    id: string;
+    title: string;
+    description: string | null;
+    clientId: string | null;
+    startAtLocal: string;
+  };
+  onSaved?: () => void;
+  onCancel?: () => void;
+}) {
+  const isEditing = !!appointment;
   const router = useRouter();
-  const [title, setTitle] = React.useState("");
-  const [description, setDescription] = React.useState("");
-  const [clientId, setClientId] = React.useState("");
-  const [startAt, setStartAt] = React.useState("");
+  const [title, setTitle] = React.useState(appointment?.title ?? "");
+  const [description, setDescription] = React.useState(appointment?.description ?? "");
+  const [clientId, setClientId] = React.useState(appointment?.clientId ?? "");
+  const [startAt, setStartAt] = React.useState(appointment?.startAtLocal ?? "");
   const [loading, setLoading] = React.useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch("/api/appointments", {
-        method: "POST",
+      const res = await fetch(isEditing ? `/api/appointments/${appointment.id}` : "/api/appointments", {
+        method: isEditing ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, description, clientId, startAt }),
       });
@@ -31,11 +49,14 @@ export function AppointmentForm({ clients }: { clients: { id: string; name: stri
         toast.error(data.error || "Opslaan mislukt");
         return;
       }
-      toast.success("Afspraak toegevoegd");
-      setTitle("");
-      setDescription("");
-      setStartAt("");
+      toast.success(isEditing ? "Afspraak bijgewerkt" : "Afspraak toegevoegd");
+      if (!isEditing) {
+        setTitle("");
+        setDescription("");
+        setStartAt("");
+      }
       router.refresh();
+      onSaved?.();
     } catch {
       toast.error("Er is iets misgegaan");
     } finally {
@@ -76,9 +97,16 @@ export function AppointmentForm({ clients }: { clients: { id: string; name: stri
         <Label htmlFor="description">Omschrijving (optioneel)</Label>
         <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} />
       </div>
-      <Button type="submit" size="lg" loading={loading} disabled={!title || !startAt} className="self-start">
-        Afspraak toevoegen
-      </Button>
+      <div className="flex gap-2">
+        <Button type="submit" size="lg" loading={loading} disabled={!title || !startAt} className="self-start">
+          {isEditing ? "Wijzigingen opslaan" : "Afspraak toevoegen"}
+        </Button>
+        {isEditing && (
+          <Button type="button" variant="ghost" size="lg" onClick={onCancel}>
+            Annuleren
+          </Button>
+        )}
+      </div>
     </form>
   );
 }
