@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { handleApiError } from "@/lib/api";
 import { appointmentSchema } from "@/lib/validations";
+import { parseDatetimeLocalAsAmsterdam } from "@/lib/utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,8 +11,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const data = appointmentSchema.parse(body);
 
-    const startAt = new Date(data.startAt);
-    if (Number.isNaN(startAt.getTime())) {
+    const startAt = parseDatetimeLocalAsAmsterdam(data.startAt);
+    if (!startAt) {
       return NextResponse.json({ error: "Ongeldige datum/tijd" }, { status: 400 });
     }
 

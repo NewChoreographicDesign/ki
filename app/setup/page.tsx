@@ -13,12 +13,11 @@ export default async function SetupPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-brand-grid" />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[28rem] w-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-gradient opacity-[0.1] blur-3xl"
-      />
+    <main className="relative flex min-h-dvh items-center justify-center bg-background p-4">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 bg-brand-grid" />
+        <div className="absolute left-1/2 top-1/2 h-[28rem] w-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-gradient opacity-[0.1] blur-3xl" />
+      </div>
       <div className="relative flex w-full max-w-md flex-col items-center gap-8">
         <LogoMark size="lg" className="animate-scale-in" />
         <Card className="w-full animate-fade-in-up" style={{ animationDelay: "120ms" }}>

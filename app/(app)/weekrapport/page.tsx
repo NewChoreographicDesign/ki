@@ -35,7 +35,6 @@ export default async function WeekrapportPage() {
     }),
   ]);
   const missedByDay = computeMissedTodosByDay(data.todos, data.weekStart, data.weekEnd);
-  const todosDone = data.todos.filter((t) => t.completed);
 
   return (
     <div className="flex flex-col gap-6">
@@ -155,40 +154,26 @@ export default async function WeekrapportPage() {
         <CardContent className="flex flex-col gap-4">
           {data.todos.length === 0 ? (
             <p className="text-slate-500">Geen taken aangemaakt of afgerond deze week.</p>
-          ) : (
-            <>
-              {missedByDay.length > 0 ? (
-                <div className="flex flex-col gap-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Niet gedaan, per dag</p>
-                  {missedByDay.map((day) => (
-                    <div key={day.dateLabel}>
-                      <p className="text-sm font-medium text-slate-200">
-                        {day.dayLabel} <span className="font-normal text-slate-500">{day.dateLabel}</span>
+          ) : missedByDay.length > 0 ? (
+            <div className="flex flex-col gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Niet gedaan, per dag</p>
+              {missedByDay.map((day) => (
+                <div key={day.dateLabel}>
+                  <p className="text-sm font-medium text-slate-200">
+                    {day.dayLabel} <span className="font-normal text-slate-500">{day.dateLabel}</span>
+                  </p>
+                  <div className="mt-1 flex flex-col gap-0.5">
+                    {day.titles.map((title, i) => (
+                      <p key={i} className="text-sm text-slate-300">
+                        {title}
                       </p>
-                      <div className="mt-1 flex flex-col gap-0.5">
-                        {day.titles.map((title, i) => (
-                          <p key={i} className="text-sm text-slate-300">
-                            {title}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              ) : (
-                <p className="text-sm text-emerald-400">Alle taken zijn op tijd afgerond.</p>
-              )}
-              {todosDone.length > 0 && (
-                <div className="flex flex-col gap-1.5">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Afgerond</p>
-                  {todosDone.map((t) => (
-                    <p key={t.id} className="text-sm text-slate-300">
-                      {t.title} <span className="text-slate-500">· door {t.completedBy?.name ?? "?"}</span>
-                    </p>
-                  ))}
-                </div>
-              )}
-            </>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-emerald-400">Alle taken zijn op tijd afgerond.</p>
           )}
         </CardContent>
       </Card>

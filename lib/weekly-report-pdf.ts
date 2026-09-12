@@ -75,19 +75,12 @@ export function renderWeeklyReportPdf(data: WeeklyReportData): Promise<Buffer> {
       item(doc, "Geen taken aangemaakt of afgerond deze week.");
     } else {
       const missedByDay = computeMissedTodosByDay(data.todos, data.weekStart, data.weekEnd);
-      const done = data.todos.filter((t) => t.completed);
       if (missedByDay.length === 0) {
         item(doc, "Alle taken zijn op tijd afgerond.");
       } else {
         subsection(doc, "Niet gedaan, per dag");
         for (const day of missedByDay) {
           item(doc, `${day.dayLabel} ${day.dateLabel}`, day.titles.join(", "));
-        }
-      }
-      if (done.length > 0) {
-        subsection(doc, "Afgerond");
-        for (const t of done) {
-          item(doc, `${t.title} · door ${t.completedBy?.name ?? "?"}`);
         }
       }
     }

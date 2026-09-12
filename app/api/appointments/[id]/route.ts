@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { handleApiError } from "@/lib/api";
 import { appointmentSchema } from "@/lib/validations";
-import { formatDateTime, fullName } from "@/lib/utils";
+import { formatDateTime, fullName, parseDatetimeLocalAsAmsterdam } from "@/lib/utils";
 import { logAudit } from "@/lib/audit";
 
 // Any authenticated staff member can correct a planned appointment (wrong
@@ -41,8 +41,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const body = await request.json();
     const data = appointmentSchema.parse(body);
 
-    const startAt = new Date(data.startAt);
-    if (Number.isNaN(startAt.getTime())) {
+    const startAt = parseDatetimeLocalAsAmsterdam(data.startAt);
+    if (!startAt) {
       return NextResponse.json({ error: "Ongeldige datum/tijd" }, { status: 400 });
     }
 

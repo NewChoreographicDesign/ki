@@ -203,7 +203,6 @@ export function renderWeeklyReportText(data: WeeklyReportData): string {
     add("Geen taken aangemaakt of afgerond deze week.");
   } else {
     const missedByDay = computeMissedTodosByDay(data.todos, data.weekStart, data.weekEnd);
-    const done = data.todos.filter((t) => t.completed);
     if (missedByDay.length === 0) {
       add("Alle taken zijn op tijd afgerond.");
     } else {
@@ -213,13 +212,6 @@ export function renderWeeklyReportText(data: WeeklyReportData): string {
         for (const title of day.titles) {
           add(`    ${title}`);
         }
-      }
-    }
-    if (done.length > 0) {
-      add("");
-      add("Afgerond:");
-      for (const t of done) {
-        add(`  ${t.title} · door ${t.completedBy?.name ?? "?"}`);
       }
     }
   }

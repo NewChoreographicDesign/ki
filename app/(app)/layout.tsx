@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession, canAccessBackend, canAccessWeeklyReport } from "@/lib/auth";
 import { AppNav } from "@/components/app-nav";
 import { IdleLogout } from "@/components/idle-logout";
-import { MedicationReminderWatcher } from "@/components/medication-reminder-watcher";
+import { ReminderWatcher } from "@/components/reminder-watcher";
 import { RouteTransition } from "@/components/route-transition";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -12,7 +12,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       <IdleLogout />
-      <MedicationReminderWatcher />
+      <ReminderWatcher />
       <AppNav
         userName={session.name}
         canAccessBackend={canAccessBackend(session.role)}

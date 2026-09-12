@@ -117,6 +117,23 @@ export function toDatetimeLocalValue(date: Date): string {
   return `${p.year}-${pad(p.month)}-${pad(p.day)}T${pad(p.hour)}:${pad(p.minute)}`;
 }
 
+// The inverse of toDatetimeLocalValue(): a bare "YYYY-MM-DDTHH:mm" string
+// (what a <input type="datetime-local"> sends) has no timezone of its own,
+// so `new Date(value)` parses it against the SERVER's local timezone - UTC
+// on Vercel - not the Europe/Amsterdam time the picker actually showed. That
+// silently stores every appointment 1-2 hours off from what staff typed.
+// Returns null when malformed.
+export function parseDatetimeLocalAsAmsterdam(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value.trim());
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  return amsterdamDate(year, month, day, hour, minute);
+}
+
 export function isSameDay(a: Date, b: Date): boolean {
   return (
     a.getFullYear() === b.getFullYear() &&
