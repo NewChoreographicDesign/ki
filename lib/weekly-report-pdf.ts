@@ -2,8 +2,8 @@ import "server-only";
 import PDFDocument from "pdfkit";
 import {
   groupMedicationChecksByDay,
-  formatTodoDueLabel,
-  formatAppointmentEditDetail,
+  computeMissedTodosByDay,
+  formatChangeLogDetail,
   type WeeklyReportData,
 } from "@/lib/weekly-report";
 import { formatDate, formatDateTime, formatTime, fullName, isoWeekOf } from "@/lib/utils";
@@ -74,14 +74,14 @@ export function renderWeeklyReportPdf(data: WeeklyReportData): Promise<Buffer> {
     if (data.todos.length === 0) {
       item(doc, "Geen taken aangemaakt of afgerond deze week.");
     } else {
-      const notDone = data.todos.filter((t) => !t.completed);
+      const missedByDay = computeMissedTodosByDay(data.todos, data.weekStart, data.weekEnd);
       const done = data.todos.filter((t) => t.completed);
-      if (notDone.length === 0) {
-        item(doc, "Alle taken zijn afgerond.");
+      if (missedByDay.length === 0) {
+        item(doc, "Alle taken zijn op tijd afgerond.");
       } else {
-        subsection(doc, "Nog niet gedaan");
-        for (const t of notDone) {
-          item(doc, `${t.title} · moest klaar zijn: ${formatTodoDueLabel(t)}`);
+        subsection(doc, "Niet gedaan, per dag");
+        for (const day of missedByDay) {
+          item(doc, `${day.dayLabel} ${day.dateLabel}`, day.titles.join(", "));
         }
       }
       if (done.length > 0) {
@@ -104,12 +104,12 @@ export function renderWeeklyReportPdf(data: WeeklyReportData): Promise<Buffer> {
       }
     }
 
-    section(doc, `Wijzigingen agenda - changelog (${data.appointmentEdits.length})`);
-    if (data.appointmentEdits.length === 0) {
-      item(doc, "Geen wijzigingen aan afspraken deze week.");
+    section(doc, `Wijzigingen - changelog (${data.changeLog.length})`);
+    if (data.changeLog.length === 0) {
+      item(doc, "Geen wijzigingen aan afspraken of medicatieregistraties deze week.");
     } else {
-      for (const e of data.appointmentEdits) {
-        item(doc, `${formatDateTime(e.createdAt)} · door ${e.user?.name ?? "onbekend"} · ${formatAppointmentEditDetail(e.action)}`);
+      for (const e of data.changeLog) {
+        item(doc, `${formatDateTime(e.createdAt)} · door ${e.user?.name ?? "onbekend"} · ${formatChangeLogDetail(e.action)}`);
       }
     }
 

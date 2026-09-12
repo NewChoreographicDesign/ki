@@ -4,8 +4,8 @@ import { getSession, canAccessWeeklyReport } from "@/lib/auth";
 import {
   getWeeklyReportData,
   groupMedicationChecksByDay,
-  formatTodoDueLabel,
-  formatAppointmentEditDetail,
+  computeMissedTodosByDay,
+  formatChangeLogDetail,
 } from "@/lib/weekly-report";
 import { db } from "@/lib/db";
 import { formatDate, formatDateTime, formatTime, fullName, mostRecentMondayStart } from "@/lib/utils";
@@ -34,7 +34,7 @@ export default async function WeekrapportPage() {
       select: { id: true, isoYear: true, isoWeek: true, weekStart: true, createdAt: true },
     }),
   ]);
-  const todosNotDone = data.todos.filter((t) => !t.completed);
+  const missedByDay = computeMissedTodosByDay(data.todos, data.weekStart, data.weekEnd);
   const todosDone = data.todos.filter((t) => t.completed);
 
   return (
@@ -157,17 +157,26 @@ export default async function WeekrapportPage() {
             <p className="text-slate-500">Geen taken aangemaakt of afgerond deze week.</p>
           ) : (
             <>
-              {todosNotDone.length > 0 ? (
-                <div className="flex flex-col gap-1.5">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Nog niet gedaan</p>
-                  {todosNotDone.map((t) => (
-                    <p key={t.id} className="text-sm text-slate-300">
-                      {t.title} <span className="text-slate-500">· moest klaar zijn: {formatTodoDueLabel(t)}</span>
-                    </p>
+              {missedByDay.length > 0 ? (
+                <div className="flex flex-col gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Niet gedaan, per dag</p>
+                  {missedByDay.map((day) => (
+                    <div key={day.dateLabel}>
+                      <p className="text-sm font-medium text-slate-200">
+                        {day.dayLabel} <span className="font-normal text-slate-500">{day.dateLabel}</span>
+                      </p>
+                      <div className="mt-1 flex flex-col gap-0.5">
+                        {day.titles.map((title, i) => (
+                          <p key={i} className="text-sm text-slate-300">
+                            {title}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-emerald-400">Alle taken zijn afgerond.</p>
+                <p className="text-sm text-emerald-400">Alle taken zijn op tijd afgerond.</p>
               )}
               {todosDone.length > 0 && (
                 <div className="flex flex-col gap-1.5">
@@ -204,19 +213,20 @@ export default async function WeekrapportPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Wijzigingen agenda · changelog ({data.appointmentEdits.length})</CardTitle>
+          <CardTitle className="text-base">Wijzigingen · changelog ({data.changeLog.length})</CardTitle>
           <CardDescription>
-            Iedereen mag een geplande afspraak corrigeren; hier staat wie wat heeft aangepast.
+            Correcties die geen speciale rechten vereisen: iedereen mag een geplande afspraak
+            aanpassen, een beheerder mag een medicatiestatus corrigeren of een registratie
+            resetten. Hier staat wie wat heeft aangepast.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
-          {data.appointmentEdits.length === 0 ? (
-            <p className="text-slate-500">Geen wijzigingen aan afspraken deze week.</p>
+          {data.changeLog.length === 0 ? (
+            <p className="text-slate-500">Geen wijzigingen aan afspraken of medicatieregistraties deze week.</p>
           ) : (
-            data.appointmentEdits.map((e) => (
+            data.changeLog.map((e) => (
               <p key={e.id} className="text-sm text-slate-300">
-                {formatDateTime(e.createdAt)} · door {e.user?.name ?? "onbekend"} ·{" "}
-                {formatAppointmentEditDetail(e.action)}
+                {formatDateTime(e.createdAt)} · door {e.user?.name ?? "onbekend"} · {formatChangeLogDetail(e.action)}
               </p>
             ))
           )}
