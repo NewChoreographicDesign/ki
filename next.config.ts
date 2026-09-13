@@ -20,10 +20,27 @@ const securityHeaders = [
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
 ];
 
+// pdfkit resolves its built-in fonts (Helvetica etc.) through a package.json
+// "imports" subpath (#standard-fonts/*) rather than a plain relative
+// require() — Next's build-time file tracer can't follow that dynamically
+// constructed specifier, so it silently drops node_modules/pdfkit/js/
+// standard-fonts/** from the deployed serverless function, and every call
+// to renderWeeklyReportPdf() throws "Cannot find module '#standard-fonts/
+// Helvetica'" in production despite building and working locally (`next
+// build` doesn't execute route code, only `next dev`/local `node` does,
+// which is why this passed local verification every time). Affects any
+// route that can reach lib/weekly-report-pdf.ts.
+const PDFKIT_TRACING_INCLUDES = ["./node_modules/pdfkit/js/standard-fonts/**"];
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   eslint: {
     ignoreDuringBuilds: false,
+  },
+  outputFileTracingIncludes: {
+    "/weekrapport": PDFKIT_TRACING_INCLUDES,
+    "/api/weekrapport/archive/[id]": PDFKIT_TRACING_INCLUDES,
+    "/api/cron/weekly-report": PDFKIT_TRACING_INCLUDES,
   },
   async headers() {
     return [
