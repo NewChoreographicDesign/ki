@@ -7,6 +7,7 @@ import {
   formatChangeLogDetail,
 } from "@/lib/weekly-report";
 import { db } from "@/lib/db";
+import { backfillMissingWeeklyReports } from "@/lib/weekly-report-archive";
 import { formatDate, formatDateTime, formatTime, fullName, mostRecentMondayStart } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { WeekrapportDownloads } from "./section-picker";
@@ -26,13 +27,21 @@ export default async function WeekrapportPage() {
   }
 
   const weekStart = mostRecentMondayStart();
+  const archiveSelect = { id: true, isoYear: true, isoWeek: true, weekStart: true, createdAt: true } as const;
   const [data, archive] = await Promise.all([
     getWeeklyReportData(weekStart),
-    db.weeklyReportPdf.findMany({
-      orderBy: { weekStart: "desc" },
-      select: { id: true, isoYear: true, isoWeek: true, weekStart: true, createdAt: true },
-    }),
+    db.weeklyReportPdf.findMany({ orderBy: { weekStart: "desc" }, select: archiveSelect }),
   ]);
+
+  // The Monday cron (app/api/cron/weekly-report/route.ts) can miss a week
+  // (a misconfigured secret, a skipped trigger) with no retry of its own —
+  // this fills any gap in on the next page load instead of leaving that
+  // week's archive gone for good. See lib/weekly-report-archive.ts.
+  const created = await backfillMissingWeeklyReports(archive);
+  const finalArchive = created > 0
+    ? await db.weeklyReportPdf.findMany({ orderBy: { weekStart: "desc" }, select: archiveSelect })
+    : archive;
+
   const missedByDay = computeMissedTodosByDay(data.todos, data.weekStart, data.weekEnd);
 
   return (
@@ -45,7 +54,7 @@ export default async function WeekrapportPage() {
       </div>
 
       <WeekrapportDownloads
-        archive={archive.map((a) => ({
+        archive={finalArchive.map((a) => ({
           id: a.id,
           isoYear: a.isoYear,
           isoWeek: a.isoWeek,
