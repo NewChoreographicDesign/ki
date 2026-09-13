@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
 import { Role, ShiftType } from "@prisma/client";
@@ -89,8 +90,16 @@ export async function clearSessionCookie() {
  * the database. The JWT is valid for 12 hours, but a deactivation or role
  * change (e.g. an admin revoking a departing employee, or demoting someone)
  * must take effect immediately — not whenever that token happens to expire.
+ *
+ * Wrapped in React's cache() because most pages call this a second time on
+ * top of the layout that already called it (app/(app)/layout.tsx, plus
+ * app/(app)/backend/layout.tsx for anything under /backend) — without this,
+ * every one of those page loads was making the same db.user.findUnique()
+ * round trip two or three times over. cache() only dedupes within a single
+ * request's render, so a role/active change still takes effect on the very
+ * next request — this doesn't change that.
  */
-export async function getSession(): Promise<SessionPayload | null> {
+export const getSession = cache(async (): Promise<SessionPayload | null> => {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
   if (!token) return null;
@@ -105,7 +114,7 @@ export async function getSession(): Promise<SessionPayload | null> {
   if (!user || !user.active) return null;
 
   return { sub: claims.sub, name: user.name, role: user.role };
-}
+});
 
 export class AuthError extends Error {
   status: number;
