@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Clock, Pencil, Trash2, Flag, Minus } from "lucide-react";
+import { CheckCircle2, Clock, Pencil, Trash2, Flag, Minus, DoorOpen } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDateTime, PRIORITY_LABELS } from "@/lib/utils";
 import { serializeTodo, type TodoData } from "./todo-types";
@@ -122,6 +123,12 @@ export function TodoItem({
               {todo.title}
             </span>
             <PriorityIcon priority={todo.priority} />
+            {todo.assignedToId && (
+              <Badge variant="slate" className="flex items-center gap-1">
+                <DoorOpen className="h-3 w-3" />
+                {todo.room || "Algemeen"}
+              </Badge>
+            )}
           </div>
           <div className="flex gap-2">
             {!todo.completed && !showComment && (

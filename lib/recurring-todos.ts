@@ -38,6 +38,8 @@ export async function regenerateRecurringTodos(): Promise<{ regenerated: number 
           time: todo.time,
           recurring: true,
           createdById: todo.createdById,
+          assignedToId: todo.assignedToId,
+          room: todo.room,
         },
       }),
       db.todo.update({ where: { id: todo.id }, data: { regenerated: true } }),

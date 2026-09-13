@@ -157,7 +157,7 @@ export function TodoBoard({
 }
 
 /** Tasks with a scheduled time sort earliest-first; untimed tasks follow, by priority. */
-function sortByTime(a: TodoData, b: TodoData): number {
+export function sortByTime(a: TodoData, b: TodoData): number {
   if (a.time && b.time) return a.time.localeCompare(b.time);
   if (a.time && !b.time) return -1;
   if (!a.time && b.time) return 1;

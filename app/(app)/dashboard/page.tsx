@@ -15,6 +15,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { startOfToday, todayDayOfWeek, formatTime, fullName, cn } from "@/lib/utils";
 import { RecentHandovers } from "./recent-handovers";
+import { MyTasks } from "./my-tasks";
+import { serializeTodo } from "../todos/todo-types";
 
 export const dynamic = "force-dynamic";
 
@@ -113,13 +115,29 @@ const QUICK_ACTIONS = [
 
 export default async function DashboardPage() {
   const session = await getSession();
-  const [stats, roomsToday, rawHandovers] = await Promise.all([
+  const [stats, roomsToday, rawHandovers, myOpenTodos, myCompletedTodos] = await Promise.all([
     getStats(),
     getTodayByRoom(),
     db.handover.findMany({
       include: { user: true, client: true },
       orderBy: { createdAt: "desc" },
       take: 50,
+    }),
+    // AppLayout already redirects to /login when there's no session, so this
+    // page only ever renders authenticated — the "__none__" fallback just
+    // keeps both branches of this query the same Prisma call shape (rather
+    // than a ternary between a real query and Promise.resolve([])) and
+    // resolves to an empty list in the type-only case where session is null.
+    db.todo.findMany({
+      where: { assignedToId: session?.sub ?? "__none__", completed: false },
+      include: { createdBy: true, completedBy: true, assignedTo: true },
+      orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
+    }),
+    db.todo.findMany({
+      where: { assignedToId: session?.sub ?? "__none__", completed: true },
+      include: { createdBy: true, completedBy: true, assignedTo: true },
+      orderBy: { completedAt: "desc" },
+      take: 5,
     }),
   ]);
 
@@ -189,6 +207,14 @@ export default async function DashboardPage() {
         <StatCard icon={UserCheck} label="Nu aanwezig" value={stats.presentNow} delay={0} />
         <StatCard icon={Calendar} label="Afspraken (7 dagen)" value={stats.upcomingAppointments} delay={40} />
       </div>
+
+      {session && (
+        <MyTasks
+          userId={session.sub}
+          initialOpen={myOpenTodos.map(serializeTodo)}
+          initialCompleted={myCompletedTodos.map(serializeTodo)}
+        />
+      )}
 
       <RecentHandovers
         handovers={recentHandovers.map((h) => ({

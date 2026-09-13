@@ -19,6 +19,11 @@ export type TodoData = {
   completionNote: string | null;
   createdByName: string;
   createdAt: string;
+  /** Null = shared team task on the Werklijst; set = personal task for that medewerker. */
+  assignedToId: string | null;
+  assignedToName: string | null;
+  /** Null/empty = "Algemeen". Only meaningful for personal tasks. */
+  room: string | null;
 };
 
 type RawTodo = {
@@ -35,6 +40,9 @@ type RawTodo = {
   completionNote: string | null;
   createdBy: { name: string };
   createdAt: Date | string;
+  assignedToId?: string | null;
+  assignedTo?: { name: string } | null;
+  room?: string | null;
 };
 
 /** Shared by the server page (initial load) and the client board (optimistic updates from
@@ -54,5 +62,8 @@ export function serializeTodo(todo: RawTodo): TodoData {
     completionNote: todo.completionNote,
     createdByName: todo.createdBy.name,
     createdAt: new Date(todo.createdAt).toISOString(),
+    assignedToId: todo.assignedToId ?? null,
+    assignedToName: todo.assignedTo?.name ?? null,
+    room: todo.room ?? null,
   };
 }

@@ -46,6 +46,7 @@ model User {
   handovers        Handover[]
   todosCreated     Todo[]             @relation("TodoCreatedBy")
   todosCompleted   Todo[]             @relation("TodoCompletedBy")
+  todosAssigned    Todo[]             @relation("TodoAssignedTo")
   appointments     Appointment[]
   shifts           Shift[]
   weekPlans        WeekPlan[]
@@ -224,11 +225,22 @@ model Todo {
   completionNote  String?
   createdById     String
   createdBy       User      @relation("TodoCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  // Personal to-do's: set when this task is assigned to one specific
+  // medewerker (by themselves, or by an admin/coordinator via Backend)
+  // rather than shared on the team-wide Werklijst. Null = shared task,
+  // unchanged from all existing behavior. See app/(app)/todos/page.tsx,
+  // which filters this to null for the shared list.
+  assignedToId    String?
+  assignedTo      User?     @relation("TodoAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  // Optional room tag for a personal to-do — null/empty means "Algemeen",
+  // same free-text convention as Client.room.
+  room            String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   @@index([completed, priority])
   @@index([recurring, completed, regenerated])
+  @@index([assignedToId, completed])
 }
 
 model Presence {

@@ -109,6 +109,11 @@ export const todoSchema = z
     daysOfWeek: z.array(z.number().int().min(0).max(6)).max(7).optional(),
     time: z.string().regex(timeOfDay, "Gebruik het formaat UU:MM").optional().or(z.literal("")),
     recurring: z.boolean().optional(),
+    // Personal to-do (see app/api/todos/route.ts for who may set this to
+    // someone other than themselves) — omitted/empty keeps today's behavior
+    // of a shared team task on the Werklijst.
+    assignedToId: z.string().optional().or(z.literal("")),
+    room: z.string().trim().max(100).optional().or(z.literal("")),
   })
   .refine((data) => !data.recurring || (data.daysOfWeek && data.daysOfWeek.length > 0), {
     message: "Kies minstens één dag voor een terugkerende taak",

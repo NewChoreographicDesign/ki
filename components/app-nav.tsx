@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Settings,
   Download,
+  ListTodo,
   Menu,
   X,
   LogOut,
@@ -29,6 +30,7 @@ type NavItem = {
   icon: React.ComponentType<{ className?: string }>;
   backendOnly?: boolean;
   weeklyReportOnly?: boolean;
+  personalTodoAssignmentOnly?: boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
@@ -41,6 +43,12 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/protocollen", label: "Protocollen", icon: ShieldCheck },
   { href: "/rapportage", label: "Rapportage", icon: FileText },
   { href: "/weekrapport", label: "Weekrapport", icon: Download, weeklyReportOnly: true },
+  {
+    href: "/persoonlijke-taken",
+    label: "Taken toewijzen",
+    icon: ListTodo,
+    personalTodoAssignmentOnly: true,
+  },
   { href: "/backend", label: "Backend", icon: Settings, backendOnly: true },
 ];
 
@@ -68,10 +76,12 @@ export function AppNav({
   userName,
   canAccessBackend,
   canAccessWeeklyReport,
+  canAccessPersonalTodoAssignment,
 }: {
   userName: string;
   canAccessBackend: boolean;
   canAccessWeeklyReport: boolean;
+  canAccessPersonalTodoAssignment: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -80,7 +90,9 @@ export function AppNav({
 
   const items = NAV_ITEMS.filter(
     (item) =>
-      (!item.backendOnly || canAccessBackend) && (!item.weeklyReportOnly || canAccessWeeklyReport)
+      (!item.backendOnly || canAccessBackend) &&
+      (!item.weeklyReportOnly || canAccessWeeklyReport) &&
+      (!item.personalTodoAssignmentOnly || canAccessPersonalTodoAssignment)
   );
 
   function openMenu() {

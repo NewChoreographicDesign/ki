@@ -3,14 +3,15 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { IDLE_TIMEOUT_MS } from "@/lib/session-policy";
 
 // Shared iPads/devices in a care setting are the real exposure risk here:
 // someone walks away from an unlocked session and the next person to touch
-// the screen sees client health data. The JWT session itself stays valid
-// for a full shift (12h, see lib/auth.ts) — this is a separate, client-side
-// control that forces a fresh login after a period of no interaction at all,
-// regardless of how much of the JWT's lifetime remains.
-const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
+// the screen sees client health data. This is the in-tab UX half of idle
+// logout: an immediate toast + redirect while the app is open. middleware.ts
+// enforces the same timeout server-side (via a lastActivity JWT claim) so
+// closing the app entirely — not just backgrounding it — still logs out on
+// the next request once idle, even though no JS here ran to catch it.
 // A single long setTimeout is unreliable for this: browsers throttle or
 // fully suspend timers in a backgrounded tab or a locked/sleeping tablet,
 // so the timeout can silently never fire while the device sits idle — and

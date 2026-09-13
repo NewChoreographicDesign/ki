@@ -15,14 +15,17 @@ export default async function TodosPage() {
   // can't correctly time a task that recurs on an arbitrary set of days.
   await regenerateRecurringTodos();
 
+  // assignedToId: null keeps this to the shared, everyone-sees-it Werklijst —
+  // personal to-do's (assigned to one specific medewerker) live on the
+  // Dashboard's "Mijn taken" widget and the Backend assignment screen instead.
   const [open, completed] = await Promise.all([
     db.todo.findMany({
-      where: { completed: false },
+      where: { completed: false, assignedToId: null },
       include: { createdBy: true, completedBy: true },
       orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
     }),
     db.todo.findMany({
-      where: { completed: true },
+      where: { completed: true, assignedToId: null },
       include: { createdBy: true, completedBy: true },
       orderBy: { completedAt: "desc" },
       take: 10,

@@ -15,12 +15,24 @@ export function TodoForm({
   initial,
   onSaved,
   onCancel,
+  showRoom = false,
+  fixedAssignedToId,
 }: {
   /** Present when editing an existing task — PATCHes instead of creating. */
   todoId?: string;
   initial?: TodoData;
   onSaved: (todo: TodoData) => void;
   onCancel?: () => void;
+  /** Shows a "Kamer" field — only meaningful for personal to-do's. */
+  showRoom?: boolean;
+  /**
+   * Makes a NEW task personal to this user id (self, or the medewerker an
+   * admin/coordinator is managing in Backend) — a plain data field, not a
+   * picker, since who a task is FOR is decided by which screen/widget this
+   * form is rendered in, not by typing an id into the form itself. Ignored
+   * when editing (todoId set): the existing assignment is preserved as-is.
+   */
+  fixedAssignedToId?: string;
 }) {
   const [title, setTitle] = React.useState(initial?.title ?? "");
   const [description, setDescription] = React.useState(initial?.description ?? "");
@@ -30,6 +42,7 @@ export function TodoForm({
   const [days, setDays] = React.useState<number[]>(initial?.daysOfWeek ?? []);
   const [time, setTime] = React.useState(initial?.time ?? "");
   const [recurring, setRecurring] = React.useState(initial?.recurring ?? false);
+  const [room, setRoom] = React.useState(initial?.room ?? "");
   const [loading, setLoading] = React.useState(false);
 
   const needsDay = recurring && days.length === 0;
@@ -61,6 +74,10 @@ export function TodoForm({
           daysOfWeek: days,
           time: time || undefined,
           recurring,
+          room: showRoom ? room : undefined,
+          // Editing keeps the task's existing assignee; only a brand-new
+          // task picks up fixedAssignedToId.
+          assignedToId: todoId ? undefined : fixedAssignedToId,
         }),
       });
       const data = await res.json();
@@ -77,6 +94,7 @@ export function TodoForm({
         setDays([]);
         setTime("");
         setRecurring(false);
+        setRoom("");
       }
     } catch {
       toast.error("Er is iets misgegaan");
@@ -110,6 +128,18 @@ export function TodoForm({
         <Label htmlFor="description">Omschrijving (optioneel)</Label>
         <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} />
       </div>
+      {showRoom && (
+        <div>
+          <Label htmlFor="room">Kamer (optioneel)</Label>
+          <Input
+            id="room"
+            value={room}
+            onChange={(e) => setRoom(e.target.value)}
+            placeholder="Leeg = Algemeen"
+            className="sm:w-48"
+          />
+        </div>
+      )}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-[auto_1fr]">
         <div>
           <Label htmlFor="time">Tijd (optioneel)</Label>

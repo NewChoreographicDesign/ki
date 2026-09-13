@@ -4,11 +4,11 @@ import { SignJWT, jwtVerify } from "jose";
 import { Role, ShiftType } from "@prisma/client";
 import { db } from "@/lib/db";
 import { determineShiftType, shiftEndForStart } from "@/lib/utils";
+import { SESSION_DURATION_SECONDS } from "@/lib/session-policy";
 
 export { determineShiftType, shiftEndForStart };
 
 const COOKIE_NAME = "session";
-const SESSION_DURATION_SECONDS = 12 * 60 * 60; // 12 hours
 
 // Never let this ship: it's the literal value from .env.example, so a
 // deployment that copied the example file without generating a real
@@ -33,7 +33,7 @@ export type SessionPayload = {
 };
 
 export async function signSession(payload: SessionPayload): Promise<string> {
-  return new SignJWT({ name: payload.name, role: payload.role })
+  return new SignJWT({ name: payload.name, role: payload.role, lastActivity: Date.now() })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(payload.sub)
     .setIssuedAt()
@@ -116,6 +116,16 @@ export function canAccessBackend(role: Role): boolean {
 }
 
 export function canAccessWeeklyReport(role: Role): boolean {
+  return role === Role.ADMIN || role === Role.COORDINATOR;
+}
+
+// Assigning a personal to-do to another medewerker is an admin/coordinator
+// action (same roles as the weekly report), but deliberately its own route
+// rather than living under /backend — /backend is ADMIN-only end to end
+// (see middleware.ts's BACKEND_ROLES), and widening that to COORDINATOR
+// would also open Cliënten/Medewerkers/Medicatie beheer/Archief/
+// Instellingen/Auditlog, none of which were asked for here.
+export function canAccessPersonalTodoAssignment(role: Role): boolean {
   return role === Role.ADMIN || role === Role.COORDINATOR;
 }
 
