@@ -4,6 +4,7 @@ import * as React from "react";
 import { Download, Archive } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { formatDate } from "@/lib/utils";
 
 // Keys must match WEEKLY_REPORT_SECTION_KEYS in lib/weekly-report.ts. Not
@@ -37,6 +38,10 @@ export function WeekrapportDownloads({
   weekStartLabel: string;
 }) {
   const [selected, setSelected] = React.useState<Set<string>>(() => new Set(SECTIONS.map((s) => s.key)));
+  // Archief is sorted newest-first (see the query in page.tsx) — default to
+  // the most recent week so there's always a sensible pre-selected option
+  // instead of an empty dropdown.
+  const [selectedWeekId, setSelectedWeekId] = React.useState<string>(() => archive[0]?.id ?? "");
 
   function toggle(key: string) {
     setSelected((prev) => {
@@ -88,32 +93,41 @@ export function WeekrapportDownloads({
             automatisch verwijderd.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2">
+        <CardContent className="flex flex-col gap-3">
           {archive.length === 0 ? (
             <p className="text-slate-500">
               Nog geen afgeronde week gearchiveerd — dat gebeurt vanaf de eerstvolgende maandag.
             </p>
           ) : (
-            archive.map((a) => (
-              <div
-                key={a.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface2 px-3 py-2"
+            <div className="flex flex-wrap items-center gap-3">
+              <Select
+                value={selectedWeekId}
+                onChange={(e) => setSelectedWeekId(e.target.value)}
+                className="max-w-xs"
+                aria-label="Kies een week"
               >
-                <span className="text-sm text-slate-200">
-                  Week {a.isoWeek}, {a.isoYear}{" "}
-                  <span className="text-slate-500">({formatDate(new Date(a.weekStart))})</span>
-                </span>
-                <a
-                  href={noneSelected ? undefined : `/api/weekrapport/archive/${a.id}?sections=${sectionsParam}`}
-                  aria-disabled={noneSelected}
-                  onClick={(e) => noneSelected && e.preventDefault()}
-                >
-                  <Button size="sm" variant="outline" className="gap-2" disabled={noneSelected}>
-                    <Download className="h-4 w-4" /> PDF
-                  </Button>
-                </a>
-              </div>
-            ))
+                {archive.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    Week {a.isoWeek}, {a.isoYear} ({formatDate(new Date(a.weekStart))})
+                  </option>
+                ))}
+              </Select>
+              <a
+                href={
+                  noneSelected || !selectedWeekId
+                    ? undefined
+                    : `/api/weekrapport/archive/${selectedWeekId}?sections=${sectionsParam}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-disabled={noneSelected || !selectedWeekId}
+                onClick={(e) => (noneSelected || !selectedWeekId) && e.preventDefault()}
+              >
+                <Button size="sm" variant="outline" className="gap-2" disabled={noneSelected || !selectedWeekId}>
+                  <Download className="h-4 w-4" /> PDF
+                </Button>
+              </a>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -128,6 +142,8 @@ export function WeekrapportDownloads({
         </div>
         <a
           href={noneSelected ? undefined : `/api/weekrapport/download?sections=${sectionsParam}`}
+          target="_blank"
+          rel="noopener noreferrer"
           aria-disabled={noneSelected}
           onClick={(e) => noneSelected && e.preventDefault()}
         >
