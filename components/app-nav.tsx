@@ -14,7 +14,6 @@ import {
   ShieldCheck,
   Settings,
   Download,
-  ListTodo,
   Menu,
   X,
   LogOut,
@@ -30,9 +29,14 @@ type NavItem = {
   icon: React.ComponentType<{ className?: string }>;
   backendOnly?: boolean;
   weeklyReportOnly?: boolean;
-  personalTodoAssignmentOnly?: boolean;
 };
 
+// "Taken toewijzen" (/persoonlijke-taken) deliberately has no entry here —
+// it's reachable from the Backend hub card instead. Personal tasks
+// themselves already surface for a medewerker via the Dashboard's "Mijn
+// taken" widget, so a second, always-visible sidebar item for the
+// assignment screen would just be clutter for the one role (admin) that
+// actually uses it via the sidebar.
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Overzicht", icon: LayoutDashboard },
   { href: "/aanwezigheid", label: "Aanwezigheid", icon: UserCheck },
@@ -43,12 +47,6 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/protocollen", label: "Protocollen", icon: ShieldCheck },
   { href: "/rapportage", label: "Rapportage", icon: FileText },
   { href: "/weekrapport", label: "Weekrapport", icon: Download, weeklyReportOnly: true },
-  {
-    href: "/persoonlijke-taken",
-    label: "Taken toewijzen",
-    icon: ListTodo,
-    personalTodoAssignmentOnly: true,
-  },
   { href: "/backend", label: "Backend", icon: Settings, backendOnly: true },
 ];
 
@@ -76,12 +74,10 @@ export function AppNav({
   userName,
   canAccessBackend,
   canAccessWeeklyReport,
-  canAccessPersonalTodoAssignment,
 }: {
   userName: string;
   canAccessBackend: boolean;
   canAccessWeeklyReport: boolean;
-  canAccessPersonalTodoAssignment: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -89,10 +85,7 @@ export function AppNav({
   const [open, setOpen] = React.useState(false);
 
   const items = NAV_ITEMS.filter(
-    (item) =>
-      (!item.backendOnly || canAccessBackend) &&
-      (!item.weeklyReportOnly || canAccessWeeklyReport) &&
-      (!item.personalTodoAssignmentOnly || canAccessPersonalTodoAssignment)
+    (item) => (!item.backendOnly || canAccessBackend) && (!item.weeklyReportOnly || canAccessWeeklyReport)
   );
 
   function openMenu() {

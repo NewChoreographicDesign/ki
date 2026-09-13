@@ -16,7 +16,7 @@ export default async function PersoonlijkeTakenPage() {
     redirect("/dashboard");
   }
 
-  const [users, todos] = await Promise.all([
+  const [users, todos, roomRows] = await Promise.all([
     db.user.findMany({
       where: { active: true },
       orderBy: { name: "asc" },
@@ -27,7 +27,13 @@ export default async function PersoonlijkeTakenPage() {
       include: { createdBy: true, completedBy: true, assignedTo: true },
       orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
     }),
+    db.client.findMany({
+      where: { active: true, room: { not: null } },
+      distinct: ["room"],
+      select: { room: true },
+    }),
   ]);
+  const rooms = roomRows.map((c) => c.room!).sort((a, b) => a.localeCompare(b));
 
   return (
     <div className="flex flex-col gap-6">
@@ -38,7 +44,7 @@ export default async function PersoonlijkeTakenPage() {
           hun taken te bekijken of een nieuwe toe te voegen.
         </p>
       </div>
-      <PersonalTodosManager users={users} initialTodos={todos.map(serializeTodo)} />
+      <PersonalTodosManager users={users} initialTodos={todos.map(serializeTodo)} rooms={rooms} />
     </div>
   );
 }

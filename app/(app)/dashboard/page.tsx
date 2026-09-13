@@ -115,7 +115,7 @@ const QUICK_ACTIONS = [
 
 export default async function DashboardPage() {
   const session = await getSession();
-  const [stats, roomsToday, rawHandovers, myOpenTodos, myCompletedTodos] = await Promise.all([
+  const [stats, roomsToday, rawHandovers, myOpenTodos, myCompletedTodos, roomRows] = await Promise.all([
     getStats(),
     getTodayByRoom(),
     db.handover.findMany({
@@ -139,7 +139,14 @@ export default async function DashboardPage() {
       orderBy: { completedAt: "desc" },
       take: 5,
     }),
+    db.client.findMany({
+      where: { active: true, room: { not: null } },
+      distinct: ["room"],
+      select: { room: true },
+      orderBy: { room: "asc" },
+    }),
   ]);
+  const rooms = roomRows.map((c) => c.room!).sort((a, b) => a.localeCompare(b));
 
   // One entry per room — the most recent note in it — rather than every
   // handover, so a room that's had several updates doesn't crowd out rooms
@@ -213,6 +220,7 @@ export default async function DashboardPage() {
           userId={session.sub}
           initialOpen={myOpenTodos.map(serializeTodo)}
           initialCompleted={myCompletedTodos.map(serializeTodo)}
+          rooms={rooms}
         />
       )}
 

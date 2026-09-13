@@ -38,6 +38,8 @@ function PriorityIcon({ priority }: { priority: TodoData["priority"] }) {
 export function TodoItem({
   todo,
   canManage = false,
+  showRoom = false,
+  rooms = [],
   onComplete,
   onUpdate,
   onDelete,
@@ -45,6 +47,9 @@ export function TodoItem({
   todo: TodoData;
   /** Admin-only: shows edit/delete controls. */
   canManage?: boolean;
+  /** Forwarded to the edit form's TodoForm — only meaningful for personal to-do's. */
+  showRoom?: boolean;
+  rooms?: string[];
   onComplete?: (todo: TodoData) => void;
   onUpdate?: (todo: TodoData) => void;
   onDelete?: (id: string) => void;
@@ -97,6 +102,8 @@ export function TodoItem({
           <TodoForm
             todoId={todo.id}
             initial={todo}
+            showRoom={showRoom}
+            rooms={rooms}
             onSaved={(updated) => {
               setEditing(false);
               onUpdate?.(updated);

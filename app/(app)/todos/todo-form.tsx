@@ -16,6 +16,7 @@ export function TodoForm({
   onSaved,
   onCancel,
   showRoom = false,
+  rooms = [],
   fixedAssignedToId,
 }: {
   /** Present when editing an existing task — PATCHes instead of creating. */
@@ -23,8 +24,10 @@ export function TodoForm({
   initial?: TodoData;
   onSaved: (todo: TodoData) => void;
   onCancel?: () => void;
-  /** Shows a "Kamer" field — only meaningful for personal to-do's. */
+  /** Shows a "Kamer" dropdown — only meaningful for personal to-do's. */
   showRoom?: boolean;
+  /** Room options for the dropdown — the app's known client rooms. "Algemeen" is always added separately. */
+  rooms?: string[];
   /**
    * Makes a NEW task personal to this user id (self, or the medewerker an
    * admin/coordinator is managing in Backend) — a plain data field, not a
@@ -130,14 +133,18 @@ export function TodoForm({
       </div>
       {showRoom && (
         <div>
-          <Label htmlFor="room">Kamer (optioneel)</Label>
-          <Input
-            id="room"
-            value={room}
-            onChange={(e) => setRoom(e.target.value)}
-            placeholder="Leeg = Algemeen"
-            className="sm:w-48"
-          />
+          <Label htmlFor="room">Kamer</Label>
+          <Select id="room" value={room} onChange={(e) => setRoom(e.target.value)} className="sm:w-48">
+            <option value="">Algemeen</option>
+            {/* Room the task was already tagged with may no longer be an active
+                client's room (renamed/removed) — keep it selectable so editing
+                doesn't silently reassign the task to Algemeen. */}
+            {(room && !rooms.includes(room) ? [...rooms, room] : rooms).map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </Select>
         </div>
       )}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-[auto_1fr]">

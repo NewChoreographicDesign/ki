@@ -14,9 +14,11 @@ import type { TodoData } from "../todos/todo-types";
 export function PersonalTodosManager({
   users,
   initialTodos,
+  rooms,
 }: {
   users: { id: string; name: string }[];
   initialTodos: TodoData[];
+  rooms: string[];
 }) {
   const [todos, setTodos] = React.useState(initialTodos);
   const [selectedUserId, setSelectedUserId] = React.useState(users[0]?.id ?? "");
@@ -82,6 +84,7 @@ export function PersonalTodosManager({
               <TodoForm
                 key={selectedUserId}
                 showRoom
+                rooms={rooms}
                 fixedAssignedToId={selectedUserId}
                 onSaved={handleSaved}
                 onCancel={() => setFormOpen(false)}
@@ -99,6 +102,8 @@ export function PersonalTodosManager({
                 key={t.id}
                 todo={t}
                 canManage
+                showRoom
+                rooms={rooms}
                 onComplete={handleSaved}
                 onUpdate={handleSaved}
                 onDelete={handleDelete}
@@ -113,7 +118,7 @@ export function PersonalTodosManager({
           <h2 className="mb-3 text-lg font-semibold text-slate-100">Recent afgerond</h2>
           <div className="flex flex-col gap-3">
             {completed.map((t) => (
-              <TodoItem key={t.id} todo={t} canManage onDelete={handleDelete} />
+              <TodoItem key={t.id} todo={t} canManage showRoom rooms={rooms} onDelete={handleDelete} />
             ))}
           </div>
         </div>

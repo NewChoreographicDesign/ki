@@ -21,10 +21,12 @@ export function MyTasks({
   initialOpen,
   initialCompleted,
   userId,
+  rooms,
 }: {
   initialOpen: TodoData[];
   initialCompleted: TodoData[];
   userId: string;
+  rooms: string[];
 }) {
   const [open, setOpen] = React.useState(() => [...initialOpen].sort(sortByTime));
   const [completed, setCompleted] = React.useState(initialCompleted);
@@ -84,6 +86,7 @@ export function MyTasks({
               <CardContent>
                 <TodoForm
                   showRoom
+                  rooms={rooms}
                   fixedAssignedToId={userId}
                   onSaved={handleCreated}
                   onCancel={() => setFormOpen(false)}
@@ -101,6 +104,8 @@ export function MyTasks({
                   key={t.id}
                   todo={t}
                   canManage
+                  showRoom
+                  rooms={rooms}
                   onComplete={handleComplete}
                   onUpdate={handleUpdated}
                   onDelete={handleDelete}
@@ -114,7 +119,7 @@ export function MyTasks({
               <h3 className="mb-2 text-sm font-semibold text-slate-400">Recent afgerond</h3>
               <div className="flex flex-col gap-3">
                 {completed.map((t) => (
-                  <TodoItem key={t.id} todo={t} canManage onDelete={handleDelete} />
+                  <TodoItem key={t.id} todo={t} canManage showRoom rooms={rooms} onDelete={handleDelete} />
                 ))}
               </div>
             </div>
