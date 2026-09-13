@@ -23,6 +23,15 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
+  // Without this, iOS treats the on-screen keyboard as an overlay: the
+  // layout viewport (and anything sized off 100dvh) never actually shrinks,
+  // so a field lower on the page — or one in a vertically centered form
+  // like login/setup — can end up hidden behind the keyboard with no native
+  // scroll-into-view happening. "resizes-content" makes the keyboard
+  // genuinely shrink the layout viewport, the same way desktop browser
+  // chrome does, so dvh-based layouts resize correctly and the browser's
+  // own focus-scroll behavior has room to work.
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

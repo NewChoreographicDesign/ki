@@ -1,16 +1,15 @@
 import { redirect } from "next/navigation";
-import { Download, Archive } from "lucide-react";
 import { getSession, canAccessWeeklyReport } from "@/lib/auth";
 import {
   getWeeklyReportData,
-  groupMedicationChecksByDay,
+  groupMedicationChecksByRoomAndDay,
   computeMissedTodosByDay,
   formatChangeLogDetail,
 } from "@/lib/weekly-report";
 import { db } from "@/lib/db";
 import { formatDate, formatDateTime, formatTime, fullName, mostRecentMondayStart } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { WeekrapportDownloads } from "./section-picker";
 
 export const dynamic = "force-dynamic";
 
@@ -45,58 +44,15 @@ export default async function WeekrapportPage() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Archive className="h-4 w-4" /> Archief (automatisch, per kalenderweek)
-          </CardTitle>
-          <CardDescription>
-            Elke maandagochtend wordt de afgelopen week automatisch vastgelegd als PDF — hierin
-            staan alle acties van die week. PDF&apos;s worden 1 jaar bewaard; oudere worden
-            automatisch verwijderd.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-2">
-          {archive.length === 0 ? (
-            <p className="text-slate-500">
-              Nog geen afgeronde week gearchiveerd — dat gebeurt vanaf de eerstvolgende maandag.
-            </p>
-          ) : (
-            archive.map((a) => (
-              <div
-                key={a.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface2 px-3 py-2"
-              >
-                <span className="text-sm text-slate-200">
-                  Week {a.isoWeek}, {a.isoYear}{" "}
-                  <span className="text-slate-500">({formatDate(a.weekStart)})</span>
-                </span>
-                <a href={`/api/weekrapport/archive/${a.id}`}>
-                  <Button size="sm" variant="outline" className="gap-2">
-                    <Download className="h-4 w-4" /> PDF
-                  </Button>
-                </a>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-100">Deze week (nog niet afgerond)</h2>
-          <p className="mt-1 text-sm text-slate-400">
-            Live overzicht sinds {formatDate(data.weekStart)} — wordt aankomende maandag
-            automatisch aan het archief hierboven toegevoegd.
-          </p>
-        </div>
-        <a href="/api/weekrapport/download">
-          <Button variant="outline" className="gap-2">
-            <Download className="h-4 w-4" />
-            Voortgang (.txt)
-          </Button>
-        </a>
-      </div>
+      <WeekrapportDownloads
+        archive={archive.map((a) => ({
+          id: a.id,
+          isoYear: a.isoYear,
+          isoWeek: a.isoWeek,
+          weekStart: a.weekStart.toISOString(),
+        }))}
+        weekStartLabel={formatDate(data.weekStart)}
+      />
 
       <Card>
         <CardHeader>
@@ -123,22 +79,29 @@ export default async function WeekrapportPage() {
         <CardHeader>
           <CardTitle className="text-base">Medicatie ({data.medicationChecks.length})</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+        <CardContent className="flex flex-col gap-5">
           {data.medicationChecks.length === 0 ? (
             <p className="text-slate-500">Geen medicatieregistraties deze week.</p>
           ) : (
-            groupMedicationChecksByDay(data.medicationChecks).map((day) => (
-              <div key={day.dateLabel}>
-                <p className="mb-1.5 text-sm font-semibold text-slate-200">
-                  {day.dayLabel} <span className="font-normal text-slate-500">{day.dateLabel}</span>
-                </p>
-                <div className="flex flex-col gap-1.5">
-                  {day.checks.map((c) => (
-                    <p key={c.id} className="text-sm text-slate-300">
-                      {formatTime(c.checkedAt)} · {fullName(c.medication.client)} · {c.medication.name} ·{" "}
-                      {MEDICATION_STATUS_LABELS[c.status] ?? c.status} · door {c.user.name}
-                      {c.comment ? ` · ${c.comment}` : ""}
-                    </p>
+            groupMedicationChecksByRoomAndDay(data.medicationChecks).map((room) => (
+              <div key={room.room}>
+                <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-sky-400">{room.room}</p>
+                <div className="flex flex-col gap-3 border-l border-border pl-4">
+                  {room.days.map((day) => (
+                    <div key={day.dateLabel}>
+                      <p className="mb-1.5 text-sm font-semibold text-slate-200">
+                        {day.dayLabel} <span className="font-normal text-slate-500">{day.dateLabel}</span>
+                      </p>
+                      <div className="flex flex-col gap-1.5">
+                        {day.checks.map((c) => (
+                          <p key={c.id} className="text-sm text-slate-300">
+                            {formatTime(c.checkedAt)} · {fullName(c.medication.client)} · {c.medication.name} ·{" "}
+                            {MEDICATION_STATUS_LABELS[c.status] ?? c.status} · door {c.user.name}
+                            {c.comment ? ` · ${c.comment}` : ""}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>

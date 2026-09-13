@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { computeMissedTodosByDay, formatChangeLogDetail } from "@/lib/weekly-report";
+import {
+  computeMissedTodosByDay,
+  formatChangeLogDetail,
+  groupMedicationChecksByRoomAndDay,
+  parseWeeklyReportSections,
+  WEEKLY_REPORT_SECTION_KEYS,
+} from "@/lib/weekly-report";
 import { amsterdamDate } from "@/lib/utils";
 
 type TestTodo = {
@@ -90,6 +96,75 @@ describe("computeMissedTodosByDay", () => {
     const missed = computeMissedTodosByDay([todoA, todoB], weekStart, weekEnd);
     expect(missed).toHaveLength(1);
     expect(missed[0].titles).toEqual(["Taak A", "Taak B"]);
+  });
+});
+
+type TestCheck = {
+  id: string;
+  checkedAt: Date;
+  status: "TAKEN" | "NOT_TAKEN" | "LEAVE";
+  comment: string | null;
+  user: { name: string };
+  medication: { name: string; client: { room: string | null } };
+};
+
+function makeCheck(overrides: Partial<TestCheck> & { id: string; checkedAt: Date }): TestCheck {
+  return {
+    status: "TAKEN",
+    comment: null,
+    user: { name: "Anna" },
+    medication: { name: "Paracetamol", client: { room: "Kamer 1" } },
+    ...overrides,
+  };
+}
+
+describe("groupMedicationChecksByRoomAndDay", () => {
+  it("groups checks by room, then by day within each room", () => {
+    const monday = amsterdamDate(2026, 1, 5, 8);
+    const tuesday = amsterdamDate(2026, 1, 6, 8);
+    const checks = [
+      makeCheck({ id: "1", checkedAt: monday, medication: { name: "A", client: { room: "Kamer 1" } } }),
+      makeCheck({ id: "2", checkedAt: monday, medication: { name: "B", client: { room: "Kamer 2" } } }),
+      makeCheck({ id: "3", checkedAt: tuesday, medication: { name: "A", client: { room: "Kamer 1" } } }),
+    ];
+
+    const grouped = groupMedicationChecksByRoomAndDay(checks as unknown as Parameters<typeof groupMedicationChecksByRoomAndDay>[0]);
+
+    expect(grouped.map((r) => r.room)).toEqual(["Kamer 1", "Kamer 2"]);
+    expect(grouped[0].days).toHaveLength(2);
+    expect(grouped[0].days[0].checks.map((c) => c.id)).toEqual(["1"]);
+    expect(grouped[0].days[1].checks.map((c) => c.id)).toEqual(["3"]);
+    expect(grouped[1].days[0].checks.map((c) => c.id)).toEqual(["2"]);
+  });
+
+  it("puts clients with no room under Geen kamer, after real rooms", () => {
+    const day = amsterdamDate(2026, 1, 5, 8);
+    const checks = [
+      makeCheck({ id: "1", checkedAt: day, medication: { name: "A", client: { room: null } } }),
+      makeCheck({ id: "2", checkedAt: day, medication: { name: "B", client: { room: "Kamer 1" } } }),
+    ];
+
+    const grouped = groupMedicationChecksByRoomAndDay(checks as unknown as Parameters<typeof groupMedicationChecksByRoomAndDay>[0]);
+
+    expect(grouped.map((r) => r.room)).toEqual(["Kamer 1", "Geen kamer"]);
+  });
+});
+
+describe("parseWeeklyReportSections", () => {
+  it("returns every section when no query value is given", () => {
+    expect(parseWeeklyReportSections(null)).toEqual(new Set(WEEKLY_REPORT_SECTION_KEYS));
+  });
+
+  it("returns only the requested, recognized sections", () => {
+    expect(parseWeeklyReportSections("medication,todos")).toEqual(new Set(["medication", "todos"]));
+  });
+
+  it("ignores unknown keys", () => {
+    expect(parseWeeklyReportSections("medication,bogus")).toEqual(new Set(["medication"]));
+  });
+
+  it("falls back to every section when nothing recognized is given", () => {
+    expect(parseWeeklyReportSections("bogus")).toEqual(new Set(WEEKLY_REPORT_SECTION_KEYS));
   });
 });
 

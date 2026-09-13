@@ -100,6 +100,46 @@ export function groupMedicationChecksByDay(checks: WeeklyReportData["medicationC
 }
 
 /**
+ * Same grouping as groupMedicationChecksByDay(), but nested one level under
+ * each client's room first — the shape the weekrapport's Medicatie section
+ * actually needs: per room, per day, who gave (or didn't give) what. A
+ * client with no room falls under "Geen kamer", sorted after real rooms
+ * (alphabetically) same as the dashboard's "Vandaag per kamer" convention.
+ */
+export function groupMedicationChecksByRoomAndDay(checks: WeeklyReportData["medicationChecks"]) {
+  const byRoom = new Map<string, WeeklyReportData["medicationChecks"]>();
+  for (const check of checks) {
+    const room = check.medication.client.room || "Geen kamer";
+    const list = byRoom.get(room);
+    if (list) list.push(check);
+    else byRoom.set(room, [check]);
+  }
+
+  const rank = (room: string) => (room === "Geen kamer" ? 1 : 0);
+  return Array.from(byRoom.entries())
+    .map(([room, roomChecks]) => ({ room, days: groupMedicationChecksByDay(roomChecks) }))
+    .sort((a, b) => rank(a.room) - rank(b.room) || a.room.localeCompare(b.room));
+}
+
+// The weekrapport's five sections, downloadable independently (see
+// app/(app)/weekrapport/section-picker.tsx) — both the live .txt and an
+// archived week's PDF can be filtered to just the ones asked for, while the
+// automatically archived PDF itself (app/api/cron/weekly-report/route.ts)
+// always keeps everything, since that's the permanent record.
+export const WEEKLY_REPORT_SECTION_KEYS = ["reports", "medication", "todos", "appointments", "changelog"] as const;
+export type WeeklyReportSection = (typeof WEEKLY_REPORT_SECTION_KEYS)[number];
+const ALL_SECTIONS = new Set<WeeklyReportSection>(WEEKLY_REPORT_SECTION_KEYS);
+
+/** Parses a comma-separated `?sections=` query value, ignoring unknown keys; empty/missing means "all". */
+export function parseWeeklyReportSections(raw: string | null): Set<WeeklyReportSection> {
+  if (!raw) return ALL_SECTIONS;
+  const keys = raw.split(",").filter((k): k is WeeklyReportSection =>
+    (WEEKLY_REPORT_SECTION_KEYS as readonly string[]).includes(k)
+  );
+  return keys.length > 0 ? new Set(keys) : ALL_SECTIONS;
+}
+
+/**
  * Turns a raw audit-log action string into the human-readable line shown in
  * the weekrapport changelog — shared by the live view, .txt download, and
  * PDF archive so the three never drift into describing an edit differently.
@@ -155,7 +195,10 @@ export function computeMissedTodosByDay(
   return result;
 }
 
-export function renderWeeklyReportText(data: WeeklyReportData): string {
+export function renderWeeklyReportText(
+  data: WeeklyReportData,
+  sections: Set<WeeklyReportSection> = ALL_SECTIONS
+): string {
   const lines: string[] = [];
   const add = (line = "") => lines.push(line);
 
@@ -163,80 +206,93 @@ export function renderWeeklyReportText(data: WeeklyReportData): string {
   add(`Gegenereerd op ${formatDateTime(new Date())}`);
   add("=".repeat(60));
 
-  add("");
-  add(`RAPPORTAGES (${data.reports.length})`);
-  add("-".repeat(60));
-  if (data.reports.length === 0) {
-    add("Geen rapportages deze week.");
-  } else {
-    for (const r of data.reports) {
-      add(
-        `${formatDate(r.date)} · ${fullName(r.client)} · ${r.shift === "MORNING" ? "Ochtend" : "Avond"} · door ${r.user.name}`
-      );
-      add(r.content);
-      add("");
-    }
-  }
-
-  add("");
-  add(`MEDICATIE (${data.medicationChecks.length})`);
-  add("-".repeat(60));
-  if (data.medicationChecks.length === 0) {
-    add("Geen medicatieregistraties deze week.");
-  } else {
-    for (const day of groupMedicationChecksByDay(data.medicationChecks)) {
-      add(`${day.dayLabel} ${day.dateLabel}`);
-      for (const c of day.checks) {
-        const status = STATUS_LABELS[c.status] ?? c.status;
-        add(
-          `  ${formatTime(c.checkedAt)} · ${fullName(c.medication.client)} · ${c.medication.name} · ${status} · door ${c.user.name}${c.comment ? ` · ${c.comment}` : ""}`
-        );
-      }
-      add("");
-    }
-  }
-
-  add("");
-  add(`WERKLIJST (${data.todos.length})`);
-  add("-".repeat(60));
-  if (data.todos.length === 0) {
-    add("Geen taken aangemaakt of afgerond deze week.");
-  } else {
-    const missedByDay = computeMissedTodosByDay(data.todos, data.weekStart, data.weekEnd);
-    if (missedByDay.length === 0) {
-      add("Alle taken zijn op tijd afgerond.");
+  if (sections.has("reports")) {
+    add("");
+    add(`RAPPORTAGES (${data.reports.length})`);
+    add("-".repeat(60));
+    if (data.reports.length === 0) {
+      add("Geen rapportages deze week.");
     } else {
-      add("Niet gedaan, per dag:");
-      for (const day of missedByDay) {
-        add(`  ${day.dayLabel} ${day.dateLabel}`);
-        for (const title of day.titles) {
-          add(`    ${title}`);
+      for (const r of data.reports) {
+        add(
+          `${formatDate(r.date)} · ${fullName(r.client)} · ${r.shift === "MORNING" ? "Ochtend" : "Avond"} · door ${r.user.name}`
+        );
+        add(r.content);
+        add("");
+      }
+    }
+  }
+
+  if (sections.has("medication")) {
+    add("");
+    add(`MEDICATIE (${data.medicationChecks.length})`);
+    add("-".repeat(60));
+    if (data.medicationChecks.length === 0) {
+      add("Geen medicatieregistraties deze week.");
+    } else {
+      for (const room of groupMedicationChecksByRoomAndDay(data.medicationChecks)) {
+        add(room.room);
+        for (const day of room.days) {
+          add(`  ${day.dayLabel} ${day.dateLabel}`);
+          for (const c of day.checks) {
+            const status = STATUS_LABELS[c.status] ?? c.status;
+            add(
+              `    ${formatTime(c.checkedAt)} · ${fullName(c.medication.client)} · ${c.medication.name} · ${status} · door ${c.user.name}${c.comment ? ` · ${c.comment}` : ""}`
+            );
+          }
+        }
+        add("");
+      }
+    }
+  }
+
+  if (sections.has("todos")) {
+    add("");
+    add(`WERKLIJST (${data.todos.length})`);
+    add("-".repeat(60));
+    if (data.todos.length === 0) {
+      add("Geen taken aangemaakt of afgerond deze week.");
+    } else {
+      const missedByDay = computeMissedTodosByDay(data.todos, data.weekStart, data.weekEnd);
+      if (missedByDay.length === 0) {
+        add("Alle taken zijn op tijd afgerond.");
+      } else {
+        add("Niet gedaan, per dag:");
+        for (const day of missedByDay) {
+          add(`  ${day.dayLabel} ${day.dateLabel}`);
+          for (const title of day.titles) {
+            add(`    ${title}`);
+          }
         }
       }
     }
   }
 
-  add("");
-  add(`AFSPRAKEN (${data.appointments.length})`);
-  add("-".repeat(60));
-  if (data.appointments.length === 0) {
-    add("Geen afspraken deze week.");
-  } else {
-    for (const a of data.appointments) {
-      add(
-        `${formatDateTime(a.startAt)} · ${a.title}${a.client ? ` · ${fullName(a.client)}` : ""} · aangemaakt door ${a.createdBy.name}`
-      );
+  if (sections.has("appointments")) {
+    add("");
+    add(`AFSPRAKEN (${data.appointments.length})`);
+    add("-".repeat(60));
+    if (data.appointments.length === 0) {
+      add("Geen afspraken deze week.");
+    } else {
+      for (const a of data.appointments) {
+        add(
+          `${formatDateTime(a.startAt)} · ${a.title}${a.client ? ` · ${fullName(a.client)}` : ""} · aangemaakt door ${a.createdBy.name}`
+        );
+      }
     }
   }
 
-  add("");
-  add(`WIJZIGINGEN - changelog (${data.changeLog.length})`);
-  add("-".repeat(60));
-  if (data.changeLog.length === 0) {
-    add("Geen wijzigingen aan afspraken of medicatieregistraties deze week.");
-  } else {
-    for (const e of data.changeLog) {
-      add(`${formatDateTime(e.createdAt)} · door ${e.user?.name ?? "onbekend"} · ${formatChangeLogDetail(e.action)}`);
+  if (sections.has("changelog")) {
+    add("");
+    add(`WIJZIGINGEN - changelog (${data.changeLog.length})`);
+    add("-".repeat(60));
+    if (data.changeLog.length === 0) {
+      add("Geen wijzigingen aan afspraken of medicatieregistraties deze week.");
+    } else {
+      for (const e of data.changeLog) {
+        add(`${formatDateTime(e.createdAt)} · door ${e.user?.name ?? "onbekend"} · ${formatChangeLogDetail(e.action)}`);
+      }
     }
   }
 
