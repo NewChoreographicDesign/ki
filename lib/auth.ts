@@ -4,7 +4,7 @@ import { SignJWT, jwtVerify } from "jose";
 import { Role, ShiftType } from "@prisma/client";
 import { db } from "@/lib/db";
 import { determineShiftType, shiftEndForStart } from "@/lib/utils";
-import { SESSION_DURATION_SECONDS } from "@/lib/session-policy";
+import { SESSION_DURATION_SECONDS, IDLE_TIMEOUT_MS } from "@/lib/session-policy";
 
 export { determineShiftType, shiftEndForStart };
 
@@ -45,6 +45,20 @@ export async function verifySession(token: string): Promise<SessionPayload | nul
   try {
     const { payload } = await jwtVerify(token, getSecretKey());
     if (!payload.sub || typeof payload.name !== "string" || typeof payload.role !== "string") {
+      return null;
+    }
+    // Must agree with middleware.ts's own idle-timeout check on the same
+    // claim — middleware.ts can't reuse this function directly (edge
+    // runtime, no next/headers), so both independently check lastActivity
+    // against the same IDLE_TIMEOUT_MS. If they disagreed, a page that
+    // redirects based on getSession() (e.g. /login bouncing an already-
+    // authenticated visitor to /dashboard) would fight middleware's own
+    // redirect for the same idle-expired cookie — an infinite redirect
+    // loop, not just a wrong answer. A token predating this claim (no
+    // lastActivity at all) is treated as fresh, same rollout reasoning as
+    // middleware.ts.
+    const lastActivity = typeof payload.lastActivity === "number" ? payload.lastActivity : Date.now();
+    if (Date.now() - lastActivity > IDLE_TIMEOUT_MS) {
       return null;
     }
     return { sub: payload.sub, name: payload.name, role: payload.role as Role };
