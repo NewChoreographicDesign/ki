@@ -142,7 +142,15 @@ model Medication {
   name          String
   dosage        String
   instructions  String?
+  // Comma-separated "HH:MM" schedule, e.g. "08:00,20:00" — empty when
+  // asNeeded is true (no fixed schedule, so nothing to parse).
   times         String
+  // "Indien nodig" (PRN): given only when the client needs it, not on a
+  // fixed schedule. No scheduled times means no reminder banner (see
+  // lib/medication-reminders.ts) and no daily slot cap on registrations
+  // (see app/api/medication-checks/route.ts) — it can be logged any number
+  // of times a day.
+  asNeeded      Boolean  @default(false)
   active        Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

@@ -31,6 +31,7 @@ export default async function ArchiefPage() {
           name: m.name,
           dosage: m.dosage,
           times: m.times,
+          asNeeded: m.asNeeded,
           clientName: fullName(m.client),
         }))}
       />

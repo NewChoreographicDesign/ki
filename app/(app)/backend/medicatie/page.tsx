@@ -23,6 +23,7 @@ export default async function BackendMedicatiePage() {
           dosage: m.dosage,
           instructions: m.instructions,
           times: m.times,
+          asNeeded: m.asNeeded,
           active: m.active,
           clientName: fullName(m.client),
         }))}

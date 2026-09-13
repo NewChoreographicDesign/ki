@@ -75,6 +75,25 @@ describe("medicationSchema", () => {
     const result = medicationSchema.safeParse({ clientId: "abc", name: "Paracetamol" });
     expect(result.success).toBe(false);
   });
+
+  it("accepts asNeeded without times", () => {
+    const result = medicationSchema.safeParse({
+      clientId: "abc",
+      name: "Paracetamol",
+      dosage: "500mg",
+      asNeeded: true,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects no times and no asNeeded", () => {
+    const result = medicationSchema.safeParse({
+      clientId: "abc",
+      name: "Paracetamol",
+      dosage: "500mg",
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("medicationCheckSchema", () => {

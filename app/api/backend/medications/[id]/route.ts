@@ -11,7 +11,8 @@ const patchSchema = z.object({
   name: z.string().trim().min(1).max(200).optional(),
   dosage: z.string().trim().min(1).max(200).optional(),
   instructions: z.string().trim().max(1000).optional().or(z.literal("")),
-  times: z.string().trim().min(1).max(200).optional(),
+  times: z.string().trim().max(200).optional().or(z.literal("")),
+  asNeeded: z.boolean().optional(),
 });
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -22,7 +23,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     const medication = await db.medication.update({
       where: { id },
-      data: { ...data, instructions: data.instructions === "" ? null : data.instructions },
+      data: {
+        ...data,
+        instructions: data.instructions === "" ? null : data.instructions,
+        // A full edit-form save always sends asNeeded explicitly — force
+        // times to "" in that case regardless of what the client sent, so
+        // a stale/leftover times value can never sneak back onto a PRN
+        // medication. A partial update (e.g. just {active}) leaves both
+        // untouched, since data.asNeeded and data.times are then undefined.
+        times: data.asNeeded ? "" : data.times,
+      },
     });
     await logAudit({ userId: session.sub, action: "medication.update", targetType: "Medication", targetId: id });
     return NextResponse.json({ ok: true, medication });

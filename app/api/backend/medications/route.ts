@@ -17,7 +17,8 @@ export async function POST(request: NextRequest) {
         name: data.name,
         dosage: data.dosage,
         instructions: data.instructions || null,
-        times: data.times,
+        times: data.asNeeded ? "" : data.times || "",
+        asNeeded: data.asNeeded ?? false,
       },
     });
 

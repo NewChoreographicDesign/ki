@@ -4,7 +4,7 @@ import { Role } from "@prisma/client";
 import { ArrowLeft, Clock } from "lucide-react";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { fullName, mostRecentMondayStart, startOfToday, parseMedicationTimes } from "@/lib/utils";
+import { fullName, mostRecentMondayStart, startOfToday, parseMedicationTimes, formatTime } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MedicationCheckForm } from "./medication-check-form";
@@ -68,14 +68,25 @@ export default async function ClientMedicationPage({
       ) : (
         <div className="flex flex-col gap-4">
           {client.medications.map((med) => {
-            const times = parseMedicationTimes(med.times);
-            // A check isn't linked to a specific scheduled slot, so — same
-            // heuristic as the reminder banner (lib/medication-reminders.ts)
-            // — today's checks are paired against the sorted times in order:
-            // the earliest check today "fills" the earliest time, and so on.
             const todaysChecksAsc = med.checks.filter((c) => c.checkedAt >= todayStart).slice().reverse();
-            const slots = times.map((time, i) => ({ time, check: todaysChecksAsc[i] ?? null }));
-            const allDoneToday = todaysChecksAsc.length >= times.length;
+            // "Indien nodig" has no fixed schedule to gate against — it can
+            // be given any number of times a day, so the form never hides
+            // and today's registrations just list as they happened rather
+            // than filling numbered time slots.
+            let slots: { time: string; check: (typeof todaysChecksAsc)[number] | null }[];
+            let allDoneToday: boolean;
+            if (med.asNeeded) {
+              slots = todaysChecksAsc.map((check) => ({ time: formatTime(check.checkedAt), check }));
+              allDoneToday = false;
+            } else {
+              const times = parseMedicationTimes(med.times);
+              // A check isn't linked to a specific scheduled slot, so — same
+              // heuristic as the reminder banner (lib/medication-reminders.ts)
+              // — today's checks are paired against the sorted times in order:
+              // the earliest check today "fills" the earliest time, and so on.
+              slots = times.map((time, i) => ({ time, check: todaysChecksAsc[i] ?? null }));
+              allDoneToday = todaysChecksAsc.length >= times.length;
+            }
 
             return (
               <Card key={med.id}>
@@ -84,7 +95,8 @@ export default async function ClientMedicationPage({
                     {med.name} &middot; {med.dosage}
                   </CardTitle>
                   <CardDescription>
-                    {med.instructions || "Geen extra instructies"} &middot; Tijden: {med.times}
+                    {med.instructions || "Geen extra instructies"} &middot;{" "}
+                    {med.asNeeded ? "Indien nodig" : `Tijden: ${med.times}`}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-4">
@@ -92,23 +104,27 @@ export default async function ClientMedicationPage({
                     <p className="mb-2 flex items-center gap-1.5 text-sm font-medium text-slate-400">
                       <Clock className="h-3.5 w-3.5" /> Vandaag
                     </p>
-                    <div className="flex flex-wrap gap-2">
-                      {slots.map(({ time, check }) => {
-                        if (!check) {
+                    {med.asNeeded && slots.length === 0 ? (
+                      <p className="text-sm text-slate-500">Nog niet gegeven vandaag.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {slots.map(({ time, check }) => {
+                          if (!check) {
+                            return (
+                              <Badge key={time} variant="slate">
+                                {time} — nog open
+                              </Badge>
+                            );
+                          }
+                          const status = STATUS_LABELS[check.status] ?? STATUS_LABELS.TAKEN;
                           return (
-                            <Badge key={time} variant="slate">
-                              {time} — nog open
+                            <Badge key={med.asNeeded ? check.id : time} variant={status.variant} className="animate-scale-in">
+                              {time} — {status.label} ({check.user.name})
                             </Badge>
                           );
-                        }
-                        const status = STATUS_LABELS[check.status] ?? STATUS_LABELS.TAKEN;
-                        return (
-                          <Badge key={time} variant={status.variant} className="animate-scale-in">
-                            {time} — {status.label} ({check.user.name})
-                          </Badge>
-                        );
-                      })}
-                    </div>
+                        })}
+                      </div>
+                    )}
                   </div>
                   {allDoneToday ? (
                     <p className="text-sm text-slate-500">

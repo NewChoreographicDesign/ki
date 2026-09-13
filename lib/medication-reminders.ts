@@ -47,6 +47,10 @@ export async function getDueMedicationReminders(): Promise<DueReminder[]> {
 
   const due: DueReminder[] = [];
   for (const med of medications) {
+    // "Indien nodig" has no fixed schedule to be due against — explicit
+    // skip here (rather than relying on times being empty) so the intent
+    // reads clearly and holds even if times ever ends up stale.
+    if (med.asNeeded) continue;
     const times = parseMedicationTimes(med.times);
     const pendingTimes = times.slice(med.checks.length);
 

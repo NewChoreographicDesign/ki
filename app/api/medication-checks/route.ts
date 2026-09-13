@@ -26,16 +26,20 @@ export async function POST(request: NextRequest) {
     // — two taps on "Afvinken", or the reminder banner and the medicatie
     // page both being used for the same dose — is a hard cap: once today's
     // check count reaches the number of scheduled times, nothing more can
-    // be registered until tomorrow's count resets to zero.
-    const times = parseMedicationTimes(medication.times);
-    const todaysCheckCount = await db.medicationCheck.count({
-      where: { medicationId, checkedAt: { gte: startOfToday() } },
-    });
-    if (todaysCheckCount >= times.length) {
-      return NextResponse.json(
-        { error: "Alle geplande tijden voor vandaag zijn al geregistreerd voor deze medicatie." },
-        { status: 409 }
-      );
+    // be registered until tomorrow's count resets to zero. "Indien nodig"
+    // medication has no fixed schedule to cap against — it can be given
+    // any number of times a day, so this cap doesn't apply to it.
+    if (!medication.asNeeded) {
+      const times = parseMedicationTimes(medication.times);
+      const todaysCheckCount = await db.medicationCheck.count({
+        where: { medicationId, checkedAt: { gte: startOfToday() } },
+      });
+      if (todaysCheckCount >= times.length) {
+        return NextResponse.json(
+          { error: "Alle geplande tijden voor vandaag zijn al geregistreerd voor deze medicatie." },
+          { status: 409 }
+        );
+      }
     }
 
     const check = await db.medicationCheck.create({

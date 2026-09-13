@@ -17,6 +17,7 @@ export type MedicationRow = {
   dosage: string;
   instructions: string | null;
   times: string;
+  asNeeded: boolean;
   active: boolean;
   clientName: string;
 };
@@ -34,6 +35,7 @@ export function MedicationManager({
   const [dosage, setDosage] = React.useState("");
   const [instructions, setInstructions] = React.useState("");
   const [times, setTimes] = React.useState("");
+  const [asNeeded, setAsNeeded] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
 
@@ -44,7 +46,7 @@ export function MedicationManager({
       const res = await fetch("/api/backend/medications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientId, name, dosage, instructions, times }),
+        body: JSON.stringify({ clientId, name, dosage, instructions, times, asNeeded }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -56,6 +58,7 @@ export function MedicationManager({
       setDosage("");
       setInstructions("");
       setTimes("");
+      setAsNeeded(false);
       router.refresh();
     } catch {
       toast.error("Er is iets misgegaan");
@@ -131,15 +134,30 @@ export function MedicationManager({
                   value={times}
                   onChange={(e) => setTimes(e.target.value)}
                   placeholder="08:00,20:00"
-                  required
+                  disabled={asNeeded}
+                  required={!asNeeded}
                 />
               </div>
             </div>
+            <label className="flex items-center gap-2 text-sm text-slate-200">
+              <input
+                type="checkbox"
+                checked={asNeeded}
+                onChange={(e) => setAsNeeded(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-600 bg-surface2 accent-sky-500"
+              />
+              Indien nodig — geen vaste tijden, geen meldingen
+            </label>
             <div>
               <Label htmlFor="instructions">Instructies (optioneel)</Label>
               <Input id="instructions" value={instructions} onChange={(e) => setInstructions(e.target.value)} />
             </div>
-            <Button type="submit" loading={loading} disabled={!clientId || !name || !dosage || !times} className="self-start">
+            <Button
+              type="submit"
+              loading={loading}
+              disabled={!clientId || !name || !dosage || (!asNeeded && !times)}
+              className="self-start"
+            >
               Toevoegen
             </Button>
           </form>
@@ -167,7 +185,7 @@ export function MedicationManager({
                     <span className="text-sm text-slate-500">({m.clientName})</span>
                   </p>
                   <p className="text-sm text-slate-500">
-                    Tijden: {m.times}
+                    {m.asNeeded ? "Indien nodig" : `Tijden: ${m.times}`}
                     {m.instructions ? ` · ${m.instructions}` : ""}
                   </p>
                 </div>
@@ -215,6 +233,7 @@ function MedicationEditRow({
   const [dosage, setDosage] = React.useState(medication.dosage);
   const [instructions, setInstructions] = React.useState(medication.instructions ?? "");
   const [times, setTimes] = React.useState(medication.times);
+  const [asNeeded, setAsNeeded] = React.useState(medication.asNeeded);
   const [loading, setLoading] = React.useState(false);
 
   async function handleSave() {
@@ -223,7 +242,7 @@ function MedicationEditRow({
       const res = await fetch(`/api/backend/medications/${medication.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, dosage, instructions, times }),
+        body: JSON.stringify({ name, dosage, instructions, times, asNeeded }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -254,9 +273,24 @@ function MedicationEditRow({
           </div>
           <div>
             <Label htmlFor={`times-${medication.id}`}>Tijden</Label>
-            <Input id={`times-${medication.id}`} value={times} onChange={(e) => setTimes(e.target.value)} required />
+            <Input
+              id={`times-${medication.id}`}
+              value={times}
+              onChange={(e) => setTimes(e.target.value)}
+              disabled={asNeeded}
+              required={!asNeeded}
+            />
           </div>
         </div>
+        <label className="flex items-center gap-2 text-sm text-slate-200">
+          <input
+            type="checkbox"
+            checked={asNeeded}
+            onChange={(e) => setAsNeeded(e.target.checked)}
+            className="h-4 w-4 rounded border-slate-600 bg-surface2 accent-sky-500"
+          />
+          Indien nodig — geen vaste tijden, geen meldingen
+        </label>
         <div>
           <Label htmlFor={`instructions-${medication.id}`}>Instructies (optioneel)</Label>
           <Input
@@ -266,7 +300,7 @@ function MedicationEditRow({
           />
         </div>
         <div className="flex gap-2">
-          <Button loading={loading} disabled={!name || !dosage || !times} onClick={handleSave}>
+          <Button loading={loading} disabled={!name || !dosage || (!asNeeded && !times)} onClick={handleSave}>
             Opslaan
           </Button>
           <Button variant="ghost" onClick={onCancel}>

@@ -10,7 +10,14 @@ import { Badge } from "@/components/ui/badge";
 const ROLE_LABEL = { ADMIN: "Admin", COORDINATOR: "Coördinator", EMPLOYEE: "Medewerker" } as const;
 
 type ArchivedUser = { id: string; name: string; role: keyof typeof ROLE_LABEL };
-type ArchivedMedication = { id: string; name: string; dosage: string; times: string; clientName: string };
+type ArchivedMedication = {
+  id: string;
+  name: string;
+  dosage: string;
+  times: string;
+  asNeeded: boolean;
+  clientName: string;
+};
 
 export function ArchiveManager({
   users,
@@ -109,7 +116,7 @@ export function ArchiveManager({
                     {m.name} &middot; {m.dosage}{" "}
                     <span className="text-sm text-slate-500">({m.clientName})</span>
                   </p>
-                  <p className="text-sm text-slate-500">Tijden: {m.times}</p>
+                  <p className="text-sm text-slate-500">{m.asNeeded ? "Indien nodig" : `Tijden: ${m.times}`}</p>
                 </div>
                 <Button
                   size="sm"

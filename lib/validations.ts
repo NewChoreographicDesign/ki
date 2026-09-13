@@ -53,14 +53,21 @@ export const reportSchema = z.object({
   content: z.string().trim().min(3).max(5000),
 });
 
-export const medicationSchema = z.object({
-  clientId: z.string().min(1),
-  name: z.string().trim().min(1).max(200),
-  dosage: z.string().trim().min(1).max(200),
-  instructions: z.string().trim().max(1000).optional().or(z.literal("")),
-  times: z.string().trim().min(1).max(200),
-  active: z.boolean().optional(),
-});
+export const medicationSchema = z
+  .object({
+    clientId: z.string().min(1),
+    name: z.string().trim().min(1).max(200),
+    dosage: z.string().trim().min(1).max(200),
+    instructions: z.string().trim().max(1000).optional().or(z.literal("")),
+    // Required unless asNeeded ("Indien nodig") — see the refine below.
+    times: z.string().trim().max(200).optional().or(z.literal("")),
+    asNeeded: z.boolean().optional(),
+    active: z.boolean().optional(),
+  })
+  .refine((data) => data.asNeeded || !!data.times, {
+    message: "Kies tijden of \"Indien nodig\"",
+    path: ["times"],
+  });
 
 export const medicationCheckSchema = z.object({
   medicationId: z.string().min(1),
