@@ -1,4 +1,5 @@
 import "server-only";
+import path from "path";
 import PDFDocument from "pdfkit";
 import {
   groupMedicationChecksByRoomAndDay,
@@ -16,13 +17,31 @@ const STATUS_LABELS: Record<string, string> = {
   NOT_TAKEN: "Niet ingenomen",
 };
 
+// pdfkit's built-in "standard 14" fonts (Helvetica etc.) are resolved
+// through a package.json "imports" subpath (#standard-fonts/*) rather than
+// a plain relative require(). That subpath is resolved against the package
+// boundary of whichever file does the requiring, which webpack's bundling
+// breaks — pdfkit's code no longer runs from inside node_modules/pdfkit/
+// once bundled into a page's own chunk, so Node can't find a package.json
+// with a matching "imports" field for it at all. That's an unfixable
+// mismatch between pdfkit's font-loading mechanism and Next.js's bundler,
+// not a missing-file problem (outputFileTracingIncludes doesn't help: the
+// files being present is irrelevant once Node no longer recognizes the
+// call as originating from inside the pdfkit package). Embedding our own
+// real font file sidesteps the standard-font machinery entirely — pdfkit
+// never touches '#standard-fonts/*' for a font given as a filesystem path,
+// which is loaded with an ordinary, statically traceable fs.readFileSync().
+// Liberation Sans (assets/fonts/, SIL Open Font License — LICENSE-OFL.txt)
+// is metrically compatible with Helvetica and was created specifically to
+// be a freely embeddable substitute for it.
+const DEFAULT_FONT = path.join(process.cwd(), "assets/fonts/LiberationSans-Regular.ttf");
+
 /**
  * Renders the same weekly data as renderWeeklyReportText() (lib/weekly-report.ts)
  * as a PDF instead, for the automatically archived weekly reports (see
  * app/api/cron/weekly-report/route.ts). pdfkit is used because it needs no
- * external binary/browser (unlike a headless-Chromium approach), works on
- * Vercel's serverless Node runtime, and its built-in Helvetica font needs no
- * bundled font files.
+ * external binary/browser (unlike a headless-Chromium approach) and works
+ * on Vercel's serverless Node runtime.
  */
 export function renderWeeklyReportPdf(
   data: WeeklyReportData,
@@ -31,7 +50,7 @@ export function renderWeeklyReportPdf(
   const { isoYear, isoWeek } = isoWeekOf(data.weekStart);
 
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: 50, size: "A4" });
+    const doc = new PDFDocument({ margin: 50, size: "A4", font: DEFAULT_FONT });
     const chunks: Buffer[] = [];
     doc.on("data", (chunk) => chunks.push(chunk));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
