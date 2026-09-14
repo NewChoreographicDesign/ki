@@ -152,6 +152,15 @@ export function canAccessPersonalTodoAssignment(role: Role): boolean {
   return role === Role.ADMIN || role === Role.COORDINATOR;
 }
 
+// Same reasoning as canAccessPersonalTodoAssignment above: the auditlog
+// itself (app/(app)/backend/audit) is admin-only because it lives under
+// /backend, but a coordinator needs to see it too without gaining the rest
+// of Backend — so it's also served from its own top-level route
+// (/auditlog), sharing the same view component.
+export function canAccessAuditLog(role: Role): boolean {
+  return role === Role.ADMIN || role === Role.COORDINATOR;
+}
+
 /** Ends any dangling open shift for the user and starts a fresh one for the current login. */
 export async function startShiftForLogin(userId: string): Promise<{ id: string; type: ShiftType }> {
   const now = new Date();

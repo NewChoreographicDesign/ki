@@ -9,7 +9,7 @@ import {
   type WeeklyReportData,
   type WeeklyReportSection,
 } from "@/lib/weekly-report";
-import { formatDate, formatDateTime, formatTime, fullName, isoWeekOf } from "@/lib/utils";
+import { formatDate, formatDateTime, formatTime, fullName, isoWeekOf, shiftLabel } from "@/lib/utils";
 
 const STATUS_LABELS: Record<string, string> = {
   TAKEN: "Afgevinkt",
@@ -73,7 +73,7 @@ export function renderWeeklyReportPdf(
         for (const r of data.reports) {
           item(
             doc,
-            `${formatDate(r.date)} · ${fullName(r.client)} · ${r.shift === "MORNING" ? "Ochtend" : "Avond"} · door ${r.user.name}`,
+            `${formatDate(r.date)} · ${fullName(r.client)} · ${shiftLabel(r.shift)} · door ${r.user.name}`,
             r.content
           );
         }

@@ -75,9 +75,11 @@ describe("determineShiftType", () => {
     expect(determineShiftType(amsterdamDate(2026, 1, 1, 22, 59))).toBe(ShiftType.EVENING);
   });
 
-  it("treats night hours as evening continuation", () => {
-    expect(determineShiftType(amsterdamDate(2026, 1, 1, 2, 0))).toBe(ShiftType.EVENING);
-    expect(determineShiftType(amsterdamDate(2026, 1, 1, 23, 30))).toBe(ShiftType.EVENING);
+  it("returns NIGHT between 23:00 and 07:00", () => {
+    expect(determineShiftType(amsterdamDate(2026, 1, 1, 23, 0))).toBe(ShiftType.NIGHT);
+    expect(determineShiftType(amsterdamDate(2026, 1, 1, 23, 30))).toBe(ShiftType.NIGHT);
+    expect(determineShiftType(amsterdamDate(2026, 1, 1, 2, 0))).toBe(ShiftType.NIGHT);
+    expect(determineShiftType(amsterdamDate(2026, 1, 1, 6, 59))).toBe(ShiftType.NIGHT);
   });
 });
 
@@ -94,10 +96,16 @@ describe("shiftEndForStart", () => {
     expect(end.getTime()).toBe(amsterdamDate(2026, 1, 1, 23, 0).getTime());
   });
 
-  it("rolls over to the next day for a late-night start", () => {
+  it("ends a night shift started late in the evening at 07:00 the next day", () => {
     const start = amsterdamDate(2026, 1, 1, 23, 30);
-    const end = shiftEndForStart(ShiftType.EVENING, start);
-    expect(end.getTime()).toBe(amsterdamDate(2026, 1, 2, 23, 0).getTime());
+    const end = shiftEndForStart(ShiftType.NIGHT, start);
+    expect(end.getTime()).toBe(amsterdamDate(2026, 1, 2, 7, 0).getTime());
+  });
+
+  it("ends a night shift started after midnight at 07:00 the same calendar day", () => {
+    const start = amsterdamDate(2026, 1, 2, 2, 0);
+    const end = shiftEndForStart(ShiftType.NIGHT, start);
+    expect(end.getTime()).toBe(amsterdamDate(2026, 1, 2, 7, 0).getTime());
   });
 
   it("handles the summer-time (CEST, UTC+2) offset correctly", () => {

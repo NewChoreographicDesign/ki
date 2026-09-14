@@ -301,21 +301,20 @@ export function fullName(client: { firstName: string; lastName: string }): strin
 }
 
 // --- Shift logic -----------------------------------------------------------
-// Morning shift: 07:00-15:00. Evening shift: 14:00-23:00 (overlaps 14:00-15:00).
-// Outside those windows (23:00-07:00) we attach the login to the nearest shift.
-// All wall-clock times below are Europe/Amsterdam, not the server's local time.
+// Morning shift: 07:00-15:00. Evening shift: 15:00-23:00. Night shift:
+// 23:00-07:00 (spans midnight). All wall-clock times below are
+// Europe/Amsterdam, not the server's local time.
 
 export function determineShiftType(date: Date = new Date()): ShiftType {
   const hour = getZonedParts(date, AMSTERDAM_TZ).hour;
   if (hour >= 7 && hour < 15) return ShiftType.MORNING;
   if (hour >= 15 && hour < 23) return ShiftType.EVENING;
-  // Night hours (23:00-07:00): treat as a continuation of the evening shift.
-  return ShiftType.EVENING;
+  return ShiftType.NIGHT;
 }
 
 export function shiftEndForStart(type: ShiftType, startedAt: Date): Date {
   const p = getZonedParts(startedAt, AMSTERDAM_TZ);
-  const endHour = type === ShiftType.MORNING ? 15 : 23;
+  const endHour = type === ShiftType.MORNING ? 15 : type === ShiftType.EVENING ? 23 : 7;
   let end = amsterdamDate(p.year, p.month, p.day, endHour);
   if (end <= startedAt) {
     const nextDay = new Date(amsterdamDate(p.year, p.month, p.day, 12).getTime() + 24 * 3_600_000);
@@ -323,4 +322,18 @@ export function shiftEndForStart(type: ShiftType, startedAt: Date): Date {
     end = amsterdamDate(p2.year, p2.month, p2.day, endHour);
   }
   return end;
+}
+
+/** Dutch label for a shift — the single source of truth so "Nacht" can't be forgotten in a ternary. */
+export function shiftLabel(shift: ShiftType): string {
+  if (shift === ShiftType.MORNING) return "Ochtend";
+  if (shift === ShiftType.EVENING) return "Avond";
+  return "Nacht";
+}
+
+/** Badge color for a shift, shared by every place a shift renders as a Badge. */
+export function shiftBadgeVariant(shift: ShiftType): "sky" | "emerald" | "slate" {
+  if (shift === ShiftType.MORNING) return "sky";
+  if (shift === ShiftType.EVENING) return "emerald";
+  return "slate";
 }

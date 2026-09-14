@@ -48,7 +48,7 @@ export const changeBirthDateSchema = z.object({
 
 export const reportSchema = z.object({
   clientId: z.string().min(1),
-  shift: z.enum(["MORNING", "EVENING"]),
+  shift: z.enum(["MORNING", "EVENING", "NIGHT"]),
   date: z.string().regex(ddmmyyyy),
   content: z.string().trim().min(3).max(5000),
 });

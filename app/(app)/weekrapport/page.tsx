@@ -8,7 +8,7 @@ import {
 } from "@/lib/weekly-report";
 import { db } from "@/lib/db";
 import { backfillMissingWeeklyReports } from "@/lib/weekly-report-archive";
-import { formatDate, formatDateTime, formatTime, fullName, mostRecentMondayStart } from "@/lib/utils";
+import { formatDate, formatDateTime, formatTime, fullName, mostRecentMondayStart, shiftLabel } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { WeekrapportDownloads } from "./section-picker";
 
@@ -74,7 +74,7 @@ export default async function WeekrapportPage() {
             data.reports.map((r) => (
               <div key={r.id} className="rounded-lg bg-surface2 p-3 text-sm">
                 <p className="text-slate-400">
-                  {formatDate(r.date)} · {fullName(r.client)} · {r.shift === "MORNING" ? "Ochtend" : "Avond"} · door{" "}
+                  {formatDate(r.date)} · {fullName(r.client)} · {shiftLabel(r.shift)} · door{" "}
                   {r.user.name}
                 </p>
                 <p className="mt-1 whitespace-pre-wrap text-slate-200">{r.content}</p>

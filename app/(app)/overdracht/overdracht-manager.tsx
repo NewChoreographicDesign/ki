@@ -10,12 +10,12 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, shiftLabel, shiftBadgeVariant } from "@/lib/utils";
 
 export type HandoverRow = {
   id: string;
   content: string;
-  shift: "MORNING" | "EVENING";
+  shift: "MORNING" | "EVENING" | "NIGHT";
   userName: string;
   createdAt: string;
   expiresAt: string;
@@ -164,9 +164,7 @@ function RoomSection({
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
-                  <Badge variant={h.shift === "MORNING" ? "sky" : "emerald"}>
-                    {h.shift === "MORNING" ? "Ochtend" : "Avond"}
-                  </Badge>
+                  <Badge variant={shiftBadgeVariant(h.shift)}>{shiftLabel(h.shift)}</Badge>
                   {h.clientName && <span className="text-slate-300">{h.clientName}</span>}
                   <span>{h.userName}</span>
                   <span className="flex items-center gap-1">

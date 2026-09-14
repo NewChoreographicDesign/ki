@@ -39,10 +39,20 @@ describe("reportSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rejects an invalid shift value", () => {
+  it("accepts NIGHT as a valid shift value", () => {
     const result = reportSchema.safeParse({
       clientId: "abc",
       shift: "NIGHT",
+      date: "01-01-2026",
+      content: "Alles goed verlopen vandaag.",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an invalid shift value", () => {
+    const result = reportSchema.safeParse({
+      clientId: "abc",
+      shift: "AFTERNOON",
       date: "01-01-2026",
       content: "Alles goed verlopen vandaag.",
     });

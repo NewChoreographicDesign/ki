@@ -17,6 +17,8 @@ import {
   Menu,
   X,
   LogOut,
+  ListTodo,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -29,14 +31,16 @@ type NavItem = {
   icon: React.ComponentType<{ className?: string }>;
   backendOnly?: boolean;
   weeklyReportOnly?: boolean;
+  coordinatorOnly?: boolean;
 };
 
-// "Taken toewijzen" (/persoonlijke-taken) deliberately has no entry here —
-// it's reachable from the Backend hub card instead. Personal tasks
-// themselves already surface for a medewerker via the Dashboard's "Mijn
-// taken" widget, so a second, always-visible sidebar item for the
-// assignment screen would just be clutter for the one role (admin) that
-// actually uses it via the sidebar.
+// "Taken toewijzen" and "Auditlog" are coordinatorOnly — an admin reaches
+// the same two screens via the Backend hub instead (Backend already covers
+// them, so a second always-visible sidebar item would just be clutter for
+// that role), and a medewerker has access to neither. See
+// canAccessPersonalTodoAssignment/canAccessAuditLog in lib/auth.ts for why
+// coordinators need their own route to each rather than /backend itself
+// being widened to COORDINATOR.
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Overzicht", icon: LayoutDashboard },
   { href: "/aanwezigheid", label: "Aanwezigheid", icon: UserCheck },
@@ -47,6 +51,8 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/protocollen", label: "Protocollen", icon: ShieldCheck },
   { href: "/rapportage", label: "Rapportage", icon: FileText },
   { href: "/weekrapport", label: "Weekrapport", icon: Download, weeklyReportOnly: true },
+  { href: "/persoonlijke-taken", label: "Taken toewijzen", icon: ListTodo, coordinatorOnly: true },
+  { href: "/auditlog", label: "Auditlog", icon: History, coordinatorOnly: true },
   { href: "/backend", label: "Backend", icon: Settings, backendOnly: true },
 ];
 
@@ -74,10 +80,12 @@ export function AppNav({
   userName,
   canAccessBackend,
   canAccessWeeklyReport,
+  isCoordinator,
 }: {
   userName: string;
   canAccessBackend: boolean;
   canAccessWeeklyReport: boolean;
+  isCoordinator: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -85,7 +93,10 @@ export function AppNav({
   const [open, setOpen] = React.useState(false);
 
   const items = NAV_ITEMS.filter(
-    (item) => (!item.backendOnly || canAccessBackend) && (!item.weeklyReportOnly || canAccessWeeklyReport)
+    (item) =>
+      (!item.backendOnly || canAccessBackend) &&
+      (!item.weeklyReportOnly || canAccessWeeklyReport) &&
+      (!item.coordinatorOnly || isCoordinator)
   );
 
   function openMenu() {

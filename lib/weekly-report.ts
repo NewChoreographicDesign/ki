@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db";
-import { mostRecentMondayStart, formatDate, formatDateTime, formatTime, fullName, todayDayOfWeek, DAYS_OF_WEEK, parseDaysOfWeek } from "@/lib/utils";
+import { mostRecentMondayStart, formatDate, formatDateTime, formatTime, fullName, todayDayOfWeek, DAYS_OF_WEEK, parseDaysOfWeek, shiftLabel } from "@/lib/utils";
 
 const STATUS_LABELS: Record<string, string> = {
   TAKEN: "Afgevinkt",
@@ -215,7 +215,7 @@ export function renderWeeklyReportText(
     } else {
       for (const r of data.reports) {
         add(
-          `${formatDate(r.date)} · ${fullName(r.client)} · ${r.shift === "MORNING" ? "Ochtend" : "Avond"} · door ${r.user.name}`
+          `${formatDate(r.date)} · ${fullName(r.client)} · ${shiftLabel(r.shift)} · door ${r.user.name}`
         );
         add(r.content);
         add("");

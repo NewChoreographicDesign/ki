@@ -15,7 +15,7 @@ export function ReportForm({
   defaultShift,
 }: {
   clients: { id: string; name: string; room: string | null }[];
-  defaultShift: "MORNING" | "EVENING";
+  defaultShift: "MORNING" | "EVENING" | "NIGHT";
 }) {
   const router = useRouter();
   const [clientId, setClientId] = React.useState(clients[0]?.id ?? "");
@@ -66,10 +66,11 @@ export function ReportForm({
           <Select
             id="shift"
             value={shift}
-            onChange={(e) => setShift(e.target.value as "MORNING" | "EVENING")}
+            onChange={(e) => setShift(e.target.value as "MORNING" | "EVENING" | "NIGHT")}
           >
             <option value="MORNING">Ochtend</option>
             <option value="EVENING">Avond</option>
+            <option value="NIGHT">Nacht</option>
           </Select>
         </div>
         <div>

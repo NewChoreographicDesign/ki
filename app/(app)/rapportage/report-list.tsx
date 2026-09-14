@@ -4,13 +4,13 @@ import * as React from "react";
 import { ChevronDown, ChevronRight, DoorOpen } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, shiftLabel, shiftBadgeVariant } from "@/lib/utils";
 
 export type ReportRow = {
   id: string;
   clientName: string;
   room: string;
-  shift: "MORNING" | "EVENING";
+  shift: "MORNING" | "EVENING" | "NIGHT";
   createdAt: string;
   userName: string;
   content: string;
@@ -100,9 +100,7 @@ function ReportRowItem({ report }: { report: ReportRow }) {
         <div className="flex flex-col gap-2 border-t border-border bg-surface p-4">
           <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
             <span className="font-medium text-slate-200">{report.clientName}</span>
-            <Badge variant={report.shift === "MORNING" ? "sky" : "emerald"}>
-              {report.shift === "MORNING" ? "Ochtend" : "Avond"}
-            </Badge>
+            <Badge variant={shiftBadgeVariant(report.shift)}>{shiftLabel(report.shift)}</Badge>
           </div>
           <p className="whitespace-pre-wrap text-slate-200">{report.content}</p>
         </div>

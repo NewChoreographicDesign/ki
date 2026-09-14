@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatBirthDateInput } from "@/lib/format-birthdate-input";
+import { shiftLabel } from "@/lib/utils";
 
 export function LoginForm() {
   const router = useRouter();
@@ -29,7 +30,7 @@ export function LoginForm() {
         toast.error(data.error || "Inloggen mislukt");
         return;
       }
-      toast.success(`Welkom, dienst gestart (${data.shift === "MORNING" ? "ochtend" : "avond"})`);
+      toast.success(`Welkom, dienst gestart (${shiftLabel(data.shift).toLowerCase()})`);
       const next = searchParams.get("next") || "/dashboard";
       router.push(next);
       router.refresh();
