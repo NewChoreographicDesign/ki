@@ -1,4 +1,6 @@
 import type { NextConfig } from "next";
+import withBundleAnalyzerInit from "@next/bundle-analyzer";
+const withBundleAnalyzer = withBundleAnalyzerInit({ enabled: process.env.ANALYZE === "true" });
 
 // This app handles special-category health data (medication, care reports)
 // about a vulnerable population, so it ships with a strict baseline of
@@ -50,4 +52,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

@@ -71,7 +71,11 @@ koppelt.
    **Create**.
 4. Klik daarna op **Connect Project** en kies je zojuist geïmporteerde
    project. Vercel zet nu automatisch de juiste technische instelling
-   (`DATABASE_URL`) klaar — je hoeft zelf niets te kopiëren of te typen.
+   (`DATABASE_URL`) klaar — je hoeft zelf niets te kopiëren of te typen, en
+   het is meteen de snelle "pooled" variant die geschikt is voor de manier
+   waarop de app draait (serverless). Voeg deze database dus altijd toe via
+   deze **Connect Project**-knop, en niet door zelf een connection string
+   van Neon te kopiëren — die andere variant is trager bij drukte.
 
 ---
 

@@ -158,7 +158,12 @@ Kort samengevat voor ontwikkelaars:
 
 1. Push naar GitHub en importeer het project in Vercel.
 2. Koppel een Postgres-database (Vercel Storage → Neon) aan het project —
-   dit zet `DATABASE_URL` automatisch.
+   dit zet `DATABASE_URL` automatisch, en wel als Neon's *pooled* connection
+   string (via PgBouncer). Dat is precies wat je wilt voor serverless
+   functions: elke cold start opent anders zelf een nieuwe rechtstreekse
+   Postgres-connectie, wat traag is en het verbindingslimiet van Neon's
+   gratis laag snel opsoupeert. Vervang `DATABASE_URL` dus niet handmatig
+   door de "unpooled"/"direct" variant die Neon ook aanbiedt.
 3. Zet de overige environment variables: `JWT_SECRET`, `CRON_SECRET`,
    optioneel `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` /
    `CLOUDINARY_API_SECRET` (protocollen uploaden — zie de "Uploads"-sectie
