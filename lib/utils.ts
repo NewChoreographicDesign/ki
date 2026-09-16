@@ -156,25 +156,9 @@ export function startOfToday(): Date {
 export function todayDayOfWeek(now: Date = new Date()): number {
   const p = getZonedParts(now, AMSTERDAM_TZ);
   // Noon UTC (not midnight) purely to read the weekday safely, away from any
-  // DST-transition edge case — same trick as mostRecentThursdayStart below.
+  // DST-transition edge case — same trick as mostRecentMondayStart below.
   const weekday = new Date(Date.UTC(p.year, p.month - 1, p.day, 12)).getUTCDay(); // 0=Sun..6=Sat
   return (weekday + 6) % 7;
-}
-
-/** Midnight of the most recent Thursday (Amsterdam calendar; today counts if it's Thursday). */
-export function mostRecentThursdayStart(now: Date = new Date()): Date {
-  const p = getZonedParts(now, AMSTERDAM_TZ);
-  // Use UTC noon (not midnight) purely to compute the weekday number safely,
-  // away from any DST-transition edge case.
-  const noonUtc = new Date(Date.UTC(p.year, p.month - 1, p.day, 12));
-  const weekday = noonUtc.getUTCDay(); // 0=Sun .. 6=Sat
-  const daysSinceThursday = (weekday - 4 + 7) % 7; // Thursday = 4
-  const thursdayNoonUtc = new Date(noonUtc.getTime() - daysSinceThursday * 86_400_000);
-  return amsterdamDate(
-    thursdayNoonUtc.getUTCFullYear(),
-    thursdayNoonUtc.getUTCMonth() + 1,
-    thursdayNoonUtc.getUTCDate()
-  );
 }
 
 /** Midnight of the most recent Monday (Amsterdam calendar; today counts if it's Monday). */

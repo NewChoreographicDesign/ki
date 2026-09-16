@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { determineShiftType } from "@/lib/auth";
-import { fullName, mostRecentThursdayStart } from "@/lib/utils";
+import { fullName } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ReportForm } from "./report-form";
 import { ReportList, type ReportRow } from "./report-list";
@@ -8,11 +8,14 @@ import { ReportList, type ReportRow } from "./report-list";
 export const dynamic = "force-dynamic";
 
 export default async function RapportagePage() {
-  // "Recente rapportages" resets every Thursday: only reports from the most
-  // recent Thursday onward are shown here. Nothing is deleted — this is a
-  // display window, not a retention policy — older reports stay in the
-  // database and in the weekly PDF archive (see /weekrapport).
-  const since = mostRecentThursdayStart();
+  // "Recente rapportages" shows a rolling last-7-days window rather than a
+  // fixed weekly reset: a hard reset (e.g. every Thursday at midnight) means
+  // the list goes empty right at the reset moment, until new reports get
+  // filed — which reads as broken even though it's working as designed.
+  // Nothing is deleted either way — this is a display window, not a
+  // retention policy — older reports stay in the database and in the weekly
+  // PDF archive (see /weekrapport).
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   const [clients, reports] = await Promise.all([
     db.client.findMany({ where: { active: true }, orderBy: { firstName: "asc" } }),
@@ -55,7 +58,7 @@ export default async function RapportagePage() {
 
       <div>
         <h2 className="mb-3 text-lg font-semibold text-slate-100">
-          Recente rapportages <span className="font-normal text-slate-500">(sinds donderdag)</span>
+          Recente rapportages <span className="font-normal text-slate-500">(laatste 7 dagen)</span>
         </h2>
         <ReportList reports={reportRows} />
       </div>

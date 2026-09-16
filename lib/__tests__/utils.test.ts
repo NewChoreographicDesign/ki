@@ -7,7 +7,6 @@ import {
   determineShiftType,
   shiftEndForStart,
   amsterdamDate,
-  mostRecentThursdayStart,
   mostRecentMondayStart,
   todayDayOfWeek,
   isoWeekOf,
@@ -112,20 +111,6 @@ describe("shiftEndForStart", () => {
     const start = amsterdamDate(2026, 7, 1, 8, 0);
     const end = shiftEndForStart(ShiftType.MORNING, start);
     expect(end.getTime()).toBe(amsterdamDate(2026, 7, 1, 15, 0).getTime());
-  });
-});
-
-describe("mostRecentThursdayStart", () => {
-  it("returns the same day when today is Thursday", () => {
-    // 2026-01-01 is a Thursday.
-    const now = amsterdamDate(2026, 1, 1, 10, 0);
-    expect(mostRecentThursdayStart(now).getTime()).toBe(amsterdamDate(2026, 1, 1).getTime());
-  });
-
-  it("returns the previous Thursday for a later day in the week", () => {
-    // 2026-01-04 is a Sunday; the preceding Thursday is 2026-01-01.
-    const now = amsterdamDate(2026, 1, 4, 10, 0);
-    expect(mostRecentThursdayStart(now).getTime()).toBe(amsterdamDate(2026, 1, 1).getTime());
   });
 });
 

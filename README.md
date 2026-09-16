@@ -92,7 +92,7 @@ Next.js 15 (App Router), TypeScript, Prisma en Tailwind CSS.
 | Agenda | `/agenda` | Aankomende afspraken bovenaan, daaronder het formulier voor een nieuwe afspraak |
 | Overdracht | `/overdracht` | Per kamer gegroepeerd in een inklapbare sectie, plus één aparte sectie "Algemeen" voor overdrachten zonder cliënt — zelfde indeling als Protocollen. "+ Nieuwe overdracht" is de compacte inklap-knop. Notities vervallen automatisch 7 dagen na aanmaak; een admin kan er ook eerder één verwijderen |
 | Protocollen | `/protocollen` | Per kamer gegroepeerd in een inklapbare sectie, plus één aparte sectie "Algemeen" voor protocollen zonder cliënt. "+ Nieuw protocol" is dezelfde compacte inklap-knop als bij To-Do's. Tekst en/of geüpload bestand, voor iedereen |
-| Rapportage | `/rapportage` | Rapportage per cliënt/dienst. "Recente rapportages" toont alleen sinds de laatste donderdag |
+| Rapportage | `/rapportage` | Rapportage per cliënt/dienst. "Recente rapportages" toont een rollend venster van de laatste 7 dagen |
 | Weekrapport | `/weekrapport` | Automatisch archief van één PDF per kalenderweek (alle acties van die week), 1 jaar bewaard, plus een live overzicht van de lopende week. De Medicatie-sectie is per dag gesplitst (dagnaam + datum als kop) in plaats van één doorlopende lijst. Admin + coördinator |
 | Backend | `/backend` | Cliënten, medewerkers (incl. geboortedatum resetten of verwijderen), medicatie beheer (incl. wijzigen of verwijderen), weekplanning, archief (gedeactiveerde medewerkers/medicatie), instellingen, auditlog (alleen admin) |
 | Mijn account | `/account` | Eigen geboortedatum (het inloggegeven) wijzigen — vereist de huidige geboortedatum ter bevestiging. Voor iedereen, bereikbaar via de eigen naam onderin de zijbalk |
@@ -497,7 +497,7 @@ gericht toe.
 7. **Agenda** → formulier voor een nieuwe afspraak bovenaan, aankomende afspraken eronder.
 8. **Overdracht** → per kamer een inklapbare sectie, plus één sectie "Algemeen". "+ Nieuwe overdracht" klapt het formulier open. Vervalt automatisch na 7 dagen; een admin kan een notitie ook eerder verwijderen.
 9. **Protocollen** → per kamer een inklapbare sectie, plus één sectie "Algemeen". "+ Nieuw protocol" klapt het formulier open. Voor iedereen; verwijderen alleen voor admin/coördinator.
-10. **Rapportage** → kies cliënt + dienst + datum → typ → verstuur. "Recente rapportages" toont alleen wat sinds afgelopen donderdag is toegevoegd; het volledige overzicht staat ook in het **Weekrapport**.
+10. **Rapportage** → kies cliënt + dienst + datum → typ → verstuur. "Recente rapportages" toont een rollend venster van de laatste 7 dagen; het volledige overzicht staat ook in het **Weekrapport**.
 11. **Weekrapport** (admin + coördinator) → automatisch archief van één PDF per kalenderweek (1 jaar bewaard, medicatie per dag gesplitst), plus een live voortgangsoverzicht van de lopende week.
 12. **Backend** (alleen admin) → cliënten (incl. kamer), medewerkers, instellingen, auditlog, medicatie, weekplanning. Eén wijziging = overal doorgevoerd.
 13. Uitloggen rechtsonder in de zijbalk, of automatisch na 5 minuten inactiviteit.

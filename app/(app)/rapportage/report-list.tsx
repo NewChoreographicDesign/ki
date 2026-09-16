@@ -23,7 +23,7 @@ export function ReportList({ reports }: { reports: ReportRow[] }) {
   const grouped = React.useMemo(() => groupByRoom(reports), [reports]);
 
   if (reports.length === 0) {
-    return <p className="text-slate-500">Nog geen rapportages sinds afgelopen donderdag.</p>;
+    return <p className="text-slate-500">Nog geen rapportages in de afgelopen 7 dagen.</p>;
   }
 
   return (
