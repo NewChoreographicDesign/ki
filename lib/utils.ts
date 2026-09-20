@@ -316,8 +316,8 @@ export function shiftLabel(shift: ShiftType): string {
 }
 
 /** Badge color for a shift, shared by every place a shift renders as a Badge. */
-export function shiftBadgeVariant(shift: ShiftType): "sky" | "emerald" | "slate" {
-  if (shift === ShiftType.MORNING) return "sky";
-  if (shift === ShiftType.EVENING) return "emerald";
+export function shiftBadgeVariant(shift: ShiftType): "rose" | "forest" | "slate" {
+  if (shift === ShiftType.MORNING) return "rose";
+  if (shift === ShiftType.EVENING) return "forest";
   return "slate";
 }

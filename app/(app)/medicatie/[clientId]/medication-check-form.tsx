@@ -25,8 +25,8 @@ const STATUS_OPTIONS: {
     status: "TAKEN",
     label: "Afvinken",
     icon: CheckCircle2,
-    badge: "bg-emerald-500/15 text-emerald-400",
-    hover: "hover:border-emerald-500/40 hover:bg-emerald-500/5",
+    badge: "bg-forest-500/15 text-forest-400",
+    hover: "hover:border-forest-500/40 hover:bg-forest-500/5",
   },
   {
     status: "LEAVE",

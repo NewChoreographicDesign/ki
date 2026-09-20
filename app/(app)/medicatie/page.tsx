@@ -65,8 +65,8 @@ export default async function MedicatiePage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {grouped.map(({ room, scheduled, asNeeded }) => (
             <Card key={room} className="overflow-hidden">
-              <div className="flex items-center gap-3 bg-brand-gradient-soft p-4 ring-1 ring-inset ring-sky-400/20">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-500/15 text-sky-400">
+              <div className="flex items-center gap-3 bg-brand-gradient-soft p-4 ring-1 ring-inset ring-rose-400/20">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/15 text-rose-400">
                   <DoorOpen className="h-5 w-5" />
                 </span>
                 <span className="flex flex-col">
@@ -105,7 +105,7 @@ export default async function MedicatiePage() {
           <div className="flex flex-col gap-2">
             {clientsWithoutMeds.map((client) => (
               <Link key={client.id} href={`/medicatie/${client.id}`}>
-                <Card className="transition-colors hover:border-sky-500/50 hover:bg-surface2">
+                <Card className="transition-colors hover:border-rose-500/50 hover:bg-surface2">
                   <CardContent className="flex items-center justify-between gap-4 p-4">
                     <span className="text-sm text-slate-300">{fullName(client)}</span>
                     <ChevronRight className="h-4 w-4 text-slate-500" />
@@ -122,13 +122,13 @@ export default async function MedicatiePage() {
 
 function MedicationRow({ row }: { row: MedicationOverviewRow }) {
   const badgeLabel = row.asNeeded ? "Indien nodig" : row.doneForToday ? "Klaar" : row.nextOpenTime;
-  const badgeVariant = row.doneForToday ? "slate" : row.asNeeded ? "emerald" : "sky";
+  const badgeVariant = row.doneForToday ? "slate" : row.asNeeded ? "forest" : "rose";
 
   return (
     <Link href={`/medicatie/${row.clientId}`} className="block">
       <div
         className={cn(
-          "flex items-start gap-3 rounded-xl border border-border p-3 transition-colors hover:border-sky-500/50",
+          "flex items-start gap-3 rounded-xl border border-border p-3 transition-colors hover:border-rose-500/50",
           row.doneForToday ? "bg-surface2/20 opacity-60" : "bg-surface2/50"
         )}
       >

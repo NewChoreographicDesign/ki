@@ -6,14 +6,17 @@ import { usePathname } from "next/navigation";
 const CURTAIN_MS = 1200;
 
 /**
- * The curtain itself: two rings (the same white rings as the logo mark)
- * slide in from the screen edges and meet in the middle, then the black
- * overlay and the new page crossfade together while the page comes into
- * focus out of a slight motion blur. All timing lives in the four
- * `curtain-*` keyframes (tailwind.config.ts) so the rings, the overlay
- * fade, and the content reveal always stay in lockstep — this component
- * only has to mount the overlay and, once its animation has actually
- * finished, remove it so it stops blocking clicks.
+ * The curtain itself: two unequal rings — the same asymmetric pair as the
+ * logo mark (components/brand/logo.tsx), a thick full-gradient ring and a
+ * thin 60%-opacity one behind it — slide in from opposite screen edges and
+ * meet in the middle. The instant they meet, the mark's focal dot snaps
+ * into place between them (curtain-dot), then the overlay and the new page
+ * crossfade together while the page comes into focus out of a slight motion
+ * blur. All timing lives in the five `curtain-*` keyframes
+ * (tailwind.config.ts) so the rings, the dot, the overlay fade, and the
+ * content reveal always stay in lockstep — this component only has to mount
+ * the overlay and, once its animation has actually finished, remove it so
+ * it stops blocking clicks.
  *
  * `children` gets its own Suspense boundary specifically so the overlay
  * never waits on it: without this, a slow-loading destination page (a cold
@@ -66,8 +69,12 @@ function TransitionCurtain({ children }: { children: React.ReactNode }) {
           className="fixed inset-0 z-[200] animate-curtain-overlay bg-background"
           onAnimationEnd={() => setCurtainUp(false)}
         >
-          <div className="absolute left-1/2 top-1/2 h-32 w-32 animate-curtain-ring-left rounded-full border-[14px] border-white shadow-glow-sky" />
-          <div className="absolute left-1/2 top-1/2 h-32 w-32 animate-curtain-ring-right rounded-full border-[14px] border-white/75" />
+          {/* Front ring — thick, leads, warm gold. Matches the mark's front ring. */}
+          <div className="absolute left-1/2 top-1/2 h-32 w-32 animate-curtain-ring-left rounded-full border-[18px] border-gold-500 shadow-glow-rose" />
+          {/* Back ring — thin, 60% opacity, follows underneath. Matches the mark's back ring. */}
+          <div className="absolute left-1/2 top-1/2 h-28 w-28 animate-curtain-ring-right rounded-full border-[9px] border-rose-500 opacity-60" />
+          {/* The focal dot: only appears once the two rings actually meet. */}
+          <div className="absolute left-1/2 top-1/2 h-5 w-5 animate-curtain-dot rounded-full bg-gold-500 shadow-glow-rose" />
         </div>
       )}
       <React.Suspense fallback={null}>

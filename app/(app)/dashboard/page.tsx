@@ -176,8 +176,8 @@ export default async function DashboardPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {roomsToday.map(({ room, entries }, i) => (
               <Card key={room} className="animate-fade-in-up overflow-hidden" style={{ animationDelay: `${i * 50}ms` }}>
-                <div className="flex items-center gap-3 bg-brand-gradient-soft p-4 ring-1 ring-inset ring-sky-400/20">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-500/15 text-sky-400">
+                <div className="flex items-center gap-3 bg-brand-gradient-soft p-4 ring-1 ring-inset ring-rose-400/20">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/15 text-rose-400">
                     <DoorOpen className="h-5 w-5" />
                   </span>
                   <span className="flex flex-col">
@@ -245,8 +245,8 @@ export default async function DashboardPage() {
                   className={cn(
                     "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105",
                     action.variant === "sky"
-                      ? "bg-sky-500/15 text-sky-400"
-                      : "bg-emerald-500/15 text-emerald-400"
+                      ? "bg-rose-500/15 text-rose-400"
+                      : "bg-forest-500/15 text-forest-400"
                   )}
                 >
                   <Icon className="h-6 w-6" />

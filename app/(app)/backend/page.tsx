@@ -32,9 +32,9 @@ export default function BackendPage() {
           const Icon = s.icon;
           return (
             <Link key={s.href} href={s.href}>
-              <Card className="h-full transition-colors hover:border-sky-500/50 hover:bg-surface2">
+              <Card className="h-full transition-colors hover:border-rose-500/50 hover:bg-surface2">
                 <CardContent className="flex items-start gap-4 p-5">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sky-500/15 text-sky-400">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-rose-500/15 text-rose-400">
                     <Icon className="h-6 w-6" />
                   </div>
                   <div>

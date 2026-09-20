@@ -1,12 +1,12 @@
 {
-  "name": "110G",
-  "short_name": "110G",
+  "name": "Vezrap",
+  "short_name": "Vezrap",
   "description": "Beheeromgeving voor de woongroep",
   "start_url": "/dashboard",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#0b0f14",
-  "theme_color": "#0b0f14",
+  "background_color": "#1c2420",
+  "theme_color": "#1c2420",
   "icons": [
     {
       "src": "/icons/icon.svg",

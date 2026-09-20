@@ -144,7 +144,7 @@ export function MedicationManager({
                 type="checkbox"
                 checked={asNeeded}
                 onChange={(e) => setAsNeeded(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-600 bg-surface2 accent-sky-500"
+                className="h-4 w-4 rounded border-slate-600 bg-surface2 accent-rose-500"
               />
               Indien nodig — geen vaste tijden, geen meldingen
             </label>
@@ -190,7 +190,7 @@ export function MedicationManager({
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={m.active ? "emerald" : "slate"}>{m.active ? "Actief" : "Inactief"}</Badge>
+                  <Badge variant={m.active ? "forest" : "slate"}>{m.active ? "Actief" : "Inactief"}</Badge>
                   <Button size="sm" variant="ghost" onClick={() => setEditingId(m.id)} aria-label="Bewerken">
                     <Pencil className="h-4 w-4" />
                   </Button>
@@ -287,7 +287,7 @@ function MedicationEditRow({
             type="checkbox"
             checked={asNeeded}
             onChange={(e) => setAsNeeded(e.target.checked)}
-            className="h-4 w-4 rounded border-slate-600 bg-surface2 accent-sky-500"
+            className="h-4 w-4 rounded border-slate-600 bg-surface2 accent-rose-500"
           />
           Indien nodig — geen vaste tijden, geen meldingen
         </label>

@@ -140,10 +140,10 @@ function RoomSection({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 bg-brand-gradient-soft p-5 text-left ring-1 ring-inset ring-sky-400/20 transition-colors hover:bg-sky-500/10"
+        className="flex w-full items-center justify-between gap-3 bg-brand-gradient-soft p-5 text-left ring-1 ring-inset ring-rose-400/20 transition-colors hover:bg-rose-500/10"
       >
         <span className="flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-500/15 text-sky-400">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/15 text-rose-400">
             <DoorOpen className="h-5 w-5" />
           </span>
           <span className="flex flex-col">
@@ -160,7 +160,7 @@ function RoomSection({
           {items.map((h) => (
             <div
               key={h.id}
-              className="flex flex-col gap-2 rounded-xl border border-border bg-surface2/50 p-4 transition-colors hover:border-sky-500/30"
+              className="flex flex-col gap-2 rounded-xl border border-border bg-surface2/50 p-4 transition-colors hover:border-rose-500/30"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400">

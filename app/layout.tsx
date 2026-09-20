@@ -1,9 +1,36 @@
 import type { Metadata, Viewport } from "next";
+import { Archivo, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 
+// Two families, each with exactly one job, both chosen for legibility over
+// personality: Archivo (display) is a geometric grotesk with a high
+// x-height and no decorative details that fight fast scanning — used only
+// for the wordmark, big numbers, and titles. IBM Plex Sans (body/UI) and
+// IBM Plex Mono (data, timestamps, codes) were designed for long screen
+// reading, not for mood. See tailwind.config.ts for how these map to
+// font-display / font-sans / font-mono.
+const archivo = Archivo({
+  subsets: ["latin"],
+  weight: ["500", "600", "800", "900"],
+  variable: "--font-display",
+  display: "swap",
+});
+const ibmPlexSans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-sans",
+  display: "swap",
+});
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-mono",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "110G",
+  title: "Vezrap",
   description: "Beheeromgeving voor de woongroep",
   manifest: "/manifest.json",
   icons: {
@@ -13,12 +40,12 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "110G",
+    title: "Vezrap",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0b0f14",
+  themeColor: "#1c2420",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -36,7 +63,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="nl" className="dark">
+    <html lang="nl" className={`dark ${archivo.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable}`}>
       <body className="min-h-screen bg-background font-sans">
         {children}
         <Toaster theme="dark" position="top-center" richColors />

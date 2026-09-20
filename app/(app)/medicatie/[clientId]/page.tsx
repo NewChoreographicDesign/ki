@@ -12,8 +12,8 @@ import { MedicationCheckList, type MedicationCheckRow } from "./medication-check
 
 export const dynamic = "force-dynamic";
 
-const STATUS_LABELS: Record<string, { label: string; variant: "emerald" | "amber" | "red" }> = {
-  TAKEN: { label: "Afgevinkt", variant: "emerald" },
+const STATUS_LABELS: Record<string, { label: string; variant: "forest" | "amber" | "red" }> = {
+  TAKEN: { label: "Afgevinkt", variant: "forest" },
   LEAVE: { label: "Verlof", variant: "amber" },
   NOT_TAKEN: { label: "Niet ingenomen", variant: "red" },
 };

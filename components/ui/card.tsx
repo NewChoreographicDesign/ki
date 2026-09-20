@@ -27,7 +27,7 @@ export function Card({
       onMouseMove={handleMouseMove}
       className={cn(
         "group relative overflow-hidden rounded-2xl border border-border bg-surface shadow-sm transition-[transform,box-shadow,border-color] duration-200",
-        interactive && "hover:-translate-y-0.5 hover:border-sky-500/40 hover:shadow-lift",
+        interactive && "hover:-translate-y-0.5 hover:border-rose-500/40 hover:shadow-lift",
         className
       )}
       {...props}

@@ -74,7 +74,7 @@ export function WeekrapportDownloads({
                 type="checkbox"
                 checked={selected.has(s.key)}
                 onChange={() => toggle(s.key)}
-                className="h-4 w-4 rounded border-slate-600 bg-surface2 accent-sky-500"
+                className="h-4 w-4 rounded border-slate-600 bg-surface2 accent-rose-500"
               />
               {s.label}
             </label>

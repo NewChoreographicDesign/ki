@@ -56,10 +56,10 @@ function RoomSection({ title, items }: { title: string; items: ReportRow[] }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 bg-brand-gradient-soft p-5 text-left ring-1 ring-inset ring-sky-400/20 transition-colors hover:bg-sky-500/10"
+        className="flex w-full items-center justify-between gap-3 bg-brand-gradient-soft p-5 text-left ring-1 ring-inset ring-rose-400/20 transition-colors hover:bg-rose-500/10"
       >
         <span className="flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-500/15 text-sky-400">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/15 text-rose-400">
             <DoorOpen className="h-5 w-5" />
           </span>
           <span className="flex flex-col">
@@ -86,13 +86,13 @@ function ReportRowItem({ report }: { report: ReportRow }) {
   const [open, setOpen] = React.useState(false);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-surface2/50 transition-colors hover:border-sky-500/30">
+    <div className="overflow-hidden rounded-xl border border-border bg-surface2/50 transition-colors hover:border-rose-500/30">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-2.5 p-3.5 text-left"
       >
-        <ChevronRight className={`h-4 w-4 shrink-0 text-sky-400 transition-transform ${open ? "rotate-90" : ""}`} />
+        <ChevronRight className={`h-4 w-4 shrink-0 text-rose-400 transition-transform ${open ? "rotate-90" : ""}`} />
         <span className="font-medium text-slate-100">{formatDateTime(new Date(report.createdAt))}</span>
         <span className="text-sm text-slate-500">{report.userName}</span>
       </button>

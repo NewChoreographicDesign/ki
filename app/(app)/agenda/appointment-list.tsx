@@ -45,7 +45,7 @@ export function AppointmentList({
         ) : (
           <Card key={a.id}>
             <CardContent className="flex items-start gap-4 p-5">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-500/15 text-sky-400">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rose-500/15 text-rose-400">
                 <CalendarDays className="h-5 w-5" />
               </div>
               <div className="flex flex-1 flex-col gap-0.5">

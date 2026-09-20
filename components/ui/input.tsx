@@ -11,7 +11,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
           "transition-[border-color,box-shadow] duration-150",
           "placeholder:text-slate-500",
           "hover:border-slate-500/50",
-          "focus-visible:outline-none focus-visible:border-sky-400/60 focus-visible:shadow-glow-sky",
+          "focus-visible:outline-none focus-visible:border-rose-400/60 focus-visible:shadow-glow-rose",
           "disabled:cursor-not-allowed disabled:opacity-50",
           className
         )}

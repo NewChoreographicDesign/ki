@@ -17,7 +17,7 @@ import { TodoForm } from "./todo-form";
 // it's simply no longer shown here.
 const PRIORITY_ICON: Record<TodoData["priority"], { icon: React.ComponentType<{ className?: string }>; className: string }> = {
   NONE: { icon: Minus, className: "text-slate-500" },
-  LOW: { icon: Flag, className: "text-sky-400" },
+  LOW: { icon: Flag, className: "text-rose-400" },
   MEDIUM: { icon: Flag, className: "text-amber-400" },
   HIGH: { icon: Flag, className: "text-red-400" },
 };
@@ -185,7 +185,7 @@ export function TodoItem({
           Aangemaakt door {todo.createdByName} &middot; {formatDateTime(new Date(todo.createdAt))}
         </div>
         {todo.completed && (
-          <div className="text-xs text-emerald-400">
+          <div className="text-xs text-forest-400">
             Afgerond door {todo.completedByName} &middot;{" "}
             {todo.completedAt && formatDateTime(new Date(todo.completedAt))}
             {todo.completionNote ? ` — ${todo.completionNote}` : ""}

@@ -146,7 +146,7 @@ export function UserManager({ users, currentUserId }: { users: UserRow[]; curren
             <CardContent className="flex flex-wrap items-center justify-between gap-3 p-5">
               <div className="flex items-center gap-3">
                 <span className="font-medium text-slate-100">{u.name}</span>
-                <Badge variant={u.active ? "emerald" : "slate"}>{u.active ? "Actief" : "Inactief"}</Badge>
+                <Badge variant={u.active ? "forest" : "slate"}>{u.active ? "Actief" : "Inactief"}</Badge>
               </div>
               <div className="flex items-center gap-2">
                 <Select

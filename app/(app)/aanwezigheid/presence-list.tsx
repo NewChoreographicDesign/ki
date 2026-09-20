@@ -66,7 +66,7 @@ function ClientRow({
         <button
           type="button"
           onClick={() => setShowComment((v) => !v)}
-          className="self-start text-sm text-sky-400 hover:underline"
+          className="self-start text-sm text-rose-400 hover:underline"
         >
           {showComment ? "Verberg commentaar" : "Commentaar toevoegen"}
         </button>
@@ -114,7 +114,7 @@ function PresenceToggle({
       aria-label="Aanwezigheid"
       className={cn(
         "relative flex h-12 w-60 shrink-0 items-center rounded-full border p-1 transition-colors duration-300",
-        present === true && "border-emerald-500/50 bg-emerald-500/10",
+        present === true && "border-forest-500/50 bg-forest-500/10",
         present === false && "border-red-500/50 bg-red-500/10",
         present === null && "border-border bg-surface2"
       )}
@@ -123,7 +123,7 @@ function PresenceToggle({
         aria-hidden="true"
         className={cn(
           "absolute top-1 h-10 w-[calc(50%-4px)] rounded-full shadow-lift transition-all duration-300 ease-out",
-          present === true && "left-1 bg-emerald-500 opacity-100",
+          present === true && "left-1 bg-forest-500 opacity-100",
           present === false && "left-[calc(50%+3px)] bg-red-500 opacity-100",
           present === null && "left-1 bg-slate-500 opacity-0"
         )}

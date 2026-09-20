@@ -23,8 +23,8 @@ export type MedicationCheckRow = {
   userName: string;
 };
 
-const STATUS_LABELS: Record<CheckStatus, { label: string; variant: "emerald" | "amber" | "red" }> = {
-  TAKEN: { label: "Afgevinkt", variant: "emerald" },
+const STATUS_LABELS: Record<CheckStatus, { label: string; variant: "forest" | "amber" | "red" }> = {
+  TAKEN: { label: "Afgevinkt", variant: "forest" },
   LEAVE: { label: "Verlof", variant: "amber" },
   NOT_TAKEN: { label: "Niet ingenomen", variant: "red" },
 };

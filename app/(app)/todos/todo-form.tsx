@@ -169,7 +169,7 @@ export function TodoForm({
                 className={cn(
                   "flex h-10 w-11 items-center justify-center rounded-lg border text-sm font-medium transition-colors",
                   days.includes(i)
-                    ? "border-sky-400 bg-sky-500/15 text-sky-300"
+                    ? "border-rose-400 bg-rose-500/15 text-rose-300"
                     : "border-border bg-surface2 text-slate-300 hover:bg-surface2/70"
                 )}
               >
@@ -182,7 +182,7 @@ export function TodoForm({
               className={cn(
                 "flex h-10 items-center justify-center rounded-lg border px-3 text-sm font-medium transition-colors",
                 allDaysSelected
-                  ? "border-sky-400 bg-sky-500/15 text-sky-300"
+                  ? "border-rose-400 bg-rose-500/15 text-rose-300"
                   : "border-border bg-surface2 text-slate-300 hover:bg-surface2/70"
               )}
             >
@@ -196,7 +196,7 @@ export function TodoForm({
           type="checkbox"
           checked={recurring}
           onChange={(e) => setRecurring(e.target.checked)}
-          className="h-4 w-4 rounded border-slate-600 bg-surface2 accent-sky-500"
+          className="h-4 w-4 rounded border-slate-600 bg-surface2 accent-rose-500"
         />
         Terugkerende taak — bij afronden verschijnt hij automatisch weer open op de volgende
         gekozen dag

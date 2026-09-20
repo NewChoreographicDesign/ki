@@ -13,8 +13,8 @@ body {
      depth behind the UI rather than a decoration on any one page — subtle
      enough to stay out of the way of a clinical, professional dark theme. */
   background-image:
-    radial-gradient(60rem 40rem at 100% -10%, rgba(56, 189, 248, 0.07), transparent 60%),
-    radial-gradient(50rem 36rem at -10% 110%, rgba(52, 211, 153, 0.05), transparent 60%);
+    radial-gradient(60rem 40rem at 100% -10%, rgba(217, 138, 122, 0.06), transparent 60%),
+    radial-gradient(50rem 36rem at -10% 110%, rgba(92, 138, 103, 0.05), transparent 60%);
   background-attachment: fixed;
 }
 
@@ -42,7 +42,7 @@ body {
 }
 
 ::selection {
-  @apply bg-sky-500/40;
+  @apply bg-rose-500/40;
 }
 
 input, textarea, select, button {

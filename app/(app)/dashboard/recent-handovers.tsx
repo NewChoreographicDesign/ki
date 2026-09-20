@@ -29,10 +29,10 @@ export function RecentHandovers({ handovers }: { handovers: RecentHandover[] }) 
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 bg-brand-gradient-soft p-5 text-left ring-1 ring-inset ring-sky-400/20 transition-colors hover:bg-sky-500/10"
+        className="flex w-full items-center justify-between gap-3 bg-brand-gradient-soft p-5 text-left ring-1 ring-inset ring-rose-400/20 transition-colors hover:bg-rose-500/10"
       >
         <span className="flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-500/15 text-sky-400">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/15 text-rose-400">
             <ArrowLeftRight className="h-5 w-5" />
           </span>
           <span className="flex flex-col">

@@ -94,7 +94,7 @@ export default async function WeekrapportPage() {
           ) : (
             groupMedicationChecksByRoomAndDay(data.medicationChecks).map((room) => (
               <div key={room.room}>
-                <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-sky-400">{room.room}</p>
+                <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-rose-400">{room.room}</p>
                 <div className="flex flex-col gap-3 border-l border-border pl-4">
                   {room.days.map((day) => (
                     <div key={day.dateLabel}>
@@ -145,7 +145,7 @@ export default async function WeekrapportPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-emerald-400">Alle taken zijn op tijd afgerond.</p>
+            <p className="text-sm text-forest-400">Alle taken zijn op tijd afgerond.</p>
           )}
         </CardContent>
       </Card>

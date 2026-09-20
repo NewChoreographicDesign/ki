@@ -140,10 +140,10 @@ function RoomSection({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 bg-brand-gradient-soft p-5 text-left ring-1 ring-inset ring-sky-400/20 transition-colors hover:bg-sky-500/10"
+        className="flex w-full items-center justify-between gap-3 bg-brand-gradient-soft p-5 text-left ring-1 ring-inset ring-rose-400/20 transition-colors hover:bg-rose-500/10"
       >
         <span className="flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-500/15 text-sky-400">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/15 text-rose-400">
             <DoorOpen className="h-5 w-5" />
           </span>
           <span className="flex flex-col">
@@ -183,7 +183,7 @@ function ProtocolRowItem({
   const hasContent = Boolean(protocol.content || protocol.url);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-surface2/50 transition-colors hover:border-sky-500/30">
+    <div className="overflow-hidden rounded-xl border border-border bg-surface2/50 transition-colors hover:border-rose-500/30">
       <div className="flex items-center gap-2 p-3.5">
         <button
           type="button"
@@ -193,7 +193,7 @@ function ProtocolRowItem({
         >
           {hasContent ? (
             <ChevronRight
-              className={`h-4 w-4 shrink-0 text-sky-400 transition-transform ${open ? "rotate-90" : ""}`}
+              className={`h-4 w-4 shrink-0 text-rose-400 transition-transform ${open ? "rotate-90" : ""}`}
             />
           ) : (
             <span className="w-4 shrink-0" />
@@ -217,7 +217,7 @@ function ProtocolRowItem({
               href={protocol.url}
               target="_blank"
               rel="noreferrer noopener"
-              className="flex w-fit items-center gap-2 text-sm text-sky-400 hover:underline"
+              className="flex w-fit items-center gap-2 text-sm text-rose-400 hover:underline"
             >
               <FileText className="h-4 w-4" /> Bestand openen
             </a>
@@ -342,7 +342,7 @@ function NewProtocolForm({
       {loading && file && (
         <div className="flex flex-col gap-1">
           <div className="h-2 w-full overflow-hidden rounded-full bg-surface2">
-            <div className="h-full rounded-full bg-sky-500 transition-all" style={{ width: `${progress}%` }} />
+            <div className="h-full rounded-full bg-rose-500 transition-all" style={{ width: `${progress}%` }} />
           </div>
           <span className="text-xs text-slate-500">{Math.round(progress)}%</span>
         </div>

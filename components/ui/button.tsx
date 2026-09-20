@@ -8,8 +8,8 @@ type Variant = "primary" | "secondary" | "danger" | "ghost" | "outline";
 type Size = "default" | "lg" | "sm" | "icon";
 
 const variantClasses: Record<Variant, string> = {
-  primary: "bg-brand-gradient text-white hover:shadow-glow-sky hover:brightness-110 active:brightness-95",
-  secondary: "bg-emerald-500 text-white hover:bg-emerald-600 hover:shadow-glow-emerald active:bg-emerald-600",
+  primary: "bg-brand-gradient text-white hover:shadow-glow-rose hover:brightness-110 active:brightness-95",
+  secondary: "bg-forest-500 text-white hover:bg-forest-600 hover:shadow-glow-forest active:bg-forest-600",
   danger: "bg-red-500/90 text-white hover:bg-red-500 active:bg-red-600",
   outline: "border border-border bg-transparent text-slate-100 hover:bg-surface2 hover:border-slate-500/50",
   ghost: "bg-transparent text-slate-200 hover:bg-surface2",
@@ -58,7 +58,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           "group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl font-medium",
           "transition-[background-color,box-shadow,transform,filter,border-color] duration-150 active:scale-[0.98]",
           "disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           variantClasses[variant],
           sizeClasses[size],
           className

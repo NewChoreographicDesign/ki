@@ -12,7 +12,7 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
             "h-12 w-full appearance-none rounded-xl border border-border bg-surface2 px-4 pr-10 text-base text-slate-100",
             "transition-[border-color,box-shadow] duration-150",
             "hover:border-slate-500/50",
-            "focus-visible:outline-none focus-visible:border-sky-400/60 focus-visible:shadow-glow-sky",
+            "focus-visible:outline-none focus-visible:border-rose-400/60 focus-visible:shadow-glow-rose",
             "disabled:cursor-not-allowed disabled:opacity-50",
             className
           )}

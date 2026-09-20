@@ -71,7 +71,7 @@ function NavPendingDot() {
   return (
     <span
       aria-hidden="true"
-      className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 animate-pop-in rounded-full bg-sky-400 shadow-glow-sky"
+      className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 animate-pop-in rounded-full bg-rose-400 shadow-glow-rose"
     />
   );
 }
@@ -172,7 +172,7 @@ export function AppNav({
       <aside className="hidden w-72 shrink-0 flex-col border-r border-border bg-surface md:flex">
         <div className="flex items-center gap-3 p-5">
           <LogoMark size="md" />
-          <span className="text-lg font-bold tracking-tight text-slate-50">110G</span>
+          <span className="text-lg font-bold tracking-tight text-slate-50">Vezrap</span>
         </div>
         <NavLinks items={items} pathname={pathname} onNavigate={() => {}} />
         <UserFooter userName={userName} onLogout={handleLogout} />
@@ -214,7 +214,7 @@ function NavLinks({
       <div className="relative flex flex-col gap-1">
         <div
           aria-hidden="true"
-          className="absolute inset-x-0 rounded-xl bg-brand-gradient-soft ring-1 ring-inset ring-sky-400/30 transition-[top,height,opacity] duration-300 ease-out"
+          className="absolute inset-x-0 rounded-xl bg-brand-gradient-soft ring-1 ring-inset ring-rose-400/30 transition-[top,height,opacity] duration-300 ease-out"
           style={{ top: pill.top, height: pill.height, opacity: pill.opacity }}
         />
         {items.map((item, i) => {
@@ -230,7 +230,7 @@ function NavLinks({
               onClick={onNavigate}
               className={cn(
                 "relative z-10 flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium transition-colors duration-200",
-                active ? "text-sky-400" : "text-slate-300 hover:bg-surface2 hover:text-slate-100"
+                active ? "text-rose-400" : "text-slate-300 hover:bg-surface2 hover:text-slate-100"
               )}
             >
               <span className="relative shrink-0">

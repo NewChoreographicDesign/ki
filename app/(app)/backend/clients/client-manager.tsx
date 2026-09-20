@@ -124,7 +124,7 @@ export function ClientManager({ clients }: { clients: ClientRow[] }) {
                 <span className="font-medium text-slate-100">
                   {c.firstName} {c.lastName}
                 </span>
-                <Badge variant={c.active ? "emerald" : "slate"}>{c.active ? "Actief" : "Inactief"}</Badge>
+                <Badge variant={c.active ? "forest" : "slate"}>{c.active ? "Actief" : "Inactief"}</Badge>
               </div>
               <div className="flex items-center gap-3">
                 <RoomEditor room={c.room} onSave={(room) => updateClient(c.id, { room })} />
