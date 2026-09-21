@@ -106,6 +106,18 @@ export const handoverSchema = z.object({
   clientId: z.string().optional().or(z.literal("")),
 });
 
+export const createInterventionSchema = z.object({
+  clientId: z.string().min(1),
+  description: z.string().trim().min(3).max(4000),
+  goal: z.string().trim().min(3).max(2000),
+  stepsTaken: z.string().trim().min(1).max(4000),
+  followUpNeeded: z.string().trim().min(1).max(2000),
+});
+
+export const createInterventionNoteSchema = z.object({
+  content: z.string().trim().min(1).max(4000),
+});
+
 const timeOfDay = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export const todoSchema = z
