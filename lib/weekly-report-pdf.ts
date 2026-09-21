@@ -91,9 +91,10 @@ export function renderWeeklyReportPdf(
             item(doc, `${day.dayLabel} ${day.dateLabel}`);
             for (const c of day.checks) {
               const status = STATUS_LABELS[c.status] ?? c.status;
+              const due = c.scheduledTime ? `Gepland ${c.scheduledTime}` : "Indien nodig";
               item(
                 doc,
-                `    ${formatTime(c.checkedAt)} · ${fullName(c.medication.client)} · ${c.medication.name} · ${status} · door ${c.user.name}${c.comment ? ` · ${c.comment}` : ""}`
+                `    ${due} (geregistreerd ${formatTime(c.checkedAt)}) · ${fullName(c.medication.client)} · ${c.medication.name} · ${status} · door ${c.user.name}${c.comment ? ` · ${c.comment}` : ""}`
               );
             }
           }

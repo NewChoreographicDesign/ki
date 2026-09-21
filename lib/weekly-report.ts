@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db";
-import { mostRecentMondayStart, formatDate, formatDateTime, formatTime, fullName, todayDayOfWeek, DAYS_OF_WEEK, parseDaysOfWeek, shiftLabel } from "@/lib/utils";
+import { mostRecentMondayStart, formatDate, formatDateTime, formatTime, fullName, todayDayOfWeek, DAYS_OF_WEEK, parseDaysOfWeek, shiftLabel, parseMedicationTimes } from "@/lib/utils";
 
 const STATUS_LABELS: Record<string, string> = {
   TAKEN: "Afgevinkt",
@@ -75,6 +75,12 @@ export async function getWeeklyReportData(weekStart: Date, weekEnd: Date = new D
 
 export type WeeklyReportData = Awaited<ReturnType<typeof getWeeklyReportData>>;
 
+/** One of WeeklyReportData["medicationChecks"], plus the scheduled time it was registered against — see groupMedicationChecksByDay. */
+export type MedicationCheckWithSchedule = WeeklyReportData["medicationChecks"][number] & {
+  /** The prescribed "HH:MM" slot this check fills, or null for an "indien nodig" (asNeeded) medication, which has no fixed schedule. */
+  scheduledTime: string | null;
+};
+
 /**
  * Groups a week's medication checks by calendar day (Europe/Amsterdam), each
  * with a Dutch day name + date header, instead of one flat chronological
@@ -82,10 +88,25 @@ export type WeeklyReportData = Awaited<ReturnType<typeof getWeeklyReportData>>;
  * clients otherwise reads as an undifferentiated wall of lines. Checks are
  * already fetched in ascending checkedAt order, so groups come out in
  * chronological day order for free.
+ *
+ * Also pairs each check with the medication's OWN prescribed schedule
+ * (Medication.times), not just the moment it was actually registered — the
+ * weekrapport is meant to show whether medication went out on time, so
+ * "checked at 08:15" on its own isn't enough without "due at 08:00" next to
+ * it. Paired the same "Nth check of the day fills the Nth scheduled slot"
+ * way lib/medication-schedule.ts#buildMedicationOverviewRow already pairs
+ * them for the live Medicatie screen and reminder banner, so all three
+ * places agree on which slot a given check belongs to. An asNeeded
+ * medication has no fixed schedule, so scheduledTime is always null for it.
  */
 export function groupMedicationChecksByDay(checks: WeeklyReportData["medicationChecks"]) {
-  const groups: { dayLabel: string; dateLabel: string; checks: WeeklyReportData["medicationChecks"] }[] = [];
+  const groups: { dayLabel: string; dateLabel: string; checks: MedicationCheckWithSchedule[] }[] = [];
   const indexByDate = new Map<string, number>();
+  // How many checks we've already placed today for each medication — reset
+  // per calendar day (a fresh Map is created the first time a new date is
+  // seen below), since the schedule itself repeats every day.
+  const seenPerMedicationByDate = new Map<string, Map<string, number>>();
+
   for (const check of checks) {
     const dateLabel = formatDate(check.checkedAt);
     let index = indexByDate.get(dateLabel);
@@ -93,8 +114,17 @@ export function groupMedicationChecksByDay(checks: WeeklyReportData["medicationC
       index = groups.length;
       indexByDate.set(dateLabel, index);
       groups.push({ dayLabel: DAYS_OF_WEEK[todayDayOfWeek(check.checkedAt)], dateLabel, checks: [] });
+      seenPerMedicationByDate.set(dateLabel, new Map());
     }
-    groups[index].checks.push(check);
+
+    const seenPerMedication = seenPerMedicationByDate.get(dateLabel)!;
+    const seenCount = seenPerMedication.get(check.medicationId) ?? 0;
+    seenPerMedication.set(check.medicationId, seenCount + 1);
+
+    const scheduledTimes = check.medication.asNeeded ? [] : parseMedicationTimes(check.medication.times);
+    const scheduledTime = scheduledTimes[seenCount] ?? null;
+
+    groups[index].checks.push({ ...check, scheduledTime });
   }
   return groups;
 }
@@ -236,8 +266,9 @@ export function renderWeeklyReportText(
           add(`  ${day.dayLabel} ${day.dateLabel}`);
           for (const c of day.checks) {
             const status = STATUS_LABELS[c.status] ?? c.status;
+            const due = c.scheduledTime ? `Gepland ${c.scheduledTime}` : "Indien nodig";
             add(
-              `    ${formatTime(c.checkedAt)} · ${fullName(c.medication.client)} · ${c.medication.name} · ${status} · door ${c.user.name}${c.comment ? ` · ${c.comment}` : ""}`
+              `    ${due} (geregistreerd ${formatTime(c.checkedAt)}) · ${fullName(c.medication.client)} · ${c.medication.name} · ${status} · door ${c.user.name}${c.comment ? ` · ${c.comment}` : ""}`
             );
           }
         }

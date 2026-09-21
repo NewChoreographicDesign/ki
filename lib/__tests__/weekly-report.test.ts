@@ -105,7 +105,8 @@ type TestCheck = {
   status: "TAKEN" | "NOT_TAKEN" | "LEAVE";
   comment: string | null;
   user: { name: string };
-  medication: { name: string; client: { room: string | null } };
+  medicationId: string;
+  medication: { name: string; times: string; asNeeded: boolean; client: { room: string | null } };
 };
 
 function makeCheck(overrides: Partial<TestCheck> & { id: string; checkedAt: Date }): TestCheck {
@@ -113,7 +114,8 @@ function makeCheck(overrides: Partial<TestCheck> & { id: string; checkedAt: Date
     status: "TAKEN",
     comment: null,
     user: { name: "Anna" },
-    medication: { name: "Paracetamol", client: { room: "Kamer 1" } },
+    medicationId: "med-1",
+    medication: { name: "Paracetamol", times: "08:00", asNeeded: false, client: { room: "Kamer 1" } },
     ...overrides,
   };
 }
@@ -123,9 +125,9 @@ describe("groupMedicationChecksByRoomAndDay", () => {
     const monday = amsterdamDate(2026, 1, 5, 8);
     const tuesday = amsterdamDate(2026, 1, 6, 8);
     const checks = [
-      makeCheck({ id: "1", checkedAt: monday, medication: { name: "A", client: { room: "Kamer 1" } } }),
-      makeCheck({ id: "2", checkedAt: monday, medication: { name: "B", client: { room: "Kamer 2" } } }),
-      makeCheck({ id: "3", checkedAt: tuesday, medication: { name: "A", client: { room: "Kamer 1" } } }),
+      makeCheck({ id: "1", checkedAt: monday, medicationId: "A", medication: { name: "A", times: "08:00", asNeeded: false, client: { room: "Kamer 1" } } }),
+      makeCheck({ id: "2", checkedAt: monday, medicationId: "B", medication: { name: "B", times: "08:00", asNeeded: false, client: { room: "Kamer 2" } } }),
+      makeCheck({ id: "3", checkedAt: tuesday, medicationId: "A", medication: { name: "A", times: "08:00", asNeeded: false, client: { room: "Kamer 1" } } }),
     ];
 
     const grouped = groupMedicationChecksByRoomAndDay(checks as unknown as Parameters<typeof groupMedicationChecksByRoomAndDay>[0]);
@@ -140,13 +142,76 @@ describe("groupMedicationChecksByRoomAndDay", () => {
   it("puts clients with no room under Geen kamer, after real rooms", () => {
     const day = amsterdamDate(2026, 1, 5, 8);
     const checks = [
-      makeCheck({ id: "1", checkedAt: day, medication: { name: "A", client: { room: null } } }),
-      makeCheck({ id: "2", checkedAt: day, medication: { name: "B", client: { room: "Kamer 1" } } }),
+      makeCheck({ id: "1", checkedAt: day, medicationId: "A", medication: { name: "A", times: "08:00", asNeeded: false, client: { room: null } } }),
+      makeCheck({ id: "2", checkedAt: day, medicationId: "B", medication: { name: "B", times: "08:00", asNeeded: false, client: { room: "Kamer 1" } } }),
     ];
 
     const grouped = groupMedicationChecksByRoomAndDay(checks as unknown as Parameters<typeof groupMedicationChecksByRoomAndDay>[0]);
 
     expect(grouped.map((r) => r.room)).toEqual(["Kamer 1", "Geen kamer"]);
+  });
+
+  it("pairs each check with its medication's own scheduled time, not just when it was registered", () => {
+    const morning = amsterdamDate(2026, 1, 5, 8, 15);
+    const evening = amsterdamDate(2026, 1, 5, 20, 5);
+    const checks = [
+      makeCheck({
+        id: "1",
+        checkedAt: morning,
+        medicationId: "med-1",
+        medication: { name: "Paracetamol", times: "08:00,20:00", asNeeded: false, client: { room: "Kamer 1" } },
+      }),
+      makeCheck({
+        id: "2",
+        checkedAt: evening,
+        medicationId: "med-1",
+        medication: { name: "Paracetamol", times: "08:00,20:00", asNeeded: false, client: { room: "Kamer 1" } },
+      }),
+    ];
+
+    const grouped = groupMedicationChecksByRoomAndDay(checks as unknown as Parameters<typeof groupMedicationChecksByRoomAndDay>[0]);
+
+    expect(grouped[0].days[0].checks.map((c) => c.scheduledTime)).toEqual(["08:00", "20:00"]);
+  });
+
+  it("leaves scheduledTime null for an asNeeded (indien nodig) medication", () => {
+    const day = amsterdamDate(2026, 1, 5, 14);
+    const checks = [
+      makeCheck({
+        id: "1",
+        checkedAt: day,
+        medicationId: "med-2",
+        medication: { name: "Paracetamol", times: "", asNeeded: true, client: { room: "Kamer 1" } },
+      }),
+    ];
+
+    const grouped = groupMedicationChecksByRoomAndDay(checks as unknown as Parameters<typeof groupMedicationChecksByRoomAndDay>[0]);
+
+    expect(grouped[0].days[0].checks[0].scheduledTime).toBeNull();
+  });
+
+  it("resets the schedule pairing on a new day", () => {
+    const mondayMorning = amsterdamDate(2026, 1, 5, 8, 10);
+    const tuesdayMorning = amsterdamDate(2026, 1, 6, 8, 5);
+    const checks = [
+      makeCheck({
+        id: "1",
+        checkedAt: mondayMorning,
+        medicationId: "med-1",
+        medication: { name: "Paracetamol", times: "08:00,20:00", asNeeded: false, client: { room: "Kamer 1" } },
+      }),
+      makeCheck({
+        id: "2",
+        checkedAt: tuesdayMorning,
+        medicationId: "med-1",
+        medication: { name: "Paracetamol", times: "08:00,20:00", asNeeded: false, client: { room: "Kamer 1" } },
+      }),
+    ];
+
+    const grouped = groupMedicationChecksByRoomAndDay(checks as unknown as Parameters<typeof groupMedicationChecksByRoomAndDay>[0]);
+
+    expect(grouped[0].days[0].checks[0].scheduledTime).toBe("08:00");
+    expect(grouped[0].days[1].checks[0].scheduledTime).toBe("08:00");
   });
 });
 

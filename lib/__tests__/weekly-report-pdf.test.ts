@@ -33,7 +33,13 @@ function buildData(): WeeklyReportData {
         status: "TAKEN",
         comment: null,
         user: { name: "Anna" },
-        medication: { name: "Paracetamol", client: { firstName: "Jan", lastName: "Jansen", room: "Kamer 1" } },
+        medicationId: "med-1",
+        medication: {
+          name: "Paracetamol",
+          times: "08:00",
+          asNeeded: false,
+          client: { firstName: "Jan", lastName: "Jansen", room: "Kamer 1" },
+        },
       },
     ],
     todos: [
