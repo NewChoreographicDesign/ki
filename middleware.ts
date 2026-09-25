@@ -1,7 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify, SignJWT } from "jose";
-import { isDeviceRestrictionEnabled, verifyDeviceToken, DEVICE_TOKEN_COOKIE } from "@/lib/device-auth";
-import { IDLE_TIMEOUT_MS, SESSION_DURATION_SECONDS } from "@/lib/session-policy";
+
+// lib/device-auth.ts and lib/session-policy.ts are ALSO imported from
+// non-edge code (lib/auth.ts, app/api/device/unlock/route.ts,
+// components/idle-logout.tsx) — importing them here too made Next.js treat
+// them as shared across the edge/node/browser compilation graphs and split
+// them into an external chunk, which Vercel's edge sandbox then refused to
+// load ("referencing unsupported modules"). Inlined as private copies
+// instead so middleware.ts's edge bundle is fully self-contained; keep any
+// change to these values or this logic in sync with those two files.
+const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
+const SESSION_DURATION_SECONDS = 12 * 60 * 60;
+const DEVICE_TOKEN_COOKIE = "device_token";
+
+function isDeviceRestrictionEnabled(): boolean {
+  return process.env.DEVICE_RESTRICTION_ENABLED === "true";
+}
+
+async function passcodeFingerprint(): Promise<string> {
+  const passcode = process.env.DEVICE_PASSCODE ?? "";
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(passcode));
+  return Buffer.from(digest).toString("hex");
+}
+
+async function verifyDeviceToken(token: string | undefined): Promise<boolean> {
+  if (!token) return false;
+  const secretKey = getSecretKey();
+  if (!secretKey) return false;
+  try {
+    const { payload } = await jwtVerify(token, secretKey);
+    if (payload.device !== true || typeof payload.fp !== "string") return false;
+    return payload.fp === (await passcodeFingerprint());
+  } catch {
+    return false;
+  }
+}
 
 const COOKIE_NAME = "session";
 // "/" is public at the middleware layer because the page itself decides
