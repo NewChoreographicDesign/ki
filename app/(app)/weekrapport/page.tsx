@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Role } from "@prisma/client";
 import { getSession, canAccessWeeklyReport } from "@/lib/auth";
 import {
   getWeeklyReportData,
@@ -29,7 +30,10 @@ export default async function WeekrapportPage() {
   const weekStart = mostRecentMondayStart();
   const archiveSelect = { id: true, isoYear: true, isoWeek: true, weekStart: true, createdAt: true } as const;
   const [data, archive] = await Promise.all([
-    getWeeklyReportData(weekStart),
+    // COORDINATOR can reach this page (canAccessWeeklyReport) but is not
+    // ADMIN — invaller-authored reports (Report.adminOnly) stay out of this
+    // live current-week view for them, same as /rapportage.
+    getWeeklyReportData(weekStart, new Date(), session.role === Role.ADMIN),
     db.weeklyReportPdf.findMany({ orderBy: { weekStart: "desc" }, select: archiveSelect }),
   ]);
 

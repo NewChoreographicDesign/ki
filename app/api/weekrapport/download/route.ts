@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Role } from "@prisma/client";
 import { requireAuth, canAccessWeeklyReport } from "@/lib/auth";
 import { handleApiError } from "@/lib/api";
 import { getWeeklyReportData, renderWeeklyReportText, parseWeeklyReportSections } from "@/lib/weekly-report";
@@ -12,7 +13,8 @@ export async function GET(request: NextRequest) {
     }
 
     const sections = parseWeeklyReportSections(request.nextUrl.searchParams.get("sections"));
-    const data = await getWeeklyReportData(mostRecentMondayStart());
+    // See the same COORDINATOR-vs-ADMIN note in app/(app)/weekrapport/page.tsx.
+    const data = await getWeeklyReportData(mostRecentMondayStart(), new Date(), session.role === Role.ADMIN);
     const text = renderWeeklyReportText(data, sections);
     const filename = `weekrapport-${formatDDMMYYYY(data.weekStart)}.txt`;
 

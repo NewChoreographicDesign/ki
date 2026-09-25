@@ -222,6 +222,13 @@ model Report {
   shift     ShiftType
   date      DateTime
   content   String
+  // Set true at creation time when the author is Role.INVALLER (see
+  // app/api/reports/route.ts) — never toggled any other way. A rapportage
+  // written by a flexwerker is visible to ADMIN only; every other role's
+  // Rapportage list filters these rows out entirely, including other
+  // invallers. Regular staff's own rapportages are unaffected (this stays
+  // false).
+  adminOnly Boolean   @default(false)
   createdAt DateTime  @default(now())
 
   @@index([clientId, date])

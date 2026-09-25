@@ -31,6 +31,9 @@ export async function POST(request: NextRequest) {
         shift: data.shift,
         date,
         content: data.content,
+        // See Report.adminOnly's schema.prisma comment — set once, here,
+        // and never toggled any other way.
+        adminOnly: session.role === Role.INVALLER,
       },
     });
 

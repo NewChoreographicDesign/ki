@@ -17,11 +17,20 @@ const STATUS_LABELS: Record<string, string> = {
  * - A specific, already-completed week (the automatic PDF archive, see
  *   app/api/cron/weekly-report/route.ts): pass an explicit weekEnd so next
  *   week's data can't leak into an archived week's PDF.
+ *
+ * includeAdminOnly controls whether invaller-authored reports (Report.adminOnly,
+ * see its schema.prisma comment) are included. The live page/download routes
+ * (accessible to COORDINATOR as well as ADMIN — see canAccessWeeklyReport)
+ * pass false for a non-ADMIN viewer, matching the same admin-only visibility
+ * as the real-time /rapportage list. The weekly cron archive keeps the
+ * default (true): it's a single permanent PDF shared by every future
+ * viewer, not rendered per-session, so filtering it would also hide these
+ * reports from admins reviewing history past the 7-day live window.
  */
-export async function getWeeklyReportData(weekStart: Date, weekEnd: Date = new Date()) {
+export async function getWeeklyReportData(weekStart: Date, weekEnd: Date = new Date(), includeAdminOnly = true) {
   const [reports, medicationChecks, todos, appointments, changeLog] = await Promise.all([
     db.report.findMany({
-      where: { createdAt: { gte: weekStart, lt: weekEnd } },
+      where: { createdAt: { gte: weekStart, lt: weekEnd }, ...(includeAdminOnly ? {} : { adminOnly: false }) },
       include: { client: true, user: true },
       orderBy: { createdAt: "asc" },
     }),

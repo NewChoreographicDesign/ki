@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
+import { Role } from "@prisma/client";
 import { db } from "@/lib/db";
-import { determineShiftType } from "@/lib/auth";
+import { getSession, determineShiftType } from "@/lib/auth";
 import { fullName } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ReportForm } from "./report-form";
@@ -8,6 +10,9 @@ import { ReportList, type ReportRow } from "./report-list";
 export const dynamic = "force-dynamic";
 
 export default async function RapportagePage() {
+  const session = await getSession();
+  if (!session) redirect("/login");
+
   // "Recente rapportages" shows a rolling last-7-days window rather than a
   // fixed weekly reset: a hard reset (e.g. every Thursday at midnight) means
   // the list goes empty right at the reset moment, until new reports get
@@ -20,7 +25,10 @@ export default async function RapportagePage() {
   const [clients, reports] = await Promise.all([
     db.client.findMany({ where: { active: true }, orderBy: { firstName: "asc" } }),
     db.report.findMany({
-      where: { createdAt: { gte: since } },
+      // A flexwerker's own rapportage (adminOnly=true, see Report.adminOnly's
+      // schema.prisma comment) is invisible to everyone except ADMIN —
+      // including other invallers and regular medewerkers.
+      where: { createdAt: { gte: since }, ...(session.role === Role.ADMIN ? {} : { adminOnly: false }) },
       include: { client: true, user: true },
       orderBy: { createdAt: "desc" },
     }),
