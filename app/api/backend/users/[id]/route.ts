@@ -10,6 +10,10 @@ import { parseDDMMYYYY, DEFAULT_EMPLOYEE_BIRTH_DATE } from "@/lib/utils";
 const patchSchema = z.object({
   active: z.boolean().optional(),
   role: z.enum(["ADMIN", "COORDINATOR", "EMPLOYEE"]).optional(),
+  // Admin-set/edit of an account's email — what lets Microsoft SSO
+  // auto-link that account on the person's very first login. Empty
+  // string clears it, same convention as the self-service version.
+  email: z.union([z.string().trim().email("Ongeldig e-mailadres"), z.literal("")]).optional(),
   // Sets the birthdate back to the well-known default and clears any active
   // lockout, so a medewerker who forgot the real birthdate they set
   // themselves (at /account) can log back in immediately and pick a new
@@ -17,25 +21,54 @@ const patchSchema = z.object({
   // since retrying a forgotten value is never going to succeed regardless
   // of how long they wait.
   resetBirthDate: z.literal(true).optional(),
+  // Recovery path for someone who lost both their authenticator device AND
+  // their backup codes — same admin-only "undo a lockout" spirit as
+  // resetBirthDate above.
+  resetMfa: z.literal(true).optional(),
 });
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireAuth([Role.ADMIN]);
     const { id } = await params;
-    const { resetBirthDate, ...rest } = patchSchema.parse(await request.json());
+    const { resetBirthDate, resetMfa, email, ...rest } = patchSchema.parse(await request.json());
 
     const data: Prisma.UserUpdateInput = { ...rest };
+    if (email !== undefined) {
+      data.email = email || null;
+    }
     if (resetBirthDate) {
       data.birthDate = parseDDMMYYYY(DEFAULT_EMPLOYEE_BIRTH_DATE)!;
       data.failedLoginAttempts = 0;
       data.lockedUntil = null;
     }
+    if (resetMfa) {
+      data.mfaEnabled = false;
+      data.mfaSecretEncrypted = null;
+      data.mfaEnrolledAt = null;
+    }
 
-    const user = await db.user.update({ where: { id }, data });
+    let user;
+    try {
+      user = await db.user.update({ where: { id }, data });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        return NextResponse.json({ error: "Dit e-mailadres is al aan een andere medewerker gekoppeld" }, { status: 409 });
+      }
+      throw error;
+    }
+    if (resetMfa) {
+      await db.mfaBackupCode.deleteMany({ where: { userId: id } });
+    }
     await logAudit({
       userId: session.sub,
-      action: resetBirthDate ? "user.reset-birthdate" : "user.update",
+      action: resetBirthDate
+        ? "user.reset-birthdate"
+        : resetMfa
+          ? "user.mfa.reset"
+          : email !== undefined
+            ? "user.email.set-by-admin"
+            : "user.update",
       targetType: "User",
       targetId: id,
     });

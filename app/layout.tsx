@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Archivo, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import "./globals.css";
 
 // Two families, each with exactly one job, both chosen for legibility over
@@ -67,6 +68,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen bg-background font-sans">
         {children}
         <Toaster theme="dark" position="top-center" richColors />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

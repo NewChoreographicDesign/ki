@@ -30,6 +30,43 @@ export const userSchema = z.object({
   birthDate: z.string().regex(ddmmyyyy, "Gebruik het formaat DD-MM-JJJJ"),
   role: z.enum(["ADMIN", "COORDINATOR", "EMPLOYEE"]),
   active: z.boolean().optional(),
+  // Optional at creation — lets an admin pre-link an account to their
+  // Microsoft email so SSO can match it on that person's very first
+  // login, rather than requiring them to first log in with
+  // naam+geboortedatum and set it themselves via Mijn account.
+  email: z.union([z.string().trim().email("Ongeldig e-mailadres"), z.literal("")]).optional(),
+});
+
+// Self-service email (Mijn account) AND admin edit (Medewerkers) share
+// this shape — same rules either way, just a different actor/route.
+export const setEmailSchema = z.object({
+  email: z.union([z.string().trim().email("Ongeldig e-mailadres"), z.literal("")]),
+});
+
+export const mfaVerifySchema = z.object({
+  code: z.string().trim().min(4).max(20),
+});
+
+export const mfaConfirmSchema = z.object({
+  code: z.string().trim().regex(/^\d{6}$/, "Voer de 6-cijferige code in"),
+});
+
+// Step-up confirmation for disabling MFA — same reasoning as
+// changeBirthDateSchema: a valid session cookie on a shared device
+// doesn't prove who's actually at the keyboard.
+export const mfaDisableSchema = z.object({
+  birthDate: z.string().regex(ddmmyyyy, "Gebruik het formaat DD-MM-JJJJ"),
+});
+
+// Self-registration for an invaller (flexwerker) account — see
+// app/invaller-registratie. No role field (always INVALLER); carries the
+// one-time-shared registration code plus which uitzendbureau this person
+// is from.
+export const invallerRegisterSchema = z.object({
+  code: z.string().trim().min(4).max(40),
+  name: z.string().trim().min(2).max(100),
+  birthDate: z.string().regex(ddmmyyyy, "Gebruik het formaat DD-MM-JJJJ"),
+  uitzendbureau: z.string().trim().min(1).max(200),
 });
 
 export const settingSchema = z.object({
@@ -171,6 +208,40 @@ export const protocolSchema = z
     path: ["content"],
   });
 
+
+export const createDataBreachSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  description: z.string().trim().min(1).max(4000),
+  affectedData: z.string().trim().min(1).max(2000),
+  affectedPersonsEstimate: z.number().int().min(0).max(1_000_000).optional(),
+  severity: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
+  detectedAt: z.string().min(1), // ISO instant, combined client-side from date + time inputs
+});
+
+export const updateDataBreachSchema = z.object({
+  status: z.enum(["NEW", "ASSESSED", "AP_NOTIFIED", "DATA_SUBJECTS_NOTIFIED", "CLOSED"]).optional(),
+  likelyRisk: z.boolean().optional(),
+  apNotifiedAt: z.string().min(1).optional(),
+  apReference: z.string().trim().max(200).optional().or(z.literal("")),
+  dataSubjectsNotifiedAt: z.string().min(1).optional(),
+  closedSummary: z.string().trim().max(4000).optional().or(z.literal("")),
+});
+
+export const createDataBreachNoteSchema = z.object({
+  body: z.string().trim().min(1).max(4000),
+});
+
+export const pushSubscribeSchema = z.object({
+  endpoint: z.string().url(),
+  keys: z.object({
+    p256dh: z.string().min(1),
+    auth: z.string().min(1),
+  }),
+});
+
+export const pushUnsubscribeSchema = z.object({
+  endpoint: z.string().url(),
+});
 
 export const weekPlanSchema = z.object({
   clientId: z.string().min(1),

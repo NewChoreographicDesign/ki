@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { handleApiError } from "@/lib/api";
 import { reportSchema } from "@/lib/validations";
-import { parseDDMMYYYY } from "@/lib/utils";
+import { parseDDMMYYYY, fullName } from "@/lib/utils";
 import { logAudit } from "@/lib/audit";
+import { notifyUsers } from "@/lib/push";
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,6 +40,23 @@ export async function POST(request: NextRequest) {
       targetType: "Client",
       targetId: client.id,
     });
+
+    // Instant push to every admin, not just whenever they next open the
+    // app — never blocks/fails the actual report save on a push hiccup
+    // (see lib/push.ts, itself a no-op without VAPID keys configured).
+    try {
+      const admins = await db.user.findMany({
+        where: { role: Role.ADMIN, active: true, id: { not: session.sub } },
+        select: { id: true },
+      });
+      const preview = data.content.length > 120 ? `${data.content.slice(0, 120)}…` : data.content;
+      await notifyUsers(
+        admins.map((a) => a.id),
+        { title: `Nieuwe rapportage — ${fullName(client)}`, body: preview, url: "/rapportage" }
+      );
+    } catch (error) {
+      console.error("[reports] push notify failed", error);
+    }
 
     return NextResponse.json({ ok: true, report });
   } catch (error) {

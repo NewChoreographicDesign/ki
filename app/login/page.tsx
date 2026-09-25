@@ -13,6 +13,8 @@ export default async function LoginPage() {
   const existingUsers = await db.user.count();
   if (existingUsers === 0) redirect("/setup");
 
+  const ssoEnabled = Boolean(process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET);
+
   return (
     <main className="relative flex min-h-dvh items-center justify-center bg-background p-4">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -28,7 +30,7 @@ export default async function LoginPage() {
           </CardHeader>
           <CardContent>
             <Suspense fallback={null}>
-              <LoginForm />
+              <LoginForm ssoEnabled={ssoEnabled} />
             </Suspense>
           </CardContent>
         </Card>

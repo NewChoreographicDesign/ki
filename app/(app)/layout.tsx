@@ -19,6 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         canAccessBackend={canAccessBackend(session.role)}
         canAccessWeeklyReport={canAccessWeeklyReport(session.role)}
         isCoordinator={session.role === Role.COORDINATOR}
+        isInvaller={session.role === Role.INVALLER}
       />
       <div className="flex min-h-screen flex-1 flex-col">
         <main className="relative flex-1 p-4 lg:p-8">

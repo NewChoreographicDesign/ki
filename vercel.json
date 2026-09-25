@@ -1,6 +1,7 @@
 {
   "crons": [
     { "path": "/api/cron/retention-purge", "schedule": "0 4 1 * *" },
-    { "path": "/api/cron/weekly-report", "schedule": "0 2 * * 1" }
+    { "path": "/api/cron/weekly-report", "schedule": "0 2 * * 1" },
+    { "path": "/api/cron/audit-review", "schedule": "0 3 * * *" }
   ]
 }

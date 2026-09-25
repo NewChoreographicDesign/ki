@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { AuthError } from "@/lib/auth";
+import { logger } from "@/lib/log";
 
 /** Uniform error handling for API route handlers. */
 export function handleApiError(error: unknown): NextResponse {
@@ -13,6 +14,9 @@ export function handleApiError(error: unknown): NextResponse {
       { status: 400 }
     );
   }
-  console.error(error);
+  logger.error("api.unhandled_error", {
+    error: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : undefined,
+  });
   return NextResponse.json({ error: "Er is iets misgegaan" }, { status: 500 });
 }

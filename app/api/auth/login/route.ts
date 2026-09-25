@@ -5,6 +5,7 @@ import { createSessionCookie, startShiftForLogin } from "@/lib/auth";
 import { parseDDMMYYYY } from "@/lib/utils";
 import { handleApiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
+import { signMfaPendingToken, MFA_PENDING_COOKIE } from "@/lib/mfa-pending";
 
 // Login has no password, only a name + birth date — a search space small
 // enough to brute-force in minutes without a lockout. This guards against
@@ -53,6 +54,24 @@ export async function POST(request: NextRequest) {
       where: { id: user.id },
       data: { failedLoginAttempts: 0, lockedUntil: null },
     });
+
+    // Naam+geboortedatum is only the FIRST factor for an account with MFA
+    // enabled — no session is created yet, only a short-lived pending
+    // cookie the client exchanges for one via .../login/mfa once the
+    // second factor checks out (see lib/mfa-pending.ts for why this can't
+    // just be the real session cookie).
+    if (user.mfaEnabled) {
+      const pendingToken = await signMfaPendingToken({ sub: user.id });
+      const response = NextResponse.json({ mfaRequired: true });
+      response.cookies.set(MFA_PENDING_COOKIE, pendingToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 5 * 60,
+      });
+      return response;
+    }
 
     await createSessionCookie({ sub: user.id, name: user.name, role: user.role });
     const shift = await startShiftForLogin(user.id);

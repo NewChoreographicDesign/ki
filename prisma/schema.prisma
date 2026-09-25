@@ -15,6 +15,12 @@ enum Role {
   ADMIN
   COORDINATOR
   EMPLOYEE
+  // Self-registered flexwerker (uitzendkracht) — see InvallerRegistration
+  // and app/invaller-registratie. Deliberately excluded from Backend, MFA
+  // enforcement, and SSO matching: an invaller's access is already the
+  // minimal "log a shift, write a report" set, and their account isn't
+  // provisioned by an admin the way vast personeel's is.
+  INVALLER
 }
 
 enum ShiftType {
@@ -45,6 +51,27 @@ model User {
   active    Boolean   @default(true)
   failedLoginAttempts Int       @default(0)
   lockedUntil         DateTime?
+  // Not a login credential (login stays name+birthdate) — used to deliver
+  // push notifications AND, for vast personeel, as the matching key
+  // Microsoft SSO links an Azure identity to on first login (see
+  // lib/microsoft-sso.ts and app/api/auth/sso/microsoft/callback).
+  // Settable two ways: self-service (app/api/account/email/route.ts) or
+  // by an admin at creation/afterwards (app/api/backend/users). A plain
+  // DB-level unique constraint is enough here (unlike the multi-tenant
+  // Multi-Woongroep sibling of this app, which has to check uniqueness
+  // across every group in an organisation instead) — this app has exactly
+  // one tenant.
+  email               String?   @unique
+  // Set once an Azure AD identity has been linked via Microsoft SSO — the
+  // fast-path match on every subsequent login, so a later email change
+  // never breaks an already-linked account.
+  azureObjectId       String?   @unique
+  mfaEnabled          Boolean   @default(false)
+  mfaSecretEncrypted  String?
+  mfaEnrolledAt       DateTime?
+  // Invaller-only: which uitzendbureau (staffing agency) this flexwerker
+  // is from, captured at self-registration. Null for every other role.
+  uitzendbureau       String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -63,8 +90,62 @@ model User {
   interventionsCreated Intervention[]     @relation("InterventionCreatedBy")
   interventionsClosed  Intervention[]     @relation("InterventionClosedBy")
   interventionNotes    InterventionNote[]
+  mfaBackupCodes       MfaBackupCode[]
+  pushSubscriptions    PushSubscription[]
+  dataBreachesReported DataBreachIncident[] @relation("DataBreachReportedBy")
+  dataBreachNotes      DataBreachNote[]
 
   @@index([role])
+}
+
+// Recovery codes for TOTP MFA (lib/mfa.ts) — the plaintext is shown once
+// at enrollment and never stored, only a salted hash (same scrypt
+// primitive as every other credential-shaped secret in this app, see
+// lib/passcode.ts), so a database leak alone can never be used to log in.
+model MfaBackupCode {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String
+  codeSalt  String
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// A registered Web Push endpoint for one user's one device/browser — see
+// lib/push.ts. A user can have several (phone + desktop), each notified
+// independently; a dead/unsubscribed endpoint is pruned automatically
+// when Web Push reports it gone (410/404), not left to accumulate.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// The app's one reusable invaller self-registration code — see
+// app/invaller-registratie and app/api/auth/invaller-register. A
+// singleton row (same "one fixed id" pattern as DeviceUnlockLockout
+// above): this app has exactly one tenant, so there is exactly one code,
+// not one per group like the multi-tenant Multi-Woongroep sibling.
+model InvallerRegistration {
+  id            String   @id @default("singleton")
+  enabled       Boolean  @default(false)
+  codeHash      String?
+  codeSalt      String?
+  // Recoverable copy for the admin-facing "show me the current code"
+  // reveal on Medewerkers, alongside the one-way codeHash used to
+  // actually verify a registration attempt — see lib/passcode.ts.
+  codeEncrypted String?
+  version       Int      @default(1)
+  updatedAt     DateTime @updatedAt
 }
 
 model Client {
@@ -420,6 +501,127 @@ model AuditLog {
   @@index([userId, createdAt])
   @@index([targetType, targetId])
   @@index([createdAt])
+}
+
+enum AuditFindingSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+// One row per execution of the periodic AuditLog review (see
+// lib/audit-review.ts, run daily by app/api/cron/audit-review/route.ts) —
+// created EVERY run, whether or not it found anything, so this table is
+// itself the demonstrable evidence that log review is a regular, ongoing
+// process rather than something only done reactively after a complaint.
+// findingsCount is a denormalized count of that run's AuditReviewFinding
+// rows, kept here so the review-history list doesn't need a join to show it.
+model AuditReviewRun {
+  id            String   @id @default(cuid())
+  windowStart   DateTime
+  windowEnd     DateTime
+  findingsCount Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  findings AuditReviewFinding[]
+
+  @@index([createdAt])
+}
+
+// One flagged anomaly from a single AuditReviewRun — e.g. an unusual burst
+// of failed logins, or a spike in 401/403 responses. `resolved` turns the
+// automated flag into an actual "controle" event: an admin reading and
+// acknowledging it, not just the system noticing it.
+model AuditReviewFinding {
+  id               String               @id @default(cuid())
+  runId            String
+  run              AuditReviewRun       @relation(fields: [runId], references: [id], onDelete: Cascade)
+  category         String
+  severity         AuditFindingSeverity
+  summary          String
+  resolved         Boolean              @default(false)
+  resolvedByUserId String?
+  resolvedAt       DateTime?
+  createdAt        DateTime             @default(now())
+
+  @@index([resolved, createdAt])
+  @@index([runId])
+}
+
+enum DataBreachSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// The AVG Art. 33/34 workflow status — deliberately linear (no going back
+// a step once notified), since "we already told the AP" or "we already
+// told the data subjects" isn't something the app should let anyone
+// un-happen.
+enum DataBreachStatus {
+  NEW
+  ASSESSED
+  AP_NOTIFIED
+  DATA_SUBJECTS_NOTIFIED
+  CLOSED
+}
+
+// A reported datalek (data breach) — any team member can report one (see
+// app/api/datalek/route.ts, same broad-reporting-audience reasoning as
+// every other "whoever notices should be able to report immediately"
+// module in this app), an ADMIN triages and carries it through the AVG
+// timeline. detectedAt (not createdAt) is what the legally significant
+// 72-hour Autoriteit Persoonsgegevens notification clock runs from — see
+// lib/data-breach.ts#dataBreachDeadline — since a breach is often
+// discovered some time after it actually happened.
+model DataBreachIncident {
+  id                     String             @id @default(cuid())
+  reportedByUserId       String
+  reportedBy             User               @relation("DataBreachReportedBy", fields: [reportedByUserId], references: [id], onDelete: Cascade)
+  title                  String
+  description            String
+  // Free-text summary of which data types/how many people are affected —
+  // deliberately not a structured client link: a datalek is very often
+  // NOT about one specific client record (a lost device, a misdirected
+  // email naming several clients), so forcing a single Client relation
+  // would misrepresent most real cases.
+  affectedData           String
+  affectedPersonsEstimate Int?
+  // Whether a risk to data subjects' rights/freedoms is judged unlikely
+  // (AVG Art. 33(1) exception to the 72-hour AP notification duty) — null
+  // until an admin has actually assessed it (status ASSESSED or later).
+  likelyRisk             Boolean?
+  severity               DataBreachSeverity @default(MEDIUM)
+  status                 DataBreachStatus   @default(NEW)
+  detectedAt             DateTime
+  apNotifiedAt           DateTime?
+  apReference            String?
+  dataSubjectsNotifiedAt DateTime?
+  closedAt               DateTime?
+  closedSummary          String?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  notes DataBreachNote[]
+
+  @@index([status, createdAt])
+  @@index([detectedAt])
+}
+
+// Append-only timeline entry on a DataBreachIncident — several people work
+// the same case, a note must never silently change under someone who
+// already read it.
+model DataBreachNote {
+  id         String             @id @default(cuid())
+  incidentId String
+  incident   DataBreachIncident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body       String
+  createdAt  DateTime           @default(now())
+
+  @@index([incidentId, createdAt])
 }
 
 // One row per completed ISO calendar week, generated automatically by

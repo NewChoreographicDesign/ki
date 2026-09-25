@@ -19,6 +19,7 @@ import {
   LogOut,
   ListTodo,
   History,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ type NavItem = {
   backendOnly?: boolean;
   weeklyReportOnly?: boolean;
   coordinatorOnly?: boolean;
+  hideForInvaller?: boolean;
 };
 
 // "Taken toewijzen" and "Auditlog" are coordinatorOnly — an admin reaches
@@ -50,6 +52,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/overdracht", label: "Overdracht", icon: ArrowLeftRight },
   { href: "/protocollen", label: "Protocollen", icon: ShieldCheck },
   { href: "/rapportage", label: "Rapportage", icon: FileText },
+  { href: "/datalek", label: "Datalekken", icon: AlertTriangle, hideForInvaller: true },
   { href: "/weekrapport", label: "Weekrapport", icon: Download, weeklyReportOnly: true },
   { href: "/persoonlijke-taken", label: "Taken toewijzen", icon: ListTodo, coordinatorOnly: true },
   { href: "/auditlog", label: "Auditlog", icon: History, coordinatorOnly: true },
@@ -81,11 +84,13 @@ export function AppNav({
   canAccessBackend,
   canAccessWeeklyReport,
   isCoordinator,
+  isInvaller,
 }: {
   userName: string;
   canAccessBackend: boolean;
   canAccessWeeklyReport: boolean;
   isCoordinator: boolean;
+  isInvaller: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -96,7 +101,8 @@ export function AppNav({
     (item) =>
       (!item.backendOnly || canAccessBackend) &&
       (!item.weeklyReportOnly || canAccessWeeklyReport) &&
-      (!item.coordinatorOnly || isCoordinator)
+      (!item.coordinatorOnly || isCoordinator) &&
+      (!item.hideForInvaller || !isInvaller)
   );
 
   function openMenu() {

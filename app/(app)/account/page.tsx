@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { MfaPanel } from "@/components/mfa-panel";
+import { PushNotificationsToggle } from "@/components/push-notifications-toggle";
 import { AccountForm } from "./account-form";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +29,18 @@ export default async function AccountPage() {
           <AccountForm />
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Push-meldingen</CardTitle>
+          <CardDescription>Bijvoorbeeld een melding zodra een rapportage binnenkomt.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PushNotificationsToggle />
+        </CardContent>
+      </Card>
+
+      <MfaPanel />
     </div>
   );
 }

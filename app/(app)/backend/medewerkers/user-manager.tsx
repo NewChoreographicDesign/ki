@@ -16,19 +16,32 @@ import { DEFAULT_EMPLOYEE_BIRTH_DATE } from "@/lib/utils";
 export type UserRow = {
   id: string;
   name: string;
-  role: "ADMIN" | "COORDINATOR" | "EMPLOYEE";
+  role: "ADMIN" | "COORDINATOR" | "EMPLOYEE" | "INVALLER";
   active: boolean;
+  email: string | null;
+  mfaEnabled: boolean;
 };
 
-const ROLE_LABEL = { ADMIN: "Admin", COORDINATOR: "Coördinator", EMPLOYEE: "Medewerker" } as const;
+// INVALLER is deliberately not one of the roles an admin can pick here —
+// that account type only comes from self-registration (see
+// app/invaller-registratie), never from this form. It's still labeled
+// here so an invaller's own row renders correctly.
+const ROLE_LABEL = { ADMIN: "Admin", COORDINATOR: "Coördinator", EMPLOYEE: "Medewerker", INVALLER: "Invaller" } as const;
+const MANAGEABLE_ROLES = ["EMPLOYEE", "COORDINATOR", "ADMIN"] as const;
 
-type UserPatch = Partial<Pick<UserRow, "active" | "role">> | { resetBirthDate: true };
+type UserPatch =
+  | Partial<Pick<UserRow, "active">>
+  | { role: (typeof MANAGEABLE_ROLES)[number] }
+  | { resetBirthDate: true }
+  | { resetMfa: true }
+  | { email: string };
 
 export function UserManager({ users, currentUserId }: { users: UserRow[]; currentUserId: string }) {
   const router = useRouter();
   const [name, setName] = React.useState("");
   const [birthDate, setBirthDate] = React.useState(DEFAULT_EMPLOYEE_BIRTH_DATE);
-  const [role, setRole] = React.useState<UserRow["role"]>("EMPLOYEE");
+  const [role, setRole] = React.useState<(typeof MANAGEABLE_ROLES)[number]>("EMPLOYEE");
+  const [email, setEmail] = React.useState("");
   const [loading, setLoading] = React.useState(false);
 
   async function handleCreate(e: React.FormEvent) {
@@ -38,7 +51,7 @@ export function UserManager({ users, currentUserId }: { users: UserRow[]; curren
       const res = await fetch("/api/backend/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, birthDate, role }),
+        body: JSON.stringify({ name, birthDate, role, email }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -49,6 +62,7 @@ export function UserManager({ users, currentUserId }: { users: UserRow[]; curren
       setName("");
       setBirthDate(DEFAULT_EMPLOYEE_BIRTH_DATE);
       setRole("EMPLOYEE");
+      setEmail("");
       router.refresh();
     } catch {
       toast.error("Er is iets misgegaan");
@@ -64,11 +78,19 @@ export function UserManager({ users, currentUserId }: { users: UserRow[]; curren
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
       });
-      if (!res.ok) throw new Error();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || "Bijwerken mislukt");
+        return;
+      }
       toast.success(
         "resetBirthDate" in patch
           ? `Geboortedatum gereset naar ${DEFAULT_EMPLOYEE_BIRTH_DATE}`
-          : "Bijgewerkt"
+          : "resetMfa" in patch
+            ? "Tweestapsverificatie gereset — de medewerker moet deze opnieuw instellen"
+            : "email" in patch
+              ? "E-mailadres bijgewerkt"
+              : "Bijgewerkt"
       );
       router.refresh();
     } catch {
@@ -102,7 +124,7 @@ export function UserManager({ users, currentUserId }: { users: UserRow[]; curren
         </CardHeader>
         <CardContent>
           <form onSubmit={handleCreate} className="flex flex-col gap-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
               <div>
                 <Label htmlFor="name">Naam</Label>
                 <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
@@ -121,17 +143,28 @@ export function UserManager({ users, currentUserId }: { users: UserRow[]; curren
               </div>
               <div>
                 <Label htmlFor="role">Rol</Label>
-                <Select id="role" value={role} onChange={(e) => setRole(e.target.value as UserRow["role"])}>
+                <Select id="role" value={role} onChange={(e) => setRole(e.target.value as (typeof MANAGEABLE_ROLES)[number])}>
                   <option value="EMPLOYEE">Medewerker</option>
                   <option value="COORDINATOR">Coördinator</option>
                   <option value="ADMIN">Admin</option>
                 </Select>
               </div>
+              <div>
+                <Label htmlFor="create-email">E-mailadres (optioneel)</Label>
+                <Input
+                  id="create-email"
+                  type="email"
+                  placeholder="voor Microsoft-login"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
             </div>
             <p className="text-xs text-slate-500">
               Standaard {DEFAULT_EMPLOYEE_BIRTH_DATE} — je hoeft de echte geboortedatum niet te
               weten. De medewerker logt hiermee eenmalig in en stelt daarna zelf de echte
-              geboortedatum in bij Mijn account.
+              geboortedatum in bij Mijn account. Een e-mailadres is alleen nodig als deze persoon
+              met &ldquo;Inloggen met Microsoft&rdquo; wil inloggen.
             </p>
             <Button type="submit" loading={loading} disabled={!name || birthDate.length !== 10} className="self-start">
               Toevoegen
@@ -143,51 +176,72 @@ export function UserManager({ users, currentUserId }: { users: UserRow[]; curren
       <div className="flex flex-col gap-3">
         {users.map((u) => (
           <Card key={u.id}>
-            <CardContent className="flex flex-wrap items-center justify-between gap-3 p-5">
-              <div className="flex items-center gap-3">
-                <span className="font-medium text-slate-100">{u.name}</span>
-                <Badge variant={u.active ? "forest" : "slate"}>{u.active ? "Actief" : "Inactief"}</Badge>
+            <CardContent className="flex flex-col gap-3 p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="font-medium text-slate-100">{u.name}</span>
+                  <Badge variant={u.active ? "forest" : "slate"}>{u.active ? "Actief" : "Inactief"}</Badge>
+                  {u.role === "INVALLER" && <Badge variant="amber">{ROLE_LABEL.INVALLER}</Badge>}
+                  {u.mfaEnabled && <Badge variant="rose">2FA aan</Badge>}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {u.role !== "INVALLER" && (
+                    <Select
+                      className="h-10 w-auto"
+                      value={u.role}
+                      disabled={u.id === currentUserId}
+                      onChange={(e) => updateUser(u.id, { role: e.target.value as (typeof MANAGEABLE_ROLES)[number] })}
+                    >
+                      <option value="EMPLOYEE">Medewerker</option>
+                      <option value="COORDINATOR">Coördinator</option>
+                      <option value="ADMIN">Admin</option>
+                    </Select>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={u.id === currentUserId}
+                    title={`Zet geboortedatum terug naar ${DEFAULT_EMPLOYEE_BIRTH_DATE} en heft een blokkade op`}
+                    onClick={() => updateUser(u.id, { resetBirthDate: true })}
+                  >
+                    Geboortedatum resetten
+                  </Button>
+                  {u.mfaEnabled && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      title="De medewerker moet tweestapsverificatie opnieuw instellen"
+                      onClick={() => {
+                        if (window.confirm(`Tweestapsverificatie van ${u.name} resetten?`)) {
+                          updateUser(u.id, { resetMfa: true });
+                        }
+                      }}
+                    >
+                      2FA resetten
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant={u.active ? "outline" : "secondary"}
+                    disabled={u.id === currentUserId}
+                    onClick={() => updateUser(u.id, { active: !u.active })}
+                  >
+                    {u.active ? "Deactiveren" : "Activeren"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={u.id === currentUserId}
+                    onClick={() => deleteUser(u.id, u.name)}
+                    aria-label="Verwijderen"
+                    title="Alleen mogelijk zonder geregistreerde gegevens"
+                    className="text-red-400 hover:text-red-300"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Select
-                  className="h-10 w-auto"
-                  value={u.role}
-                  disabled={u.id === currentUserId}
-                  onChange={(e) => updateUser(u.id, { role: e.target.value as UserRow["role"] })}
-                >
-                  <option value="EMPLOYEE">Medewerker</option>
-                  <option value="COORDINATOR">Coördinator</option>
-                  <option value="ADMIN">Admin</option>
-                </Select>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={u.id === currentUserId}
-                  title={`Zet geboortedatum terug naar ${DEFAULT_EMPLOYEE_BIRTH_DATE} en heft een blokkade op`}
-                  onClick={() => updateUser(u.id, { resetBirthDate: true })}
-                >
-                  Geboortedatum resetten
-                </Button>
-                <Button
-                  size="sm"
-                  variant={u.active ? "outline" : "secondary"}
-                  disabled={u.id === currentUserId}
-                  onClick={() => updateUser(u.id, { active: !u.active })}
-                >
-                  {u.active ? "Deactiveren" : "Activeren"}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={u.id === currentUserId}
-                  onClick={() => deleteUser(u.id, u.name)}
-                  aria-label="Verwijderen"
-                  title="Alleen mogelijk zonder geregistreerde gegevens"
-                  className="text-red-400 hover:text-red-300"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+              {u.role !== "INVALLER" && <UserEmailField email={u.email} onSave={(email) => updateUser(u.id, { email })} />}
             </CardContent>
           </Card>
         ))}
@@ -197,7 +251,59 @@ export function UserManager({ users, currentUserId }: { users: UserRow[]; curren
         heft een blokkade na te veel foute inlogpogingen meteen op — handig als een medewerker de
         zelf ingestelde geboortedatum is vergeten.
       </p>
-      <p className="text-xs text-slate-500">Label: {ROLE_LABEL.ADMIN} / {ROLE_LABEL.COORDINATOR} / {ROLE_LABEL.EMPLOYEE}</p>
+      <p className="text-xs text-slate-500">Label: {ROLE_LABEL.ADMIN} / {ROLE_LABEL.COORDINATOR} / {ROLE_LABEL.EMPLOYEE} / {ROLE_LABEL.INVALLER}</p>
+    </div>
+  );
+}
+
+function UserEmailField({ email, onSave }: { email: string | null; onSave: (email: string) => void }) {
+  const [editing, setEditing] = React.useState(false);
+  const [value, setValue] = React.useState(email ?? "");
+  const [saving, setSaving] = React.useState(false);
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setValue(email ?? "");
+          setEditing(true);
+        }}
+        className="flex items-center gap-1.5 self-start text-left text-xs text-slate-500 hover:text-slate-300"
+        title="E-mailadres koppelen voor Microsoft-login"
+      >
+        {email ?? <span className="italic">Geen e-mailadres gekoppeld</span>}
+        <span className="text-slate-600">· bewerken</span>
+      </button>
+    );
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await onSave(value.trim());
+    } finally {
+      setSaving(false);
+      setEditing(false);
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <Input
+        type="email"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="naam@organisatie.nl"
+        className="h-8 w-56 text-xs"
+        autoFocus
+      />
+      <Button size="sm" variant="outline" className="h-8 px-2" loading={saving} onClick={handleSave}>
+        Opslaan
+      </Button>
+      <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => setEditing(false)}>
+        Annuleren
+      </Button>
     </div>
   );
 }

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-const ROLE_LABEL = { ADMIN: "Admin", COORDINATOR: "Coördinator", EMPLOYEE: "Medewerker" } as const;
+const ROLE_LABEL = { ADMIN: "Admin", COORDINATOR: "Coördinator", EMPLOYEE: "Medewerker", INVALLER: "Invaller" } as const;
 
 type ArchivedUser = { id: string; name: string; role: keyof typeof ROLE_LABEL };
 type ArchivedMedication = {

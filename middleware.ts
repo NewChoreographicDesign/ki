@@ -8,7 +8,7 @@ const COOKIE_NAME = "session";
 // where to send an unauthenticated visitor (first-run "/setup" wizard vs.
 // "/login") based on whether any user exists yet — middleware can't do that
 // DB lookup at the edge, so it must let the request through untouched.
-const PUBLIC_PATHS = ["/", "/login", "/setup"];
+const PUBLIC_PATHS = ["/", "/login", "/setup", "/invaller-registratie"];
 const BACKEND_ROLES = new Set(["ADMIN"]);
 // Always reachable regardless of device restriction: the unlock page/API
 // themselves (or nobody could ever unlock a new device), and cron (Vercel's
@@ -54,6 +54,14 @@ export async function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("Content-Security-Policy", csp);
+  // This app's equivalent of an OS "proces/thread ID" — a serverless
+  // deployment has neither. Forwarded to the Node.js runtime (lib/log.ts
+  // reads it via next/headers) so every structured log line written
+  // while handling THIS request carries the same id, and echoed back on
+  // the response so it can be handed to support investigating one
+  // specific request.
+  const requestId = crypto.randomUUID();
+  requestHeaders.set("x-request-id", requestId);
 
   // Set only once a valid, non-idle session's lastActivity claim has been
   // refreshed below — attached to whichever response variant actually gets
@@ -77,18 +85,21 @@ export async function middleware(request: NextRequest) {
   function next() {
     const response = NextResponse.next({ request: { headers: requestHeaders } });
     response.headers.set("Content-Security-Policy", csp);
+    response.headers.set("x-request-id", requestId);
     return withSessionCookie(response);
   }
 
   function redirect(url: URL) {
     const response = NextResponse.redirect(url);
     response.headers.set("Content-Security-Policy", csp);
+    response.headers.set("x-request-id", requestId);
     return withSessionCookie(response);
   }
 
   function json(body: unknown, status: number) {
     const response = NextResponse.json(body, { status });
     response.headers.set("Content-Security-Policy", csp);
+    response.headers.set("x-request-id", requestId);
     return withSessionCookie(response);
   }
 
