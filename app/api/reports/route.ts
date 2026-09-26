@@ -31,9 +31,9 @@ export async function POST(request: NextRequest) {
         shift: data.shift,
         date,
         content: data.content,
-        // See Report.adminOnly's schema.prisma comment — set once, here,
-        // and never toggled any other way.
-        adminOnly: session.role === Role.INVALLER,
+        // See Report.adminOnly's schema.prisma comment — every rapportage
+        // is admin-only from creation, regardless of who wrote it.
+        adminOnly: true,
       },
     });
 

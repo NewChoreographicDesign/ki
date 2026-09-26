@@ -7,6 +7,7 @@ const ACTION_LABELS: Record<string, string> = {
   "login.success": "Ingelogd",
   "login.failed": "Mislukte inlogpoging",
   "report.create": "Rapportage aangemaakt",
+  "report.update": "Rapportage aangepast",
   "document.delete": "Document verwijderd",
   "protocol.delete": "Protocol verwijderd",
   "user.create": "Gebruiker aangemaakt",

@@ -216,12 +216,15 @@ model Report {
   shift     ShiftType
   date      DateTime
   content   String
-  // Set true at creation time when the author is Role.INVALLER (see
-  // app/api/reports/route.ts) — never toggled any other way. A rapportage
-  // written by a flexwerker is visible to ADMIN only; every other role's
-  // Rapportage list filters these rows out entirely, including other
-  // invallers. Regular staff's own rapportages are unaffected (this stays
-  // false).
+  // Always true at creation time (see app/api/reports/route.ts) — every
+  // rapportage is ADMIN-only by default, full stop. The one exception is
+  // the author's own /rapportage list, which shows (and lets them edit)
+  // their own report for a short window after creation regardless of this
+  // flag — see lib/report-window.ts. @default(false) is kept only because
+  // it predates this rule (this app applies schema changes with
+  // `prisma db push` against the live database, no migration history, so
+  // changing a column default here wouldn't retroactively touch existing
+  // rows anyway) — every code path that creates a Report sets this true.
   adminOnly Boolean   @default(false)
   createdAt DateTime  @default(now())
 

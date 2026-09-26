@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Role } from "@prisma/client";
 import { db } from "@/lib/db";
-import { requireAuth, AuthError } from "@/lib/auth";
+import { requireAuth, AuthError, canAccessPersonalTodoAssignment } from "@/lib/auth";
 import { handleApiError } from "@/lib/api";
 import { todoSchema } from "@/lib/validations";
 import { formatDaysOfWeek } from "@/lib/utils";
@@ -15,9 +14,12 @@ export async function POST(request: NextRequest) {
     const assignedToId = data.assignedToId || null;
     // Anyone can create a personal task for themselves; assigning one to a
     // DIFFERENT medewerker (the Backend "push a task to someone" flow) is
-    // admin/coordinator-only. Leaving assignedToId empty keeps today's
-    // behavior of a shared team task on the Werklijst, unchanged.
-    if (assignedToId && assignedToId !== session.sub && session.role === Role.EMPLOYEE) {
+    // admin/coordinator-only — matches canAccessPersonalTodoAssignment, the
+    // same check /persoonlijke-taken itself redirects non-admin/coordinator
+    // away for, so this can't be reached by calling the API directly
+    // either. Leaving assignedToId empty keeps today's behavior of a
+    // shared team task on the Werklijst, unchanged.
+    if (assignedToId && assignedToId !== session.sub && !canAccessPersonalTodoAssignment(session.role)) {
       throw new AuthError("Geen toegang", 403);
     }
     if (assignedToId) {
