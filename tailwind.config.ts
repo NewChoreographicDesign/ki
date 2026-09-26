@@ -1,5 +1,24 @@
 import type { Config } from "tailwindcss";
 
+// Every themed color below is stored as CSS variables (globals.css defines
+// one set under :root for light — the default — and an override set under
+// .dark), so a single class toggle on <html> (see components/theme-toggle.tsx)
+// re-themes the whole app with zero per-component changes: every existing
+// `bg-surface2`, `text-slate-400`, `border-rose-500/50`, etc. call site
+// already just references these token names. The `rgb(var(--x) / <alpha>)`
+// form (rather than a plain hex or var()) is what makes Tailwind's opacity
+// modifiers (the `/50` in `bg-surface2/50`) keep working — Tailwind can only
+// apply an alpha channel to a color function it can inject one into.
+// Tailwind's own runtime happily accepts a function here (it calls it with
+// `{ opacityValue }` while resolving a class like `bg-surface2/50`), but the
+// bundled Config type still declares color values as plain strings only —
+// so the cast below is purely to satisfy tsc, not a behavior change.
+function withOpacity(variable: string): string {
+  const resolver = ({ opacityValue }: { opacityValue?: string }) =>
+    opacityValue === undefined ? `rgb(var(${variable}))` : `rgb(var(${variable}) / ${opacityValue})`;
+  return resolver as unknown as string;
+}
+
 const config: Config = {
   darkMode: "class",
   content: [
@@ -12,24 +31,41 @@ const config: Config = {
         // Vezrap system — four tokens, no palette to choose from: Ink carries
         // every background, Rose (Signaal) is action/emphasis, Forest
         // (Secundair) is confirmation/calm, Gold only ever lives inside the
-        // mark's gradient. See components/brand/logo.tsx.
-        background: "#1c2420",
-        surface: "#232d27",
-        surface2: "#263029",
-        border: "#33413a",
+        // mark's gradient (and stays a fixed brand color in both themes, like
+        // a logo would — see components/brand/logo.tsx — so it's the one
+        // color here left as a plain, non-themed hex).
+        background: withOpacity("--color-background"),
+        surface: withOpacity("--color-surface"),
+        surface2: withOpacity("--color-surface2"),
+        border: withOpacity("--color-border"),
+        // The stock Tailwind `slate` scale is used directly as this app's
+        // text-color ramp (text-slate-50 down to text-slate-600) — themed
+        // here as CSS variables like the rest, rather than left as literal
+        // hex, since a light theme needs a genuinely different ramp (light
+        // text on dark reversed to dark text on light), not just a lighter
+        // version of the same one.
+        slate: {
+          50: withOpacity("--color-slate-50"),
+          100: withOpacity("--color-slate-100"),
+          200: withOpacity("--color-slate-200"),
+          300: withOpacity("--color-slate-300"),
+          400: withOpacity("--color-slate-400"),
+          500: withOpacity("--color-slate-500"),
+          600: withOpacity("--color-slate-600"),
+        },
         rose: {
-          200: "#f0d5cc",
-          300: "#e3b6a8",
-          400: "#d98a7a",
-          500: "#c96f5c",
-          600: "#b25a48",
+          200: withOpacity("--color-rose-200"),
+          300: withOpacity("--color-rose-300"),
+          400: withOpacity("--color-rose-400"),
+          500: withOpacity("--color-rose-500"),
+          600: withOpacity("--color-rose-600"),
         },
         forest: {
-          200: "#cfe0d3",
-          300: "#a9c7b0",
-          400: "#7fa88a",
-          500: "#5c8a67",
-          600: "#4a7154",
+          200: withOpacity("--color-forest-200"),
+          300: withOpacity("--color-forest-300"),
+          400: withOpacity("--color-forest-400"),
+          500: withOpacity("--color-forest-500"),
+          600: withOpacity("--color-forest-600"),
         },
         gold: {
           400: "#ffd987",

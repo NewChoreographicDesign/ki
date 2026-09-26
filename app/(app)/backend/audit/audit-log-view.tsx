@@ -28,7 +28,6 @@ const ACTION_LABELS: Record<string, string> = {
   "user.mfa.reset": "Tweestapsverificatie gereset door admin",
   "login.mfa.failed": "Onjuiste tweestapsverificatie-code",
   "login.mfa.backup-code-used": "Back-upcode gebruikt om in te loggen",
-  "user.sso.linked": "Microsoft-account gekoppeld",
   "invaller.self_register": "Invaller-account zelf geregistreerd",
   "invaller_registration.rotate": "Invaller-registratiecode aangezet/vervangen",
   "invaller_registration.disable": "Invaller-registratie uitgezet",

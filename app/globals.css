@@ -2,8 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Light is the default theme (see components/theme-toggle.tsx and the
+   no-flash init script in app/layout.tsx) — .dark overrides every token
+   below with this app's original, unchanged dark palette. Values are
+   "R G B" triplets (no commas, no rgb() wrapper) because that's the format
+   Tailwind's `rgb(var(--x) / <alpha-value>)` color functions in
+   tailwind.config.ts need to splice in an opacity modifier like `/50`. */
 :root {
+  color-scheme: light;
+  --color-background: 247 248 246;
+  --color-surface: 255 255 255;
+  --color-surface2: 238 241 238;
+  --color-border: 221 227 221;
+
+  --color-slate-50: 15 23 42;
+  --color-slate-100: 30 41 59;
+  --color-slate-200: 51 65 85;
+  --color-slate-300: 71 85 105;
+  --color-slate-400: 100 116 139;
+  --color-slate-500: 124 138 160;
+  --color-slate-600: 148 163 184;
+
+  --color-rose-200: 178 90 72;
+  --color-rose-300: 156 74 58;
+  --color-rose-400: 135 64 50;
+  --color-rose-500: 114 53 40;
+  --color-rose-600: 92 43 32;
+
+  --color-forest-200: 74 113 84;
+  --color-forest-300: 63 96 72;
+  --color-forest-400: 51 80 59;
+  --color-forest-500: 42 65 48;
+  --color-forest-600: 33 52 38;
+}
+
+.dark {
   color-scheme: dark;
+  --color-background: 28 36 32;
+  --color-surface: 35 45 39;
+  --color-surface2: 38 48 41;
+  --color-border: 51 65 58;
+
+  --color-slate-50: 248 250 252;
+  --color-slate-100: 241 245 249;
+  --color-slate-200: 226 232 240;
+  --color-slate-300: 203 213 225;
+  --color-slate-400: 148 163 184;
+  --color-slate-500: 100 116 139;
+  --color-slate-600: 71 85 105;
+
+  --color-rose-200: 240 213 204;
+  --color-rose-300: 227 182 168;
+  --color-rose-400: 217 138 122;
+  --color-rose-500: 201 111 92;
+  --color-rose-600: 178 90 72;
+
+  --color-forest-200: 207 224 211;
+  --color-forest-300: 169 199 176;
+  --color-forest-400: 127 168 138;
+  --color-forest-500: 92 138 103;
+  --color-forest-600: 74 113 84;
 }
 
 body {
@@ -11,7 +69,7 @@ body {
   -webkit-tap-highlight-color: transparent;
   /* A very low-opacity glow, fixed to the viewport so it reads as ambient
      depth behind the UI rather than a decoration on any one page — subtle
-     enough to stay out of the way of a clinical, professional dark theme. */
+     enough to stay out of the way in either theme. */
   background-image:
     radial-gradient(60rem 40rem at 100% -10%, rgba(217, 138, 122, 0.06), transparent 60%),
     radial-gradient(50rem 36rem at -10% 110%, rgba(92, 138, 103, 0.05), transparent 60%);

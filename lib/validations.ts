@@ -30,10 +30,7 @@ export const userSchema = z.object({
   birthDate: z.string().regex(ddmmyyyy, "Gebruik het formaat DD-MM-JJJJ"),
   role: z.enum(["ADMIN", "COORDINATOR", "EMPLOYEE"]),
   active: z.boolean().optional(),
-  // Optional at creation — lets an admin pre-link an account to their
-  // Microsoft email so SSO can match it on that person's very first
-  // login, rather than requiring them to first log in with
-  // naam+geboortedatum and set it themselves via Mijn account.
+  // Optional contact email, settable at creation or later.
   email: z.union([z.string().trim().email("Ongeldig e-mailadres"), z.literal("")]).optional(),
 });
 

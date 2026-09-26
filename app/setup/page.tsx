@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogoMark } from "@/components/brand/logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { SetupForm } from "./setup-form";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,7 @@ export default async function SetupPage() {
         <div className="absolute inset-0 bg-brand-grid" />
         <div className="absolute left-1/2 top-1/2 h-[28rem] w-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-gradient opacity-[0.1] blur-3xl" />
       </div>
+      <ThemeToggle className="absolute right-4 top-4" />
       <div className="relative flex w-full max-w-md flex-col items-center gap-8">
         <LogoMark size="lg" className="animate-scale-in" />
         <Card className="w-full animate-fade-in-up" style={{ animationDelay: "120ms" }}>

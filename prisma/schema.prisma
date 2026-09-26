@@ -51,20 +51,14 @@ model User {
   active    Boolean   @default(true)
   failedLoginAttempts Int       @default(0)
   lockedUntil         DateTime?
-  // Not a login credential (login stays name+birthdate) — used to deliver
-  // push notifications AND, for vast personeel, as the matching key
-  // Microsoft SSO links an Azure identity to on first login (see
-  // lib/microsoft-sso.ts and app/api/auth/sso/microsoft/callback).
-  // Settable two ways: self-service (app/api/account/email/route.ts) or
-  // by an admin at creation/afterwards (app/api/backend/users). A plain
-  // DB-level unique constraint is enough here (unlike the multi-tenant
-  // Multi-Woongroep sibling of this app, which has to check uniqueness
-  // across every group in an organisation instead) — this app has exactly
-  // one tenant.
+  // Not a login credential (login stays name+birthdate) — optional contact
+  // info, settable by an admin via Medewerkers (app/api/backend/users).
   email               String?   @unique
-  // Set once an Azure AD identity has been linked via Microsoft SSO — the
-  // fast-path match on every subsequent login, so a later email change
-  // never breaks an already-linked account.
+  // Unused since Microsoft SSO was removed (it used to hold the linked
+  // Azure identity's object id). Left in place rather than dropped, since
+  // this app's schema evolves via `prisma db push` straight against the
+  // live database rather than versioned migrations — removing it is safe
+  // to do later, just not bundled into an unrelated change.
   azureObjectId       String?   @unique
   mfaEnabled          Boolean   @default(false)
   mfaSecretEncrypted  String?

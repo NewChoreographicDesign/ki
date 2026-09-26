@@ -24,6 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LogoMark } from "@/components/brand/logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { toast } from "sonner";
 
 type NavItem = {
@@ -140,7 +141,7 @@ export function AppNav({
           <Menu className="h-6 w-6" />
         </button>
         <LogoMark size="sm" />
-        <div className="w-11" />
+        <ThemeToggle />
       </div>
 
       {/* Overlay for iPad / mobile */}
@@ -272,9 +273,12 @@ function UserFooter({
         >
           {userName}
         </Link>
-        <Button variant="ghost" size="icon" onClick={onLogout} aria-label="Uitloggen">
-          <LogOut className="h-5 w-5" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <Button variant="ghost" size="icon" onClick={onLogout} aria-label="Uitloggen">
+            <LogOut className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
     </div>
   );

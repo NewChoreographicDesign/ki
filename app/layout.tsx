@@ -1,8 +1,17 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Archivo, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
-import { Toaster } from "sonner";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
+import { ThemedToaster } from "@/components/themed-toaster";
+import { THEME_STORAGE_KEY } from "@/lib/theme";
 import "./globals.css";
+
+// Runs before hydration (strategy="beforeInteractive") so the stored theme
+// is applied to <html> before the first paint — without this, the page
+// would flash light (the CSS default) and then flip to dark for anyone
+// who'd chosen dark, since React doesn't get a chance to set the class
+// until well after the server-rendered HTML has already painted.
+const THEME_INIT_SCRIPT = `(function(){try{if(localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)})==="dark")document.documentElement.classList.add("dark");}catch(e){}})();`;
 
 // Two families, each with exactly one job, both chosen for legibility over
 // personality: Archivo (display) is a geometric grotesk with a high
@@ -46,7 +55,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1c2420",
+  themeColor: "#f7f8f6",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -64,10 +73,13 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="nl" className={`dark ${archivo.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable}`}>
+    <html lang="nl" className={`${archivo.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable}`}>
       <body className="min-h-screen bg-background font-sans">
+        <Script id="theme-init" strategy="beforeInteractive">
+          {THEME_INIT_SCRIPT}
+        </Script>
         {children}
-        <Toaster theme="dark" position="top-center" richColors />
+        <ThemedToaster />
         <ServiceWorkerRegister />
       </body>
     </html>

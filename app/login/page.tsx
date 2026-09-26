@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogoMark } from "@/components/brand/logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { LoginForm } from "./login-form";
 
 export default async function LoginPage() {
@@ -13,14 +14,13 @@ export default async function LoginPage() {
   const existingUsers = await db.user.count();
   if (existingUsers === 0) redirect("/setup");
 
-  const ssoEnabled = Boolean(process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET);
-
   return (
     <main className="relative flex min-h-dvh items-center justify-center bg-background p-4">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute inset-0 bg-brand-grid" />
         <div className="absolute left-1/2 top-1/2 h-[28rem] w-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-gradient opacity-[0.1] blur-3xl" />
       </div>
+      <ThemeToggle className="absolute right-4 top-4" />
       <div className="relative flex w-full max-w-md flex-col items-center gap-8">
         <LogoMark size="lg" className="animate-scale-in" />
         <Card className="w-full animate-fade-in-up" style={{ animationDelay: "120ms" }}>
@@ -30,7 +30,7 @@ export default async function LoginPage() {
           </CardHeader>
           <CardContent>
             <Suspense fallback={null}>
-              <LoginForm ssoEnabled={ssoEnabled} />
+              <LoginForm />
             </Suspense>
           </CardContent>
         </Card>

@@ -10,16 +10,7 @@ import { ShiftType } from "@prisma/client";
 import { formatBirthDateInput } from "@/lib/format-birthdate-input";
 import { shiftLabel } from "@/lib/utils";
 
-const SSO_ERROR_LABEL: Record<string, string> = {
-  "sso-not-configured": "Inloggen met Microsoft is niet ingesteld.",
-  "sso-state-mismatch": "De Microsoft-aanmelding is verlopen — probeer opnieuw.",
-  "sso-missing-params": "De Microsoft-aanmelding is niet volledig teruggekomen — probeer opnieuw.",
-  "sso-invalid-token": "Microsoft-aanmelding kon niet worden geverifieerd.",
-  "sso-no-matching-account": "Geen gekoppeld account gevonden voor dit Microsoft-account — vraag de beheerder.",
-  "sso-failed": "Microsoft-aanmelding is mislukt, probeer opnieuw.",
-};
-
-export function LoginForm({ ssoEnabled }: { ssoEnabled: boolean }) {
+export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [name, setName] = React.useState("");
@@ -31,12 +22,6 @@ export function LoginForm({ ssoEnabled }: { ssoEnabled: boolean }) {
   // yet.
   const [mfaStep, setMfaStep] = React.useState(false);
   const [mfaCode, setMfaCode] = React.useState("");
-
-  React.useEffect(() => {
-    const error = searchParams.get("error");
-    if (error) toast.error(SSO_ERROR_LABEL[error] || "Inloggen mislukt");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   function completeLogin(data: { shift: ShiftType }) {
     toast.success(`Welkom, dienst gestart (${shiftLabel(data.shift).toLowerCase()})`);
@@ -153,20 +138,6 @@ export function LoginForm({ ssoEnabled }: { ssoEnabled: boolean }) {
       <Button type="submit" size="lg" loading={loading} className="mt-2 w-full">
         Inloggen
       </Button>
-      {ssoEnabled && (
-        <>
-          <div className="flex items-center gap-3 text-xs text-slate-500">
-            <span className="h-px flex-1 bg-border" />
-            of
-            <span className="h-px flex-1 bg-border" />
-          </div>
-          <a href="/api/auth/sso/microsoft/start" className="block">
-            <Button type="button" variant="outline" size="lg" className="w-full">
-              Inloggen met Microsoft
-            </Button>
-          </a>
-        </>
-      )}
     </form>
   );
 }

@@ -10,9 +10,7 @@ import { parseDDMMYYYY, DEFAULT_EMPLOYEE_BIRTH_DATE } from "@/lib/utils";
 const patchSchema = z.object({
   active: z.boolean().optional(),
   role: z.enum(["ADMIN", "COORDINATOR", "EMPLOYEE"]).optional(),
-  // Admin-set/edit of an account's email — what lets Microsoft SSO
-  // auto-link that account on the person's very first login. Empty
-  // string clears it, same convention as the self-service version.
+  // Admin-set/edit of an account's contact email. Empty string clears it.
   email: z.union([z.string().trim().email("Ongeldig e-mailadres"), z.literal("")]).optional(),
   // Sets the birthdate back to the well-known default and clears any active
   // lockout, so a medewerker who forgot the real birthdate they set

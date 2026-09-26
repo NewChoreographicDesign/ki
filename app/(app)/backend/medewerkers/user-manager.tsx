@@ -154,7 +154,7 @@ export function UserManager({ users, currentUserId }: { users: UserRow[]; curren
                 <Input
                   id="create-email"
                   type="email"
-                  placeholder="voor Microsoft-login"
+                  placeholder="naam@voorbeeld.nl"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -163,8 +163,7 @@ export function UserManager({ users, currentUserId }: { users: UserRow[]; curren
             <p className="text-xs text-slate-500">
               Standaard {DEFAULT_EMPLOYEE_BIRTH_DATE} — je hoeft de echte geboortedatum niet te
               weten. De medewerker logt hiermee eenmalig in en stelt daarna zelf de echte
-              geboortedatum in bij Mijn account. Een e-mailadres is alleen nodig als deze persoon
-              met &ldquo;Inloggen met Microsoft&rdquo; wil inloggen.
+              geboortedatum in bij Mijn account.
             </p>
             <Button type="submit" loading={loading} disabled={!name || birthDate.length !== 10} className="self-start">
               Toevoegen
@@ -270,9 +269,9 @@ function UserEmailField({ email, onSave }: { email: string | null; onSave: (emai
           setEditing(true);
         }}
         className="flex items-center gap-1.5 self-start text-left text-xs text-slate-500 hover:text-slate-300"
-        title="E-mailadres koppelen voor Microsoft-login"
+        title="E-mailadres instellen"
       >
-        {email ?? <span className="italic">Geen e-mailadres gekoppeld</span>}
+        {email ?? <span className="italic">Geen e-mailadres ingesteld</span>}
         <span className="text-slate-600">· bewerken</span>
       </button>
     );

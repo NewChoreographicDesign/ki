@@ -11,7 +11,7 @@ import { logger } from "@/lib/log";
  *
  * Every call also emits a structured `security` log line (lib/log.ts) —
  * this is the one chokepoint nearly every sensitive action in the app
- * already goes through (logins, MFA, SSO, user mutations, ...), so wiring
+ * already goes through (logins, MFA, user mutations, ...), so wiring
  * it here gives the SIEM-facing pipeline the exact same event set as the
  * in-app auditlog, with no need to touch each call site individually.
  */
