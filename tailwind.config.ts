@@ -1,8 +1,10 @@
 import type { Config } from "tailwindcss";
 
 // Every themed color below is stored as CSS variables (globals.css defines
-// one set under :root for light — the default — and an override set under
-// .dark), so a single class toggle on <html> (see components/theme-toggle.tsx)
+// one set under :root for light and an override set under .dark — dark is
+// the default the app actually starts in, see app/layout.tsx's init
+// script; :root is just the CSS fallback for anyone who's chosen light),
+// so a single class toggle on <html> (see components/theme-toggle.tsx)
 // re-themes the whole app with zero per-component changes: every existing
 // `bg-surface2`, `text-slate-400`, `border-rose-500/50`, etc. call site
 // already just references these token names. The `rgb(var(--x) / <alpha>)`

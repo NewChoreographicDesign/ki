@@ -29,9 +29,16 @@ function readCurrentTheme(): Theme {
 
 /** Re-renders whenever the theme changes, including from outside this component. */
 export function useTheme(): Theme {
-  const [theme, setTheme] = React.useState<Theme>("light");
+  // "dark" matches the app's default (see app/layout.tsx's init script) —
+  // only relevant for the one render before the layout-effect below
+  // corrects it to whatever's actually on <html>, so a visitor who chose
+  // light doesn't see a flash of the dark-mode icon.
+  const [theme, setTheme] = React.useState<Theme>("dark");
 
-  React.useEffect(() => {
+  // useLayoutEffect (not useEffect) so this resolves before the browser
+  // paints, not after — the init script has already set the real class by
+  // the time this component mounts, this just needs to catch up to it.
+  React.useLayoutEffect(() => {
     setTheme(readCurrentTheme());
     function onChange(e: Event) {
       setTheme((e as CustomEvent<Theme>).detail);

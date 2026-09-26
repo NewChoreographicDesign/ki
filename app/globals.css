@@ -2,12 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Light is the default theme (see components/theme-toggle.tsx and the
-   no-flash init script in app/layout.tsx) — .dark overrides every token
-   below with this app's original, unchanged dark palette. Values are
-   "R G B" triplets (no commas, no rgb() wrapper) because that's the format
-   Tailwind's `rgb(var(--x) / <alpha-value>)` color functions in
-   tailwind.config.ts need to splice in an opacity modifier like `/50`. */
+/* Dark is the app's actual default (see the no-flash init script in
+   app/layout.tsx, which adds .dark on load unless localStorage says
+   "light") — .dark below is this app's original, unchanged dark palette.
+   :root here is the light alternative and CSS-only fallback for the brief
+   window before that script runs. Values are "R G B" triplets (no commas,
+   no rgb() wrapper) because that's the format Tailwind's
+   `rgb(var(--x) / <alpha-value>)` color functions in tailwind.config.ts
+   need to splice in an opacity modifier like `/50`. */
 :root {
   color-scheme: light;
   --color-background: 247 248 246;

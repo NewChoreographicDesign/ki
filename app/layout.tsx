@@ -8,10 +8,12 @@ import "./globals.css";
 
 // Runs before hydration (strategy="beforeInteractive") so the stored theme
 // is applied to <html> before the first paint — without this, the page
-// would flash light (the CSS default) and then flip to dark for anyone
-// who'd chosen dark, since React doesn't get a chance to set the class
-// until well after the server-rendered HTML has already painted.
-const THEME_INIT_SCRIPT = `(function(){try{if(localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)})==="dark")document.documentElement.classList.add("dark");}catch(e){}})();`;
+// would flash dark (the default, see below) and then flip to light for
+// anyone who'd chosen light, since React doesn't get a chance to set the
+// class until well after the server-rendered HTML has already painted.
+// Dark is the default: the class is added unless localStorage explicitly
+// says "light" (i.e. absent/anything-else still means dark).
+const THEME_INIT_SCRIPT = `(function(){try{if(localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)})!=="light")document.documentElement.classList.add("dark");}catch(e){}})();`;
 
 // Two families, each with exactly one job, both chosen for legibility over
 // personality: Archivo (display) is a geometric grotesk with a high
@@ -55,7 +57,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f7f8f6",
+  themeColor: "#1c2420",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
