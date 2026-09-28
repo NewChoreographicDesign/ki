@@ -11,10 +11,18 @@ import {
 } from "@/lib/weekly-report";
 import { formatDate, formatDateTime, formatTime, fullName, isoWeekOf, shiftLabel } from "@/lib/utils";
 
-const STATUS_LABELS: Record<string, string> = {
-  TAKEN: "Afgevinkt",
-  LEAVE: "Verlof",
-  NOT_TAKEN: "Niet ingenomen",
+// Same three variants the live app's own Badge component uses for this
+// exact status (app/(app)/medicatie/[clientId]/medication-check-list.tsx),
+// so a reader who knows the app's colors recognizes them instantly here —
+// taken is unambiguously good (forest), a miss is unambiguously a problem
+// (red — distinct from the brand's own rose accent, which is used
+// everywhere else in this document and would blur into "just decoration"
+// if reused as a warning color here), leave is neutral information rather
+// than either (amber).
+const STATUS_STYLE: Record<string, { label: string; text: string; bg: string }> = {
+  TAKEN: { label: "Afgevinkt", text: "#3f6048", bg: "#e1ebe3" },
+  NOT_TAKEN: { label: "Niet ingenomen", text: "#a3312a", bg: "#f6dcda" },
+  LEAVE: { label: "Verlof", text: "#946322", bg: "#f5e6cd" },
 };
 
 // pdfkit's built-in "standard 14" fonts (Helvetica etc.) are resolved
@@ -119,21 +127,36 @@ export function renderWeeklyReportPdf(
     }
 
     if (sections.has("medication")) {
-      section(doc, `Medicatie (${data.medicationChecks.length})`);
+      const notTakenCount = data.medicationChecks.filter((c) => c.status === "NOT_TAKEN").length;
+      section(doc, `Medicatie (${data.medicationChecks.length})`, {
+        badge:
+          notTakenCount > 0
+            ? { ...STATUS_STYLE.NOT_TAKEN, label: `${notTakenCount} niet ingenomen` }
+            : undefined,
+      });
       if (data.medicationChecks.length === 0) {
         emptyState(doc, "Geen medicatieregistraties deze week.");
       } else {
+        // A fixed-width status-badge column, sized to the longest label, so
+        // every check across every room/day lines up in one scannable
+        // column — the badge's color is what should jump out on the page,
+        // not its shifting position.
+        const badgeColWidth = Math.max(
+          ...Object.values(STATUS_STYLE).map((s) => badgeWidth(doc, s.label))
+        );
         for (const room of groupMedicationChecksByRoomAndDay(data.medicationChecks)) {
           subsection(doc, room.room);
           for (const day of room.days) {
             miniLabel(doc, `${day.dayLabel} ${day.dateLabel}`);
             day.checks.forEach((c, i) => {
-              const status = STATUS_LABELS[c.status] ?? c.status;
+              const style = STATUS_STYLE[c.status] ?? { label: c.status, text: COLOR.muted, bg: COLOR.border };
               const due = c.scheduledTime ? `Gepland ${c.scheduledTime}` : "Indien nodig";
-              item(
+              medicationItem(
                 doc,
-                `${due} (geregistreerd ${formatTime(c.checkedAt)}) · ${fullName(c.medication.client)} · ${c.medication.name} · ${status} · door ${c.user.name}${c.comment ? ` · ${c.comment}` : ""}`,
-                undefined,
+                style,
+                badgeColWidth,
+                `${c.medication.name} — ${fullName(c.medication.client)}`,
+                `${due} (geregistreerd ${formatTime(c.checkedAt)}) · door ${c.user.name}${c.comment ? ` · ${c.comment}` : ""}`,
                 { divider: i < day.checks.length - 1, indent: 12 }
               );
             });
@@ -286,7 +309,11 @@ function ensureSpace(doc: PDFKit.PDFDocument, needed: number) {
   if (doc.y > doc.page.height - doc.page.margins.bottom - needed) doc.addPage();
 }
 
-function section(doc: PDFKit.PDFDocument, title: string) {
+function section(
+  doc: PDFKit.PDFDocument,
+  title: string,
+  opts: { badge?: { label: string; text: string; bg: string } } = {}
+) {
   ensureSpace(doc, 70);
   doc.moveDown(0.6);
   const barX = PAGE_MARGIN;
@@ -296,6 +323,13 @@ function section(doc: PDFKit.PDFDocument, title: string) {
   const textHeight = doc.heightOfString(title, { width: doc.page.width - PAGE_MARGIN * 2 - 10 });
   doc.rect(barX, y + 1, 4, Math.max(textHeight - 2, 12)).fill(COLOR.rose);
   doc.fillColor(COLOR.ink).text(title, textX, y);
+  // A right-aligned badge on the section's own title row — e.g. "N niet
+  // ingenomen" on Medicatie — surfaces the one number that actually needs
+  // attention before a reader has to scan every room and day below it.
+  if (opts.badge) {
+    const w = badgeWidth(doc, opts.badge.label);
+    drawBadge(doc, opts.badge.label, doc.page.width - PAGE_MARGIN - w, y - 1, opts.badge.text, opts.badge.bg, w);
+  }
   doc.moveDown(0.15);
   doc
     .moveTo(PAGE_MARGIN, doc.y)
@@ -347,6 +381,76 @@ function item(
   if (opts.divider) {
     doc
       .moveTo(PAGE_MARGIN + indent, doc.y)
+      .lineTo(doc.page.width - PAGE_MARGIN, doc.y)
+      .lineWidth(0.5)
+      .strokeColor(COLOR.border)
+      .stroke();
+    doc.moveDown(0.35);
+  }
+}
+
+const BADGE_HEIGHT = 14;
+const BADGE_FONT_SIZE = 7.5;
+
+/** The pill width a given label needs at the badge font, plus its padding — used to size and align a column of badges. */
+function badgeWidth(doc: PDFKit.PDFDocument, label: string): number {
+  doc.font(BOLD_FONT).fontSize(BADGE_FONT_SIZE);
+  return doc.widthOfString(label.toUpperCase(), { characterSpacing: 0.3 }) + 14;
+}
+
+/** A small rounded, colored status pill — the same rounded-full/soft-background/colored-text shape as the live app's own Badge component (components/ui/badge.tsx). */
+function drawBadge(
+  doc: PDFKit.PDFDocument,
+  label: string,
+  x: number,
+  y: number,
+  textColor: string,
+  bg: string,
+  width: number
+) {
+  doc.save();
+  doc.roundedRect(x, y, width, BADGE_HEIGHT, BADGE_HEIGHT / 2).fill(bg);
+  doc.restore();
+  doc
+    .font(BOLD_FONT)
+    .fontSize(BADGE_FONT_SIZE)
+    .fillColor(textColor)
+    .text(label.toUpperCase(), x, y + 3.6, { width, align: "center", characterSpacing: 0.3, lineBreak: false });
+}
+
+/**
+ * A medication check row: a fixed-width, color-coded status badge (forest
+ * "Afgevinkt" / red "Niet ingenomen" / amber "Verlof" — see STATUS_STYLE)
+ * in its own left column, so a reader scanning down a room's checks sees
+ * the taken/missed/leave pattern in color before reading a single word,
+ * with the medication + client as the prominent header text beside it and
+ * the scheduling/registration detail secondary underneath.
+ */
+function medicationItem(
+  doc: PDFKit.PDFDocument,
+  style: { label: string; text: string; bg: string },
+  badgeColWidth: number,
+  header: string,
+  meta: string,
+  opts: { divider?: boolean; indent?: number } = {}
+) {
+  ensureSpace(doc, 44);
+  const indent = opts.indent ?? 0;
+  const x = PAGE_MARGIN + indent;
+  const y = doc.y;
+  drawBadge(doc, style.label, x, y, style.text, style.bg, badgeColWidth);
+
+  const textX = x + badgeColWidth + 10;
+  const textWidth = doc.page.width - PAGE_MARGIN - textX;
+  doc.font(BOLD_FONT).fontSize(9.5).fillColor(COLOR.ink).text(header, textX, y - 1, { width: textWidth });
+  doc.moveDown(0.1);
+  doc.font(REGULAR_FONT).fontSize(9).fillColor(COLOR.muted).text(meta, textX, doc.y, { width: textWidth });
+
+  doc.y = Math.max(doc.y, y + BADGE_HEIGHT);
+  doc.moveDown(0.35);
+  if (opts.divider) {
+    doc
+      .moveTo(x, doc.y)
       .lineTo(doc.page.width - PAGE_MARGIN, doc.y)
       .lineWidth(0.5)
       .strokeColor(COLOR.border)
