@@ -60,6 +60,7 @@ const COLOR = {
   rose: "#b25a48",
   roseSoft: "#f3e2dd",
   forest: "#3f6048",
+  forestSoft: "#e1ebe3",
   gradientFrom: "#ffcf6e",
   gradientTo: "#d98a7a",
   white: "#ffffff",
@@ -145,7 +146,8 @@ export function renderWeeklyReportPdf(
           ...Object.values(STATUS_STYLE).map((s) => badgeWidth(doc, s.label))
         );
         for (const room of groupMedicationChecksByRoomAndDay(data.medicationChecks)) {
-          subsection(doc, room.room);
+          const roomCheckCount = room.days.reduce((n, d) => n + d.checks.length, 0);
+          roomHeader(doc, `${room.room} (${roomCheckCount})`);
           for (const day of room.days) {
             miniLabel(doc, `${day.dayLabel} ${day.dateLabel}`);
             day.checks.forEach((c, i) => {
@@ -341,12 +343,37 @@ function section(
   doc.font(REGULAR_FONT).fontSize(10).fillColor(COLOR.ink);
 }
 
-/** A room/group header within a section, e.g. splitting Medicatie by room. */
+/** A sub-heading within a section, e.g. "Niet gedaan, per dag" under Werklijst. */
 function subsection(doc: PDFKit.PDFDocument, title: string) {
   ensureSpace(doc, 50);
   doc.moveDown(0.25);
   doc.font(BOLD_FONT).fontSize(10.5).fillColor(COLOR.forest).text(title.toUpperCase(), { characterSpacing: 0.3 });
   doc.moveDown(0.2);
+  doc.font(REGULAR_FONT).fontSize(10).fillColor(COLOR.ink);
+}
+
+/**
+ * A room header within Medicatie: a full-width filled band rather than
+ * subsection()'s plain text line, so one room's block of checks reads as
+ * visually separate from the next at a glance — a plain bold label here
+ * blended into the surrounding text too easily once every check row below
+ * it already carries its own colored status badge.
+ */
+function roomHeader(doc: PDFKit.PDFDocument, title: string) {
+  const bandHeight = 20;
+  ensureSpace(doc, bandHeight + 40);
+  doc.moveDown(0.75);
+  const y = doc.y;
+  const width = doc.page.width - PAGE_MARGIN * 2;
+  doc.save();
+  doc.roundedRect(PAGE_MARGIN, y, width, bandHeight, 3).fill(COLOR.forestSoft);
+  doc.restore();
+  doc
+    .font(BOLD_FONT)
+    .fontSize(9.5)
+    .fillColor(COLOR.forest)
+    .text(title.toUpperCase(), PAGE_MARGIN + 10, y + 5.5, { characterSpacing: 0.4, lineBreak: false });
+  doc.y = y + bandHeight + 10;
   doc.font(REGULAR_FONT).fontSize(10).fillColor(COLOR.ink);
 }
 
