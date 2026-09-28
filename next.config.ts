@@ -30,7 +30,10 @@ const securityHeaders = [
 // up automatically — this entry only makes that explicit and guards
 // against a future refactor accidentally making the path non-literal
 // (a template string, a variable) in a way the tracer can no longer follow.
-const FONT_TRACING_INCLUDES = ["./assets/fonts/LiberationSans-Regular.ttf"];
+// Bold joined Regular once the PDF started using it for headings/section
+// titles (lib/weekly-report-pdf.ts) — same reasoning as Regular below,
+// same license (LICENSE-OFL.txt covers the whole family, not per-weight).
+const FONT_TRACING_INCLUDES = ["./assets/fonts/LiberationSans-Regular.ttf", "./assets/fonts/LiberationSans-Bold.ttf"];
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -40,6 +43,9 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/weekrapport": FONT_TRACING_INCLUDES,
     "/api/weekrapport/archive/[id]": FONT_TRACING_INCLUDES,
+    // The live/in-progress week's download route also renders the PDF now
+    // (?format=pdf), not just plain .txt — see app/api/weekrapport/download/route.ts.
+    "/api/weekrapport/download": FONT_TRACING_INCLUDES,
     "/api/cron/weekly-report": FONT_TRACING_INCLUDES,
   },
   async headers() {

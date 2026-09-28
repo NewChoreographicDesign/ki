@@ -140,18 +140,32 @@ export function WeekrapportDownloads({
             archief hierboven toegevoegd.
           </p>
         </div>
-        <a
-          href={noneSelected ? undefined : `/api/weekrapport/download?sections=${sectionsParam}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-disabled={noneSelected}
-          onClick={(e) => noneSelected && e.preventDefault()}
-        >
-          <Button variant="outline" className="gap-2" disabled={noneSelected}>
-            <Download className="h-4 w-4" />
-            Voortgang (.txt)
-          </Button>
-        </a>
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            href={noneSelected ? undefined : `/api/weekrapport/download?format=pdf&sections=${sectionsParam}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-disabled={noneSelected}
+            onClick={(e) => noneSelected && e.preventDefault()}
+          >
+            <Button className="gap-2" disabled={noneSelected}>
+              <Download className="h-4 w-4" />
+              Voortgang (PDF)
+            </Button>
+          </a>
+          <a
+            href={noneSelected ? undefined : `/api/weekrapport/download?sections=${sectionsParam}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-disabled={noneSelected}
+            onClick={(e) => noneSelected && e.preventDefault()}
+          >
+            <Button variant="outline" className="gap-2" disabled={noneSelected}>
+              <Download className="h-4 w-4" />
+              .txt
+            </Button>
+          </a>
+        </div>
       </div>
     </>
   );

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { renderWeeklyReportPdf } from "@/lib/weekly-report-pdf";
+import PDFDocument from "pdfkit";
+import { renderWeeklyReportPdf, drawFooters } from "@/lib/weekly-report-pdf";
 import { amsterdamDate } from "@/lib/utils";
 import type { WeeklyReportData } from "@/lib/weekly-report";
 
@@ -97,5 +98,29 @@ describe("renderWeeklyReportPdf", () => {
     const pdf = await renderWeeklyReportPdf(buildData(), new Set(["medication"]));
 
     expect(pdf.subarray(0, 5).toString("latin1")).toBe("%PDF-");
+  });
+
+  // Regression test: drawFooters() stamps "Pagina X van Y" text inside the
+  // bottom margin — past where pdfkit's own auto-pagination expects content
+  // to stop. Left alone, each of those .text() calls sees itself
+  // "overflowing" the page and silently calls doc.addPage() in response, so
+  // the real page count grows *while the footer is being stamped* and the
+  // Y in "van Y" (read from bufferedPageRange() before that loop ran) goes
+  // stale — the file still opens fine, "Pagina 1 van 2" just ends up on an
+  // actual 4-page document. Verifying this directly (rather than trying to
+  // read the rendered "Pagina X van Y" text back out of the PDF) sidesteps
+  // needing to decode pdfkit's embedded-font glyph encoding, which doesn't
+  // store rendered text as plain, greppable characters.
+  it("drawFooters does not change the document's page count", () => {
+    const doc = new PDFDocument({ margin: 50, size: "A4", bufferPages: true });
+    doc.on("data", () => {});
+    doc.addPage();
+    doc.addPage();
+    const before = doc.bufferedPageRange().count;
+
+    drawFooters(doc, "Vezrap · Weekrapport");
+
+    expect(doc.bufferedPageRange().count).toBe(before);
+    doc.end();
   });
 });
