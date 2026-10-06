@@ -200,7 +200,7 @@ const interventionPlanContentSchema = z.object({
 });
 
 export const createInterventionPlanSchema = interventionPlanContentSchema.extend({
-  interventionId: z.string().min(1),
+  clientId: z.string().min(1),
   startDate: z.string().regex(ddmmyyyy, "Gebruik het formaat DD-MM-JJJJ"),
 });
 

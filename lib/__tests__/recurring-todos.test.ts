@@ -126,20 +126,9 @@ describe("regenerateRecurringTodos — interval-based recurrence", () => {
 
   it("carries interventionPlanId forward to the regenerated occurrence", async () => {
     const client = await rawDb.client.create({ data: { firstName: "Plan", lastName: "Client" } });
-    const intervention = await rawDb.intervention.create({
-      data: {
-        clientId: client.id,
-        description: "x",
-        goal: "x",
-        stepsTaken: "x",
-        followUpNeeded: "x",
-        createdById: USER_ID,
-      },
-    });
     const plan = await rawDb.interventionPlan.create({
       data: {
-        interventionId: intervention.id,
-        clientId: intervention.clientId,
+        clientId: client.id,
         goal: "doel",
         stepsAanwezigheid: "x",
         stepsVerzet: "x",

@@ -5,8 +5,8 @@ import { createInterventionPlanSchema } from "@/lib/validations";
 import { createInterventionPlan, InterventionPlanError } from "@/lib/intervention-plans";
 
 // Open to every role, same accessibility as POST /api/interventions itself
-// (see that route's own comment) — a plan is a richer follow-up on an
-// intervention any staff member can already create.
+// (see that route's own comment) — a plan is its own, team-planned
+// trajectory for a client, not tied to any particular intervention.
 export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth();

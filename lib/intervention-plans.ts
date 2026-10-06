@@ -44,25 +44,20 @@ async function createLinkedTask(userId: string, planId: string, task: TaskInput,
 }
 
 /**
- * Starts the first InterventionPlan (version 1) for an existing
- * Intervention — see that model's schema.prisma comment for why this is
- * a separate, heavier object rather than extra fields bolted onto
- * Intervention itself.
+ * Starts the first InterventionPlan (version 1) for a client — see that
+ * model's schema.prisma comment for why this is its own, team-planned
+ * object rather than anything attached to an Intervention.
  */
 export async function createInterventionPlan(userId: string, data: z.infer<typeof createInterventionPlanSchema>) {
-  const intervention = await db.intervention.findUnique({
-    where: { id: data.interventionId },
-    select: { id: true, clientId: true },
-  });
-  if (!intervention) throw new InterventionPlanError("Interventie niet gevonden.");
+  const client = await db.client.findUnique({ where: { id: data.clientId }, select: { id: true } });
+  if (!client) throw new InterventionPlanError("Cliënt niet gevonden.");
 
   const startDate = parseDate(data.startDate, "startdatum");
   const evaluationDate = parseDate(data.evaluationDate, "evaluatiedatum");
 
   const plan = await db.interventionPlan.create({
     data: {
-      interventionId: data.interventionId,
-      clientId: intervention.clientId,
+      clientId: client.id,
       goal: data.goal,
       stepsAanwezigheid: data.stepsAanwezigheid,
       stepsVerzet: data.stepsVerzet,
@@ -144,7 +139,6 @@ export async function evaluateInterventionPlan(
     });
     const created = await tx.interventionPlan.create({
       data: {
-        interventionId: archived.interventionId,
         clientId: archived.clientId,
         version: archived.version + 1,
         previousPlanId: archived.id,

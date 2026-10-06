@@ -450,7 +450,6 @@ model Intervention {
   updatedAt   DateTime           @updatedAt
 
   notes InterventionNote[]
-  plans InterventionPlan[]
 
   @@index([clientId])
   @@index([status])
@@ -477,12 +476,12 @@ enum InterventionPlanStatus {
 }
 
 // Een interventieplan werkt de 5 pijlers van Verbindend Gezag uit tot
-// concrete stappen rond één concreet geformuleerd doel, voor één
-// Intervention. Dit is bewust een apart, zwaarder object naast Intervention
-// zelf (die blijft ongewijzigd de snelle "wat gebeurde er / welke
-// vervolgstappen"-registratie) — niet elke interventie heeft een volledig
-// plan nodig, maar wie er één wil, krijgt hier de volledige, vaste
-// structuur.
+// concrete stappen rond één concreet geformuleerd doel, voor één cliënt.
+// Een eigen, team-gepland traject — niet gekoppeld aan een Intervention
+// (die blijft de snelle, ongeplande "wat gebeurde er / welke
+// vervolgstappen"-registratie van een plots voorval): een plan ontstaat
+// juist los daarvan, als voorgenomen, gezamenlijk teamtraject rond een
+// cliënt, niet als uitvloeisel van één incident.
 //
 // Nooit bewerkt na aanmaak zodra er een koppeling (taak/evaluatie) aan
 // hangt — op de evaluatiedatum (zie evaluationDate) wordt het plan ofwel
@@ -493,11 +492,9 @@ enum InterventionPlanStatus {
 // versie van het plan woordelijk bewaard als referentie, in plaats van
 // overschreven te worden.
 model InterventionPlan {
-  id             String       @id @default(cuid())
-  interventionId String
-  intervention   Intervention @relation(fields: [interventionId], references: [id], onDelete: Cascade)
-  clientId       String
-  client         Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  id       String @id @default(cuid())
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   version        Int                    @default(1)
   previousPlanId String?                @unique
@@ -536,7 +533,6 @@ model InterventionPlan {
   tasks       Todo[]
   evaluations InterventionPlanEvaluation[]
 
-  @@index([interventionId])
   @@index([clientId])
   @@index([status])
 }

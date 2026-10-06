@@ -46,21 +46,22 @@ export type InterventionRow = {
   closedByName: string | null;
   closedAt: string | null;
   notes: InterventionNoteRow[];
-  plans: InterventionPlanRow[];
 };
 
 const ALGEMEEN = "Algemeen";
 
-type View = "overdracht" | "interventies";
+type View = "overdracht" | "interventies" | "plannen";
 
 export function OverdrachtManager({
   handovers,
   interventions,
+  plans,
   clients,
   canDelete,
 }: {
   handovers: HandoverRow[];
   interventions: InterventionRow[];
+  plans: InterventionPlanRow[];
   clients: { id: string; name: string; room: string | null }[];
   canDelete: boolean;
 }) {
@@ -71,6 +72,7 @@ export function OverdrachtManager({
 
   const grouped = React.useMemo(() => groupByRoom(handovers), [handovers]);
   const openInterventions = React.useMemo(() => interventions.filter((i) => i.status === "OPEN"), [interventions]);
+  const activePlanCount = React.useMemo(() => plans.filter((p) => p.status === "ACTIEF").length, [plans]);
 
   function refresh() {
     router.refresh();
@@ -112,6 +114,15 @@ export function OverdrachtManager({
           }`}
         >
           Interventies ({interventions.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setView("plannen")}
+          className={`px-1 pb-3 text-sm font-medium transition-colors ${
+            view === "plannen" ? "border-b-2 border-rose-400 text-slate-100" : "text-slate-500 hover:text-slate-300"
+          }`}
+        >
+          Interventieplan ({activePlanCount})
         </button>
       </div>
 
@@ -198,6 +209,27 @@ export function OverdrachtManager({
             )}
           </div>
         </>
+      )}
+
+      {view === "plannen" && (
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-slate-400">
+            Een interventieplan is een team-traject: een vooraf gepland doel, uitgewerkt per pijler van
+            Verbindend Gezag — los van losse interventies.
+          </p>
+          {clients.length === 0 ? (
+            <p className="text-slate-500">Geen actieve cliënten gevonden.</p>
+          ) : (
+            clients.map((c) => (
+              <ClientPlanCard
+                key={c.id}
+                client={c}
+                plans={plans.filter((p) => p.clientId === c.id)}
+                onChanged={refresh}
+              />
+            ))
+          )}
+        </div>
       )}
     </div>
   );
@@ -638,8 +670,6 @@ function InterventionCard({ intervention: i, onChanged }: { intervention: Interv
               </form>
             </div>
           )}
-
-          <InterventionPlanSection interventionId={i.id} plans={i.plans} onChanged={onChanged} />
         </div>
       )}
     </div>
@@ -651,6 +681,56 @@ function Field({ label, value }: { label: string; value: string }) {
     <div>
       <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
       <p className="mt-1 whitespace-pre-wrap text-sm text-slate-200">{value}</p>
+    </div>
+  );
+}
+
+// One row per client in the Interventieplan tab — collapsed by default,
+// same visual language as InterventionCard, but keyed to the client
+// directly rather than to any particular Intervention (see
+// InterventionPlanSection's own comment for why).
+function ClientPlanCard({
+  client,
+  plans,
+  onChanged,
+}: {
+  client: { id: string; name: string; room: string | null };
+  plans: InterventionPlanRow[];
+  onChanged: () => void;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const activePlan = plans.find((p) => p.status === "ACTIEF");
+  const archivedCount = plans.filter((p) => p.status !== "ACTIEF").length;
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-surface2/50">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-surface2"
+      >
+        <span className="flex min-w-0 flex-col gap-1">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="font-medium text-slate-100">
+              {client.room ? `${client.room} · ${client.name}` : client.name}
+            </span>
+            {activePlan ? (
+              <Badge variant="forest">Actief — versie {activePlan.version}</Badge>
+            ) : archivedCount > 0 ? (
+              <Badge variant="slate">Gearchiveerd ({archivedCount})</Badge>
+            ) : (
+              <Badge variant="slate">Geen plan</Badge>
+            )}
+          </span>
+          {activePlan && <span className="truncate text-sm text-slate-400">{activePlan.goal}</span>}
+        </span>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="border-t border-border p-4">
+          <InterventionPlanSection clientId={client.id} plans={plans} onChanged={onChanged} />
+        </div>
+      )}
     </div>
   );
 }

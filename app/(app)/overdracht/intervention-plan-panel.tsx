@@ -55,6 +55,7 @@ export type PlanEvaluationRow = {
 
 export type InterventionPlanRow = {
   id: string;
+  clientId: string;
   version: number;
   status: "ACTIEF" | "GEARCHIVEERD";
   goal: string;
@@ -95,19 +96,19 @@ async function api<T>(url: string, json: unknown): Promise<T> {
 }
 
 /**
- * The Verbindend Gezag section nested inside one Intervention's expanded
- * card (see overdracht-manager.tsx) — the intervention itself stays the
- * quick "wat gebeurde er" record; this is the optional, heavier plan on
- * top of it. Shows the active plan (or a start button if there is none
+ * The Verbindend Gezag plan for one client — its own tab in Overdracht
+ * (see overdracht-manager.tsx), separate from Interventies: a plan is a
+ * planned, team-wide trajectory for a client, not the record of a sudden
+ * incident. Shows the active plan (or a start button if there is none
  * yet), its linked task's live history, the evaluate flow, and a
  * collapsible archive of every earlier version.
  */
 export function InterventionPlanSection({
-  interventionId,
+  clientId,
   plans,
   onChanged,
 }: {
-  interventionId: string;
+  clientId: string;
   plans: InterventionPlanRow[];
   onChanged: () => void;
 }) {
@@ -118,16 +119,12 @@ export function InterventionPlanSection({
   const archivedPlans = plans.filter((p) => p.status !== "ACTIEF");
 
   return (
-    <div className="flex flex-col gap-3 border-t border-border pt-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-        Interventieplan — Verbindend Gezag
-      </p>
-
+    <div className="flex flex-col gap-3">
       {activePlan ? (
-        <ActivePlanCard plan={activePlan} interventionId={interventionId} onChanged={onChanged} />
+        <ActivePlanCard plan={activePlan} onChanged={onChanged} />
       ) : creating ? (
         <PlanForm
-          interventionId={interventionId}
+          clientId={clientId}
           onSaved={() => {
             setCreating(false);
             onChanged();
@@ -181,11 +178,9 @@ function PillarGrid({ plan }: { plan: Pick<InterventionPlanRow, (typeof PILLARS)
 
 function ActivePlanCard({
   plan,
-  interventionId,
   onChanged,
 }: {
   plan: InterventionPlanRow;
-  interventionId: string;
   onChanged: () => void;
 }) {
   const [evaluating, setEvaluating] = React.useState(false);
@@ -218,7 +213,7 @@ function ActivePlanCard({
         {plan.tasks.length > 0 && <TaskHistoryPanel tasks={plan.tasks} onChanged={onChanged} />}
 
         {evaluating ? (
-          <EvaluateForm plan={plan} interventionId={interventionId} onSaved={() => { setEvaluating(false); onChanged(); }} onCancel={() => setEvaluating(false)} />
+          <EvaluateForm plan={plan} onSaved={() => { setEvaluating(false); onChanged(); }} onCancel={() => setEvaluating(false)} />
         ) : (
           <Button size="sm" variant={overdue ? "secondary" : "outline"} className="self-start" onClick={() => setEvaluating(true)}>
             Plan evalueren
@@ -585,7 +580,7 @@ function PlanTaskFields({ value, onChange }: { value: TaskFieldsValue; onChange:
 
 // --- Create form (no plan yet) ---
 
-function PlanForm({ interventionId, onSaved, onCancel }: { interventionId: string; onSaved: () => void; onCancel: () => void }) {
+function PlanForm({ clientId, onSaved, onCancel }: { clientId: string; onSaved: () => void; onCancel: () => void }) {
   const [startDate, setStartDate] = React.useState(todayDDMMYYYY());
   const [content, setContent] = React.useState<PlanContentValue>({
     goal: "",
@@ -605,7 +600,7 @@ function PlanForm({ interventionId, onSaved, onCancel }: { interventionId: strin
     e.preventDefault();
     setLoading(true);
     try {
-      await api("/api/intervention-plans", { interventionId, startDate, ...content, task: taskFieldsToPayload(task) });
+      await api("/api/intervention-plans", { clientId, startDate, ...content, task: taskFieldsToPayload(task) });
       toast.success("Interventieplan aangemaakt");
       onSaved();
     } catch (e) {
@@ -650,12 +645,10 @@ function PlanForm({ interventionId, onSaved, onCancel }: { interventionId: strin
 
 function EvaluateForm({
   plan,
-  interventionId,
   onSaved,
   onCancel,
 }: {
   plan: InterventionPlanRow;
-  interventionId: string;
   onSaved: () => void;
   onCancel: () => void;
 }) {

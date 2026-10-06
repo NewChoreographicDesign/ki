@@ -25,7 +25,6 @@ let rawDb: typeof import("@/lib/db").db;
 
 const USER_ID = "user-intervention-plans-test";
 let clientId: string;
-let interventionId: string;
 
 const BASE_CONTENT = {
   goal: "Rustiger reageren bij frustratie",
@@ -53,17 +52,6 @@ beforeAll(async () => {
   });
   const client = await rawDb.client.create({ data: { firstName: "Jan", lastName: "Jansen" } });
   clientId = client.id;
-  const intervention = await rawDb.intervention.create({
-    data: {
-      clientId,
-      description: "Boos geworden na weigering",
-      goal: "Escalatie voorkomen",
-      stepsTaken: "Rustig gesprek gevoerd",
-      followUpNeeded: "Plan opstellen",
-      createdById: USER_ID,
-    },
-  });
-  interventionId = intervention.id;
 }, 30000);
 
 afterAll(async () => {
@@ -72,9 +60,9 @@ afterAll(async () => {
 });
 
 describe("createInterventionPlan", () => {
-  it("creates version 1, ACTIEF, scoped to the intervention's own client", async () => {
+  it("creates version 1, ACTIEF, for the given client", async () => {
     const plan = await createInterventionPlan(USER_ID, {
-      interventionId,
+      clientId,
       startDate: "01-01-2026",
       evaluationDate: "15-01-2026",
       ...BASE_CONTENT,
@@ -86,10 +74,10 @@ describe("createInterventionPlan", () => {
     expect(plan.previousPlanId).toBeNull();
   });
 
-  it("rejects an unknown interventionId", async () => {
+  it("rejects an unknown clientId", async () => {
     await expect(
       createInterventionPlan(USER_ID, {
-        interventionId: "does-not-exist",
+        clientId: "does-not-exist",
         startDate: "01-01-2026",
         evaluationDate: "15-01-2026",
         ...BASE_CONTENT,
@@ -99,7 +87,7 @@ describe("createInterventionPlan", () => {
 
   it("creates the linked task with showUntil equal to the plan's evaluationDate", async () => {
     const plan = await createInterventionPlan(USER_ID, {
-      interventionId,
+      clientId,
       startDate: "01-02-2026",
       evaluationDate: "20-02-2026",
       ...BASE_CONTENT,
@@ -122,7 +110,7 @@ describe("createInterventionPlan", () => {
 describe("evaluateInterventionPlan — CONTINUE", () => {
   it("keeps the same plan row, pushes evaluationDate forward, and syncs the linked open task's showUntil", async () => {
     const plan = await createInterventionPlan(USER_ID, {
-      interventionId,
+      clientId,
       startDate: "01-03-2026",
       evaluationDate: "15-03-2026",
       ...BASE_CONTENT,
@@ -152,7 +140,7 @@ describe("evaluateInterventionPlan — CONTINUE", () => {
 
   it("rejects evaluating an already-archived plan", async () => {
     const plan = await createInterventionPlan(USER_ID, {
-      interventionId,
+      clientId,
       startDate: "01-05-2026",
       evaluationDate: "15-05-2026",
       ...BASE_CONTENT,
@@ -180,7 +168,7 @@ describe("evaluateInterventionPlan — CONTINUE", () => {
 describe("evaluateInterventionPlan — ADJUSTED", () => {
   it("archives the old plan and creates a new version chained to it, preserving the evaluation on the old plan", async () => {
     const plan = await createInterventionPlan(USER_ID, {
-      interventionId,
+      clientId,
       startDate: "01-07-2026",
       evaluationDate: "15-07-2026",
       ...BASE_CONTENT,
@@ -220,7 +208,7 @@ describe("evaluateInterventionPlan — ADJUSTED", () => {
     expect(newTask!.showUntil?.toISOString().slice(0, 10)).toBe("2026-08-01");
 
     // Both plan versions are still readable afterward — nothing was deleted.
-    const bothVersions = await rawDb.interventionPlan.findMany({ where: { interventionId }, orderBy: { version: "asc" } });
+    const bothVersions = await rawDb.interventionPlan.findMany({ where: { clientId }, orderBy: { version: "asc" } });
     expect(bothVersions.map((p) => p.id)).toContain(plan.id);
     expect(bothVersions.map((p) => p.id)).toContain(result.newPlan.id);
   });
