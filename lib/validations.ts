@@ -2,6 +2,10 @@ import { z } from "zod";
 import { SETTING_KEYS } from "@/lib/utils";
 
 const ddmmyyyy = /^\d{2}-\d{2}-\d{4}$/;
+const timeOfDay = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+// 2 ("om de dag") through 6 — see Todo.intervalDays's own schema.prisma comment.
+const intervalDaysField = z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6)]);
 
 export const loginSchema = z.object({
   name: z.string().trim().min(2).max(100),
@@ -152,7 +156,74 @@ export const createInterventionNoteSchema = z.object({
   content: z.string().trim().min(1).max(4000),
 });
 
-const timeOfDay = /^([01]\d|2[0-3]):[0-5]\d$/;
+const VERBINDEND_GEZAG_PILLARS = ["AANWEZIGHEID", "VERZET", "HERSTEL_RELATIE", "STEUN_SUPPORT", "DEESCALATIE"] as const;
+
+// The task optionally linked to an InterventionPlan — same recurrence
+// shape as todoSchema (daysOfWeek XOR intervalDays+intervalAnchorDate,
+// only required at all when recurring), minus assignedToId/room (always a
+// shared Werklijst task) and showUntil (always derived server-side from
+// the plan's own evaluationDate — see app/api/intervention-plans/route.ts).
+const interventionPlanTaskSchema = z
+  .object({
+    title: z.string().trim().min(1).max(300),
+    description: z.string().trim().max(2000).optional().or(z.literal("")),
+    priority: z.enum(["NONE", "LOW", "MEDIUM", "HIGH"]),
+    time: z.string().regex(timeOfDay, "Gebruik het formaat UU:MM").optional().or(z.literal("")),
+    recurring: z.boolean().optional(),
+    daysOfWeek: z.array(z.number().int().min(0).max(6)).max(7).optional(),
+    intervalDays: intervalDaysField.optional(),
+    intervalAnchorDate: z.string().regex(ddmmyyyy, "Gebruik het formaat DD-MM-JJJJ").optional().or(z.literal("")),
+  })
+  .refine((data) => !data.intervalDays || !!data.intervalAnchorDate, {
+    message: "Kies een startdag voor het interval",
+    path: ["intervalAnchorDate"],
+  })
+  .refine((data) => !data.recurring || (data.daysOfWeek && data.daysOfWeek.length > 0) || !!data.intervalDays, {
+    message: "Kies minstens één dag, of een interval, voor de gekoppelde taak",
+    path: ["daysOfWeek"],
+  });
+
+// The 5-pillar steps every InterventionPlan needs, shared by the create
+// schema below and the "ADJUSTED" branch of interventionPlanEvaluationSchema
+// (a revised plan is still a full plan with all 5 filled in — see
+// InterventionPlan's own schema.prisma comment on why that's a new row,
+// not a patch of the old one).
+const interventionPlanContentSchema = z.object({
+  goal: z.string().trim().min(1).max(2000),
+  stepsAanwezigheid: z.string().trim().min(1).max(2000),
+  stepsVerzet: z.string().trim().min(1).max(2000),
+  stepsHerstelRelatie: z.string().trim().min(1).max(2000),
+  stepsSteunSupport: z.string().trim().min(1).max(2000),
+  stepsDeescalatie: z.string().trim().min(1).max(2000),
+  evaluationDate: z.string().regex(ddmmyyyy, "Gebruik het formaat DD-MM-JJJJ"),
+  task: interventionPlanTaskSchema.optional(),
+});
+
+export const createInterventionPlanSchema = interventionPlanContentSchema.extend({
+  interventionId: z.string().min(1),
+  startDate: z.string().regex(ddmmyyyy, "Gebruik het formaat DD-MM-JJJJ"),
+});
+
+// CONTINUE just logs the reflection and pushes evaluationDate forward on
+// the SAME plan; ADJUSTED logs the reflection against the OLD plan and
+// creates a whole new plan version from `newPlan` — see
+// app/api/intervention-plans/[id]/evaluate/route.ts.
+export const interventionPlanEvaluationSchema = z.discriminatedUnion("decision", [
+  z.object({
+    decision: z.literal("CONTINUE"),
+    date: z.string().regex(ddmmyyyy, "Gebruik het formaat DD-MM-JJJJ"),
+    pillarsThatHelped: z.array(z.enum(VERBINDEND_GEZAG_PILLARS)).max(5),
+    reflection: z.string().trim().min(1).max(2000),
+    nextEvaluationDate: z.string().regex(ddmmyyyy, "Gebruik het formaat DD-MM-JJJJ"),
+  }),
+  z.object({
+    decision: z.literal("ADJUSTED"),
+    date: z.string().regex(ddmmyyyy, "Gebruik het formaat DD-MM-JJJJ"),
+    pillarsThatHelped: z.array(z.enum(VERBINDEND_GEZAG_PILLARS)).max(5),
+    reflection: z.string().trim().min(1).max(2000),
+    newPlan: interventionPlanContentSchema,
+  }),
+]);
 
 export const todoSchema = z
   .object({
@@ -160,6 +231,16 @@ export const todoSchema = z
     description: z.string().trim().max(2000).optional().or(z.literal("")),
     priority: z.enum(["NONE", "LOW", "MEDIUM", "HIGH"]),
     daysOfWeek: z.array(z.number().int().min(0).max(6)).max(7).optional(),
+    // Alternative to daysOfWeek — a task is never saved with both (see the
+    // refine below and Todo.intervalDays's schema.prisma comment).
+    intervalDays: intervalDaysField.optional(),
+    intervalAnchorDate: z.string().regex(ddmmyyyy, "Gebruik het formaat DD-MM-JJJJ").optional().or(z.literal("")),
+    // Only ever set automatically from an InterventionPlan's own
+    // evaluationDate (see app/api/intervention-plans/route.ts) — not part
+    // of the plain Werklijst form, but still accepted here so editing an
+    // already-linked task through the normal PATCH /api/todos/[id] keeps
+    // it intact instead of silently clearing it.
+    showUntil: z.string().regex(ddmmyyyy, "Gebruik het formaat DD-MM-JJJJ").optional().or(z.literal("")),
     time: z.string().regex(timeOfDay, "Gebruik het formaat UU:MM").optional().or(z.literal("")),
     recurring: z.boolean().optional(),
     // Personal to-do (see app/api/todos/route.ts for who may set this to
@@ -168,8 +249,12 @@ export const todoSchema = z
     assignedToId: z.string().optional().or(z.literal("")),
     room: z.string().trim().max(100).optional().or(z.literal("")),
   })
-  .refine((data) => !data.recurring || (data.daysOfWeek && data.daysOfWeek.length > 0), {
-    message: "Kies minstens één dag voor een terugkerende taak",
+  .refine((data) => !data.intervalDays || !!data.intervalAnchorDate, {
+    message: "Kies een startdag voor het interval",
+    path: ["intervalAnchorDate"],
+  })
+  .refine((data) => !data.recurring || (data.daysOfWeek && data.daysOfWeek.length > 0) || !!data.intervalDays, {
+    message: "Kies minstens één dag, of een interval, voor een terugkerende taak",
     path: ["daysOfWeek"],
   });
 

@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { todayDayOfWeek } from "@/lib/utils";
+import { todayDayOfWeek, todayCalendarDate } from "@/lib/utils";
 import { serializeTodo } from "./todo-types";
 import { TodoBoard } from "./todo-board";
 import { regenerateRecurringTodos } from "@/lib/recurring-todos";
@@ -47,6 +47,7 @@ export default async function TodosPage() {
         initialOpen={open.map(serializeTodo)}
         initialCompleted={completed.map(serializeTodo)}
         canManage={session?.role === "ADMIN"}
+        today={todayCalendarDate().toISOString()}
         todayWeekday={todayDayOfWeek()}
       />
     </div>

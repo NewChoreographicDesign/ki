@@ -1,6 +1,6 @@
 import { Role } from "@prisma/client";
 import { db } from "@/lib/db";
-import { fullName } from "@/lib/utils";
+import { fullName, parseDaysOfWeek } from "@/lib/utils";
 import { getSession } from "@/lib/auth";
 import { OverdrachtManager } from "./overdracht-manager";
 
@@ -19,6 +19,15 @@ export default async function OverdrachtPage() {
         createdBy: true,
         closedBy: true,
         notes: { include: { author: true }, orderBy: { createdAt: "asc" } },
+        plans: {
+          include: {
+            tasks: { include: { completedBy: true }, orderBy: { createdAt: "asc" } },
+            evaluations: { include: { user: true }, orderBy: { date: "asc" } },
+            createdBy: true,
+            archivedBy: true,
+          },
+          orderBy: { version: "desc" },
+        },
       },
       // Open ones first (so they always surface at the top regardless of
       // age), newest-created within each group.
@@ -66,6 +75,48 @@ export default async function OverdrachtPage() {
             content: n.content,
             authorName: n.author.name,
             createdAt: n.createdAt.toISOString(),
+          })),
+          plans: i.plans.map((p) => ({
+            id: p.id,
+            version: p.version,
+            status: p.status,
+            goal: p.goal,
+            stepsAanwezigheid: p.stepsAanwezigheid,
+            stepsVerzet: p.stepsVerzet,
+            stepsHerstelRelatie: p.stepsHerstelRelatie,
+            stepsSteunSupport: p.stepsSteunSupport,
+            stepsDeescalatie: p.stepsDeescalatie,
+            startDate: p.startDate.toISOString(),
+            evaluationDate: p.evaluationDate.toISOString(),
+            createdByName: p.createdBy.name,
+            createdAt: p.createdAt.toISOString(),
+            archivedAt: p.archivedAt ? p.archivedAt.toISOString() : null,
+            archivedByName: p.archivedBy?.name ?? null,
+            tasks: p.tasks.map((t) => ({
+              id: t.id,
+              title: t.title,
+              description: t.description,
+              priority: t.priority,
+              time: t.time,
+              recurring: t.recurring,
+              daysOfWeek: parseDaysOfWeek(t.daysOfWeek),
+              intervalDays: t.intervalDays,
+              intervalAnchorDate: t.intervalAnchorDate ? t.intervalAnchorDate.toISOString() : null,
+              showUntil: t.showUntil ? t.showUntil.toISOString() : null,
+              completed: t.completed,
+              completedAt: t.completedAt ? t.completedAt.toISOString() : null,
+              completedByName: t.completedBy?.name ?? null,
+              completionNote: t.completionNote,
+              createdAt: t.createdAt.toISOString(),
+            })),
+            evaluations: p.evaluations.map((e) => ({
+              id: e.id,
+              date: e.date.toISOString(),
+              pillarsThatHelped: e.pillarsThatHelped,
+              reflection: e.reflection,
+              decision: e.decision,
+              userName: e.user.name,
+            })),
           })),
         }))}
         clients={clients.map((c) => ({ id: c.id, name: fullName(c), room: c.room }))}

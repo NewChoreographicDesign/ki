@@ -11,6 +11,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTime, shiftLabel, shiftBadgeVariant } from "@/lib/utils";
+import { InterventionPlanSection, type InterventionPlanRow } from "./intervention-plan-panel";
 
 export type HandoverRow = {
   id: string;
@@ -45,6 +46,7 @@ export type InterventionRow = {
   closedByName: string | null;
   closedAt: string | null;
   notes: InterventionNoteRow[];
+  plans: InterventionPlanRow[];
 };
 
 const ALGEMEEN = "Algemeen";
@@ -636,6 +638,8 @@ function InterventionCard({ intervention: i, onChanged }: { intervention: Interv
               </form>
             </div>
           )}
+
+          <InterventionPlanSection interventionId={i.id} plans={i.plans} onChanged={onChanged} />
         </div>
       )}
     </div>

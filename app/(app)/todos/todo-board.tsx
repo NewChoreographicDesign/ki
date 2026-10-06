@@ -4,7 +4,7 @@ import * as React from "react";
 import { Plus, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DAYS_OF_WEEK } from "@/lib/utils";
+import { DAYS_OF_WEEK, isTodoDueToday } from "@/lib/utils";
 import { TodoForm } from "./todo-form";
 import { TodoItem } from "./todo-item";
 import type { TodoData } from "./todo-types";
@@ -20,12 +20,15 @@ export function TodoBoard({
   initialOpen,
   initialCompleted,
   canManage = false,
+  today,
   todayWeekday,
 }: {
   initialOpen: TodoData[];
   initialCompleted: TodoData[];
   /** Admin-only: shows edit/delete controls on every task. */
   canManage?: boolean;
+  /** ISO calendar date (midnight UTC, Amsterdam-local day) — see lib/utils.ts todayCalendarDate(). */
+  today: string;
   /** 0 = Monday .. 6 = Sunday, see lib/utils.ts todayDayOfWeek(). */
   todayWeekday: number;
 }) {
@@ -34,12 +37,23 @@ export function TodoBoard({
   const [formOpen, setFormOpen] = React.useState(false);
   const [showWeek, setShowWeek] = React.useState(false);
 
-  // A task with no day set has no day restriction, so it's always "due
-  // today"; a task with days set is only shown here on one of those days —
-  // the rest of the week it moves into the "Alle weektaken" dropdown below,
-  // so the main list only ever shows what actually needs doing today.
-  const dueToday = open.filter((t) => t.daysOfWeek.length === 0 || t.daysOfWeek.includes(todayWeekday));
-  const otherDays = open.filter((t) => t.daysOfWeek.length > 0 && !t.daysOfWeek.includes(todayWeekday));
+  const todayDate = React.useMemo(() => new Date(today), [today]);
+  const notExpired = React.useCallback(
+    (t: TodoData) => !t.showUntil || todayDate.getTime() <= new Date(t.showUntil).getTime(),
+    [todayDate]
+  );
+
+  // A task with no day/interval set has no day restriction, so it's always
+  // "due today"; one with a day or interval pattern is only shown here when
+  // that pattern says today — the rest of the time it moves into the "Alle
+  // weektaken" dropdown below, so the main list only ever shows what
+  // actually needs doing today. A task past its showUntil never shows at
+  // all, on either list — see Todo.showUntil's own comment.
+  const dueToday = open.filter((t) => notExpired(t) && isTodoDueToday(t, todayDate, todayWeekday));
+  const otherDays = open.filter(
+    (t) => notExpired(t) && !t.intervalDays && t.daysOfWeek.length > 0 && !t.daysOfWeek.includes(todayWeekday)
+  );
+  const otherInterval = open.filter((t) => notExpired(t) && t.intervalDays && !isTodoDueToday(t, todayDate, todayWeekday));
 
   function handleCreated(todo: TodoData) {
     setOpen((prev) => [...prev, todo].sort(sortByTime));
@@ -100,7 +114,7 @@ export function TodoBoard({
           </div>
         )}
 
-        {otherDays.length > 0 && (
+        {(otherDays.length > 0 || otherInterval.length > 0) && (
           <div className="mt-4">
             <button
               type="button"
@@ -108,7 +122,7 @@ export function TodoBoard({
               className="flex items-center gap-1.5 text-sm font-medium text-slate-400 hover:text-slate-200"
             >
               <ChevronDown className={`h-4 w-4 transition-transform ${showWeek ? "rotate-180" : ""}`} />
-              Alle weektaken tonen ({otherDays.length})
+              Alle weektaken tonen ({otherDays.length + otherInterval.length})
             </button>
             {showWeek && (
               <div className="mt-3 flex flex-col gap-5">
@@ -134,6 +148,23 @@ export function TodoBoard({
                     </div>
                   );
                 })}
+                {otherInterval.length > 0 && (
+                  <div>
+                    <h3 className="mb-2 text-sm font-semibold text-slate-400">Terugkerend per interval</h3>
+                    <div className="flex flex-col gap-3">
+                      {otherInterval.map((t) => (
+                        <TodoItem
+                          key={t.id}
+                          todo={t}
+                          canManage={canManage}
+                          onComplete={handleComplete}
+                          onUpdate={handleUpdated}
+                          onDelete={handleDelete}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

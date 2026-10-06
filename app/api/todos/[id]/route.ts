@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { requireAuth, AuthError } from "@/lib/auth";
 import { handleApiError } from "@/lib/api";
 import { todoSchema } from "@/lib/validations";
-import { formatDaysOfWeek } from "@/lib/utils";
+import { formatDaysOfWeek, parseDDMMYYYY } from "@/lib/utils";
 import { logAudit } from "@/lib/audit";
 
 // Editing/deleting someone else's SHARED task is admin-only (anyone can
@@ -35,13 +35,20 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       throw new AuthError("Geen toegang", 403);
     }
 
+    // Same "never both" enforcement as POST /api/todos.
+    const intervalDays = data.intervalDays ?? null;
+    const daysOfWeek = intervalDays ? [] : data.daysOfWeek ?? [];
+
     const todo = await db.todo.update({
       where: { id },
       data: {
         title: data.title,
         description: data.description || null,
         priority: data.priority,
-        daysOfWeek: formatDaysOfWeek(data.daysOfWeek ?? []),
+        daysOfWeek: formatDaysOfWeek(daysOfWeek),
+        intervalDays,
+        intervalAnchorDate: intervalDays && data.intervalAnchorDate ? parseDDMMYYYY(data.intervalAnchorDate) : null,
+        showUntil: data.showUntil ? parseDDMMYYYY(data.showUntil) : null,
         time: data.time || null,
         recurring: data.recurring ?? false,
         // Reassigning to someone else isn't supported here — the assignee

@@ -226,6 +226,38 @@ export function parseDaysOfWeek(value: string): number[] {
   ).sort((a, b) => a - b);
 }
 
+/** Today's Amsterdam calendar date as a UTC-midnight date — same convention as parseDDMMYYYY. */
+export function todayCalendarDate(now: Date = new Date()): Date {
+  const p = getZonedParts(now, AMSTERDAM_TZ);
+  return new Date(Date.UTC(p.year, p.month - 1, p.day));
+}
+
+/** The interval lengths a Todo can recur on via intervalDays — "elke andere dag" (2) up to "elke 6e dag". */
+export const TODO_INTERVAL_OPTIONS = [2, 3, 4, 5, 6] as const;
+
+/**
+ * Whether a todo with either kind of recurrence (daysOfWeek OR
+ * intervalDays+intervalAnchorDate — see Todo's own schema.prisma comment
+ * for why a task never has both) is due on `today`. Shared by the
+ * Werklijst board (client, `today`/`todayWeekday` passed down from the
+ * server page so every viewer agrees on "today" regardless of their own
+ * device clock) and lib/recurring-todos.ts (server, regenerating a
+ * completed recurring task). `showUntil` is checked first and wins
+ * regardless of pattern — see Todo.showUntil's own comment.
+ */
+export function isTodoDueToday(
+  todo: { daysOfWeek: number[]; intervalDays: number | null; intervalAnchorDate: string | Date | null; showUntil: string | Date | null },
+  today: Date,
+  todayWeekday: number
+): boolean {
+  if (todo.showUntil && today.getTime() > new Date(todo.showUntil).getTime()) return false;
+  if (todo.intervalDays && todo.intervalAnchorDate) {
+    const diffDays = Math.round((today.getTime() - new Date(todo.intervalAnchorDate).getTime()) / 86_400_000);
+    return diffDays >= 0 && diffDays % todo.intervalDays === 0;
+  }
+  return todo.daysOfWeek.length === 0 || todo.daysOfWeek.includes(todayWeekday);
+}
+
 /** Inverse of parseDaysOfWeek — array of weekday indices back into the stored string form. */
 export function formatDaysOfWeek(days: number[]): string {
   return Array.from(new Set(days))

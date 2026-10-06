@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { requireAuth, AuthError, canAccessPersonalTodoAssignment } from "@/lib/auth";
 import { handleApiError } from "@/lib/api";
 import { todoSchema } from "@/lib/validations";
-import { formatDaysOfWeek } from "@/lib/utils";
+import { formatDaysOfWeek, parseDDMMYYYY } from "@/lib/utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,12 +29,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // A task uses either daysOfWeek or the interval pattern, never both —
+    // todoSchema only checks an interval has its own anchor, so enforce the
+    // "not both" half here rather than trusting the client to have cleared
+    // the other one.
+    const intervalDays = data.intervalDays ?? null;
+    const daysOfWeek = intervalDays ? [] : data.daysOfWeek ?? [];
+
     const todo = await db.todo.create({
       data: {
         title: data.title,
         description: data.description || null,
         priority: data.priority,
-        daysOfWeek: formatDaysOfWeek(data.daysOfWeek ?? []),
+        daysOfWeek: formatDaysOfWeek(daysOfWeek),
+        intervalDays,
+        intervalAnchorDate: intervalDays && data.intervalAnchorDate ? parseDDMMYYYY(data.intervalAnchorDate) : null,
+        showUntil: data.showUntil ? parseDDMMYYYY(data.showUntil) : null,
         time: data.time || null,
         recurring: data.recurring ?? false,
         createdById: session.sub,

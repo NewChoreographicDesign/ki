@@ -13,6 +13,7 @@ import {
   parseDaysOfWeek,
   formatDaysOfWeek,
   parseMedicationTimes,
+  isTodoDueToday,
 } from "@/lib/utils";
 import { ShiftType } from "@prisma/client";
 
@@ -195,5 +196,53 @@ describe("parseMedicationTimes", () => {
 
   it("returns an empty array for an empty string", () => {
     expect(parseMedicationTimes("")).toEqual([]);
+  });
+});
+
+describe("isTodoDueToday", () => {
+  const today = new Date(Date.UTC(2026, 0, 15)); // a Thursday — todayWeekday 3
+
+  it("is due when daysOfWeek is empty (no restriction)", () => {
+    expect(isTodoDueToday({ daysOfWeek: [], intervalDays: null, intervalAnchorDate: null, showUntil: null }, today, 3)).toBe(true);
+  });
+
+  it("is due when today's weekday is in daysOfWeek", () => {
+    expect(isTodoDueToday({ daysOfWeek: [1, 3, 5], intervalDays: null, intervalAnchorDate: null, showUntil: null }, today, 3)).toBe(true);
+  });
+
+  it("is not due when today's weekday is not in daysOfWeek", () => {
+    expect(isTodoDueToday({ daysOfWeek: [1, 5], intervalDays: null, intervalAnchorDate: null, showUntil: null }, today, 3)).toBe(false);
+  });
+
+  it("is due on the anchor day itself (diff 0)", () => {
+    expect(isTodoDueToday({ daysOfWeek: [], intervalDays: 3, intervalAnchorDate: today, showUntil: null }, today, 3)).toBe(true);
+  });
+
+  it("is due exactly every intervalDays after the anchor", () => {
+    const anchor = new Date(Date.UTC(2026, 0, 12)); // 3 days before `today`
+    expect(isTodoDueToday({ daysOfWeek: [], intervalDays: 3, intervalAnchorDate: anchor, showUntil: null }, today, 3)).toBe(true);
+  });
+
+  it("is not due on an off-cycle day", () => {
+    const anchor = new Date(Date.UTC(2026, 0, 14)); // 1 day before `today`
+    expect(isTodoDueToday({ daysOfWeek: [], intervalDays: 3, intervalAnchorDate: anchor, showUntil: null }, today, 3)).toBe(false);
+  });
+
+  it("ignores daysOfWeek entirely once intervalDays is set", () => {
+    // today's weekday (3) is deliberately NOT in daysOfWeek, but the interval still matches.
+    expect(
+      isTodoDueToday({ daysOfWeek: [0, 1], intervalDays: 3, intervalAnchorDate: today, showUntil: null }, today, 3)
+    ).toBe(true);
+  });
+
+  it("is never due once past showUntil, regardless of pattern", () => {
+    const showUntil = new Date(Date.UTC(2026, 0, 14)); // yesterday
+    expect(isTodoDueToday({ daysOfWeek: [], intervalDays: null, intervalAnchorDate: null, showUntil }, today, 3)).toBe(false);
+    expect(isTodoDueToday({ daysOfWeek: [], intervalDays: 3, intervalAnchorDate: today, showUntil }, today, 3)).toBe(false);
+  });
+
+  it("still applies on showUntil's own day (cutoff is exclusive of the day itself)", () => {
+    const showUntil = today;
+    expect(isTodoDueToday({ daysOfWeek: [], intervalDays: null, intervalAnchorDate: null, showUntil }, today, 3)).toBe(true);
   });
 });

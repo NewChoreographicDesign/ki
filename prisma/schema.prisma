@@ -84,6 +84,9 @@ model User {
   interventionsCreated Intervention[]     @relation("InterventionCreatedBy")
   interventionsClosed  Intervention[]     @relation("InterventionClosedBy")
   interventionNotes    InterventionNote[]
+  interventionPlansCreated            InterventionPlan[]           @relation("InterventionPlanCreatedBy")
+  interventionPlansArchived           InterventionPlan[]           @relation("InterventionPlanArchivedBy")
+  interventionPlanEvaluationsAuthored InterventionPlanEvaluation[]
   mfaBackupCodes       MfaBackupCode[]
   pushSubscriptions    PushSubscription[]
   dataBreachesReported DataBreachIncident[] @relation("DataBreachReportedBy")
@@ -162,6 +165,7 @@ model Client {
   appointments Appointment[]
   handovers    Handover[]
   interventions Intervention[]
+  interventionPlans InterventionPlan[]
 
   @@index([active])
 }
@@ -312,13 +316,30 @@ model Todo {
   // a string rather than a native array so this keeps working on SQLite in
   // local dev, not just Postgres (see scripts/prepare-datasource.js).
   daysOfWeek      String    @default("")
+  // Alternative to daysOfWeek: recur every N calendar days (2 = om de dag,
+  // up to 6) counted from intervalAnchorDate, instead of a fixed weekday
+  // set — e.g. for an intervention-plan task that needs "elke 3e dag",
+  // which no subset of weekdays can express. Null = use daysOfWeek as
+  // before; a task never has both set (see todoSchema's own refine). The
+  // anchor is a deliberately free, caregiver-chosen date, not pinned to
+  // the task's own createdAt — see lib/recurring-todos.ts#isTodoDueToday.
+  intervalDays       Int?
+  intervalAnchorDate DateTime?
+  // Once set, this task stops appearing on the Werklijst entirely (not
+  // even under "Alle weektaken") from this date onward, regardless of
+  // daysOfWeek/intervalDays — used by an intervention-plan-linked task so
+  // it naturally stops nagging once the plan itself is due for
+  // evaluation (see InterventionPlan.evaluationDate, which this mirrors).
+  // Null = no cutoff, a task runs indefinitely like today.
+  showUntil      DateTime?
   // Scheduled time of day, "HH:MM" (Europe/Amsterdam). Optional — not every
   // task needs a specific time. Drives the sort order on the Todos page and
   // the "due soon" list, same string-not-Date choice as Medication.times.
   time            String?
   // A recurring task gets automatically reopened as a fresh copy the next
-  // time one of its daysOfWeek comes around, once the current one has been
-  // completed — see regenerateRecurringTodos() in lib/recurring-todos.ts.
+  // time one of its daysOfWeek (or intervalDays) comes around, once the
+  // current one has been completed — see regenerateRecurringTodos() in
+  // lib/recurring-todos.ts.
   recurring       Boolean   @default(false)
   // Set once this completed recurring task has spawned its next occurrence,
   // so a task is never regenerated twice for the same completion.
@@ -340,12 +361,22 @@ model Todo {
   // Optional room tag for a personal to-do — null/empty means "Algemeen",
   // same free-text convention as Client.room.
   room            String?
+  // Links this occurrence to the InterventionPlan it was created for — set
+  // on the originally-created task AND carried over to every regenerated
+  // occurrence after it (see regenerateRecurringTodos), so the plan's own
+  // page can show the FULL history of completed occurrences (with their
+  // completionNote) plus the current open one with one single query,
+  // rather than needing a separate "series id" concept. Null for every
+  // ordinary Werklijst task not tied to a plan.
+  interventionPlanId String?
+  interventionPlan   InterventionPlan? @relation(fields: [interventionPlanId], references: [id], onDelete: SetNull)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   @@index([completed, priority])
   @@index([recurring, completed, regenerated])
   @@index([assignedToId, completed])
+  @@index([interventionPlanId])
 }
 
 model Presence {
@@ -419,9 +450,129 @@ model Intervention {
   updatedAt   DateTime           @updatedAt
 
   notes InterventionNote[]
+  plans InterventionPlan[]
 
   @@index([clientId])
   @@index([status])
+}
+
+// The 5 pillars of Verbindend Gezag / Nieuwe Autoriteit (Haim Omer) this
+// organisation works from, as fixed per the house style chosen for this
+// app — a closed enum rather than free text so every plan is structured
+// the same way and a pillar's steps can never be left out by accident.
+enum VerbindendGezagPillar {
+  AANWEZIGHEID // Presence — zichtbaar, rustig en betrokken aanwezig zijn
+  VERZET // (Geweldloos) verzet — vastberaden, niet-escalerend stelling nemen tegen het probleemgedrag
+  HERSTEL_RELATIE // Herstel van de relatie — de band met de cliënt actief onderhouden/herstellen
+  STEUN_SUPPORT // Steun en support — het eigen netwerk/team erbij betrekken, niet alleen opereren
+  DEESCALATIE // De-escalatie — spanning uit het moment zelf halen voordat het escaleert
+}
+
+// ACTIEF = het plan dat nu geldt; GEARCHIVEERD = een eerdere versie,
+// vervangen na een evaluatie (zie InterventionPlanEvaluation) maar bewust
+// nooit verwijderd — zie InterventionPlan's eigen comment voor waarom.
+enum InterventionPlanStatus {
+  ACTIEF
+  GEARCHIVEERD
+}
+
+// Een interventieplan werkt de 5 pijlers van Verbindend Gezag uit tot
+// concrete stappen rond één concreet geformuleerd doel, voor één
+// Intervention. Dit is bewust een apart, zwaarder object naast Intervention
+// zelf (die blijft ongewijzigd de snelle "wat gebeurde er / welke
+// vervolgstappen"-registratie) — niet elke interventie heeft een volledig
+// plan nodig, maar wie er één wil, krijgt hier de volledige, vaste
+// structuur.
+//
+// Nooit bewerkt na aanmaak zodra er een koppeling (taak/evaluatie) aan
+// hangt — op de evaluatiedatum (zie evaluationDate) wordt het plan ofwel
+// doorgezet (zelfde rij, nieuwe evaluationDate, zie
+// app/api/intervention-plans/[id]/evaluate/route.ts) ofwel aangepast, wat
+// DEZE rij archiveert (status -> GEARCHIVEERD) en een nieuwe rij aanmaakt
+// (version + 1, previousPlanId naar deze rij) — zo blijft elke eerdere
+// versie van het plan woordelijk bewaard als referentie, in plaats van
+// overschreven te worden.
+model InterventionPlan {
+  id             String       @id @default(cuid())
+  interventionId String
+  intervention   Intervention @relation(fields: [interventionId], references: [id], onDelete: Cascade)
+  clientId       String
+  client         Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  version        Int                    @default(1)
+  previousPlanId String?                @unique
+  previousPlan   InterventionPlan?      @relation("InterventionPlanHistory", fields: [previousPlanId], references: [id], onDelete: SetNull)
+  nextPlan       InterventionPlan?      @relation("InterventionPlanHistory")
+  status         InterventionPlanStatus @default(ACTIEF)
+
+  // Het concrete, SMART-achtig geformuleerde doel van dit plan — zelfde
+  // "vrije tekst, geen vast sjabloon" keuze als bij de andere Intervention-velden.
+  goal String
+
+  // Eén vrij-tekstveld met de concrete stappen per pijler — vast van
+  // structuur (alle 5 altijd ingevuld), vrij van inhoud.
+  stepsAanwezigheid   String
+  stepsVerzet         String
+  stepsHerstelRelatie String
+  stepsSteunSupport   String
+  stepsDeescalatie    String
+
+  startDate DateTime
+  // De datum waarop dit plan geëvalueerd moet worden — drijft ook
+  // Todo.showUntil van elke aan dit plan gekoppelde taak (zie Todo's eigen
+  // comment): de taak verdwijnt van de Werklijst zodra het plan aan
+  // evaluatie toe is, in plaats van vanzelf te blijven doorlopen.
+  evaluationDate DateTime
+
+  createdById  String
+  createdBy    User      @relation("InterventionPlanCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  archivedAt   DateTime?
+  archivedById String?
+  archivedBy   User?     @relation("InterventionPlanArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tasks       Todo[]
+  evaluations InterventionPlanEvaluation[]
+
+  @@index([interventionId])
+  @@index([clientId])
+  @@index([status])
+}
+
+// Eén evaluatiemoment van een InterventionPlan — een korte, concrete
+// reflectie in plaats van een vrij essay, met als vaste vraag welke van de
+// 5 pijlers merkbaar hielpen (pillarsThatHelped, zelfde comma-separated
+// opslag als Todo.daysOfWeek) — dat dwingt tot teruggrijpen op de
+// pijlerstructuur zelf in plaats van een los verhaal, wat de kern is van
+// hoe Verbindend Gezag reflecteren aanpakt (wat werkte, vanuit welke
+// basishouding, i.p.v. alleen "wat ging er mis"). Nooit bewerkt of
+// verwijderd na aanmaak — het is het permanente verslag van die
+// evaluatie, ongeacht wat er daarna met het plan gebeurt.
+model InterventionPlanEvaluation {
+  id                 String           @id @default(cuid())
+  interventionPlanId String
+  interventionPlan   InterventionPlan @relation(fields: [interventionPlanId], references: [id], onDelete: Cascade)
+  userId             String
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  date              DateTime
+  pillarsThatHelped String // comma-separated VerbindendGezagPillar values
+  reflection        String
+  decision          InterventionPlanDecision
+  createdAt         DateTime                 @default(now())
+
+  @@index([interventionPlanId, date])
+}
+
+// CONTINUE = plan is nog steeds actueel, blijft dezelfde rij (alleen
+// evaluationDate schuift door). ADJUSTED = plan wordt aangepast, wat een
+// nieuwe InterventionPlan-versie aanmaakt en deze archiveert — zie
+// InterventionPlan's eigen comment.
+enum InterventionPlanDecision {
+  CONTINUE
+  ADJUSTED
 }
 
 // One chronological follow-up entry on an Intervention — "what we did

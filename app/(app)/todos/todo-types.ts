@@ -11,6 +11,12 @@ export type TodoData = {
   description: string | null;
   priority: "NONE" | "LOW" | "MEDIUM" | "HIGH";
   daysOfWeek: number[];
+  /** 2 ("om de dag") .. 6, or null — see Todo.intervalDays's schema.prisma comment. Mutually exclusive with daysOfWeek. */
+  intervalDays: number | null;
+  intervalAnchorDate: string | null;
+  /** Once past this date the task no longer shows on the Werklijst at all — see Todo.showUntil's schema.prisma comment. */
+  showUntil: string | null;
+  interventionPlanId: string | null;
   time: string | null;
   recurring: boolean;
   completed: boolean;
@@ -32,6 +38,10 @@ type RawTodo = {
   description: string | null;
   priority: "NONE" | "LOW" | "MEDIUM" | "HIGH";
   daysOfWeek: string;
+  intervalDays?: number | null;
+  intervalAnchorDate?: Date | string | null;
+  showUntil?: Date | string | null;
+  interventionPlanId?: string | null;
   time: string | null;
   recurring: boolean;
   completed: boolean;
@@ -54,6 +64,10 @@ export function serializeTodo(todo: RawTodo): TodoData {
     description: todo.description,
     priority: todo.priority,
     daysOfWeek: parseDaysOfWeek(todo.daysOfWeek),
+    intervalDays: todo.intervalDays ?? null,
+    intervalAnchorDate: todo.intervalAnchorDate ? new Date(todo.intervalAnchorDate).toISOString() : null,
+    showUntil: todo.showUntil ? new Date(todo.showUntil).toISOString() : null,
+    interventionPlanId: todo.interventionPlanId ?? null,
     time: todo.time,
     recurring: todo.recurring,
     completed: todo.completed,

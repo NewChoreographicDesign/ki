@@ -7,8 +7,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { cn, DAYS_OF_WEEK_SHORT } from "@/lib/utils";
+import { cn, DAYS_OF_WEEK_SHORT, TODO_INTERVAL_OPTIONS } from "@/lib/utils";
+import { formatBirthDateInput } from "@/lib/format-birthdate-input";
 import { serializeTodo, type TodoData } from "./todo-types";
+
+/** DD-MM-JJJJ → ISO yyyy-mm-dd, for the few date props (intervalAnchorDate/showUntil) that
+ * TodoData carries as ISO strings (serializeTodo() always produces ISO) but which this form
+ * edits as plain DD-MM-JJJJ text, matching every other date field in this codebase. */
+function isoToDDMMYYYY(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  return `${dd}-${mm}-${d.getUTCFullYear()}`;
+}
 
 export function TodoForm({
   todoId,
@@ -48,7 +60,23 @@ export function TodoForm({
   const [room, setRoom] = React.useState(initial?.room ?? "");
   const [loading, setLoading] = React.useState(false);
 
-  const needsDay = recurring && days.length === 0;
+  // "days" (daysOfWeek, the pre-existing weekday picker) and "interval" (every
+  // 2nd/3rd/.../6th day from a chosen start day) are mutually exclusive — see
+  // Todo.intervalDays's schema.prisma comment. Which one is active is its own
+  // bit of state rather than inferred from the fields themselves, so toggling
+  // the choice can clear the other side's fields without guesswork.
+  const [recurrenceType, setRecurrenceType] = React.useState<"days" | "interval">(
+    initial?.intervalDays ? "interval" : "days"
+  );
+  const [intervalDays, setIntervalDays] = React.useState<number>(initial?.intervalDays ?? 2);
+  const [intervalAnchorDate, setIntervalAnchorDate] = React.useState(
+    isoToDDMMYYYY(initial?.intervalAnchorDate ?? null)
+  );
+  const [showUntil, setShowUntil] = React.useState(isoToDDMMYYYY(initial?.showUntil ?? null));
+
+  const needsPattern =
+    recurring &&
+    (recurrenceType === "days" ? days.length === 0 : intervalAnchorDate.length !== 10);
   const allDaysSelected = days.length === 7;
 
   function toggleDay(day: number) {
@@ -61,8 +89,12 @@ export function TodoForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (needsDay) {
-      toast.error("Kies minstens één dag voor een terugkerende taak");
+    if (needsPattern) {
+      toast.error(
+        recurrenceType === "days"
+          ? "Kies minstens één dag voor een terugkerende taak"
+          : "Kies een startdag voor de terugkerende taak"
+      );
       return;
     }
     setLoading(true);
@@ -74,7 +106,10 @@ export function TodoForm({
           title,
           description,
           priority,
-          daysOfWeek: days,
+          daysOfWeek: recurrenceType === "days" ? days : [],
+          intervalDays: recurrenceType === "interval" ? intervalDays : undefined,
+          intervalAnchorDate: recurrenceType === "interval" ? intervalAnchorDate : undefined,
+          showUntil: showUntil || undefined,
           time: time || undefined,
           recurring,
           room: showRoom ? room : undefined,
@@ -98,6 +133,10 @@ export function TodoForm({
         setTime("");
         setRecurring(false);
         setRoom("");
+        setRecurrenceType("days");
+        setIntervalDays(2);
+        setIntervalAnchorDate("");
+        setShowUntil("");
       }
     } catch {
       toast.error("Er is iets misgegaan");
@@ -159,36 +198,90 @@ export function TodoForm({
           />
         </div>
         <div>
-          <Label>Dag(en) (optioneel)</Label>
-          <div className="flex flex-wrap gap-1.5">
-            {DAYS_OF_WEEK_SHORT.map((label, i) => (
+          <div className="mb-1.5 flex items-center gap-3">
+            <Label className="mb-0">Patroon (optioneel)</Label>
+            <div className="flex gap-1">
               <button
-                key={label}
                 type="button"
-                onClick={() => toggleDay(i)}
+                onClick={() => setRecurrenceType("days")}
                 className={cn(
-                  "flex h-10 w-11 items-center justify-center rounded-lg border text-sm font-medium transition-colors",
-                  days.includes(i)
+                  "rounded-md px-2 py-0.5 text-xs font-medium transition-colors",
+                  recurrenceType === "days"
+                    ? "bg-rose-500/15 text-rose-300"
+                    : "text-slate-400 hover:text-slate-200"
+                )}
+              >
+                Dag(en)
+              </button>
+              <button
+                type="button"
+                onClick={() => setRecurrenceType("interval")}
+                className={cn(
+                  "rounded-md px-2 py-0.5 text-xs font-medium transition-colors",
+                  recurrenceType === "interval"
+                    ? "bg-rose-500/15 text-rose-300"
+                    : "text-slate-400 hover:text-slate-200"
+                )}
+              >
+                Interval
+              </button>
+            </div>
+          </div>
+          {recurrenceType === "days" ? (
+            <div className="flex flex-wrap gap-1.5">
+              {DAYS_OF_WEEK_SHORT.map((label, i) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => toggleDay(i)}
+                  className={cn(
+                    "flex h-10 w-11 items-center justify-center rounded-lg border text-sm font-medium transition-colors",
+                    days.includes(i)
+                      ? "border-rose-400 bg-rose-500/15 text-rose-300"
+                      : "border-border bg-surface2 text-slate-300 hover:bg-surface2/70"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={toggleEveryDay}
+                className={cn(
+                  "flex h-10 items-center justify-center rounded-lg border px-3 text-sm font-medium transition-colors",
+                  allDaysSelected
                     ? "border-rose-400 bg-rose-500/15 text-rose-300"
                     : "border-border bg-surface2 text-slate-300 hover:bg-surface2/70"
                 )}
               >
-                {label}
+                Elke dag
               </button>
-            ))}
-            <button
-              type="button"
-              onClick={toggleEveryDay}
-              className={cn(
-                "flex h-10 items-center justify-center rounded-lg border px-3 text-sm font-medium transition-colors",
-                allDaysSelected
-                  ? "border-rose-400 bg-rose-500/15 text-rose-300"
-                  : "border-border bg-surface2 text-slate-300 hover:bg-surface2/70"
-              )}
-            >
-              Elke dag
-            </button>
-          </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <Select
+                  value={String(intervalDays)}
+                  onChange={(e) => setIntervalDays(Number(e.target.value))}
+                  className="w-40"
+                >
+                  {TODO_INTERVAL_OPTIONS.map((n) => (
+                    <option key={n} value={n}>
+                      {n === 2 ? "Elke 2 dagen" : `Elke ${n} dagen`}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <Input
+                  placeholder="Startdag DD-MM-JJJJ"
+                  value={intervalAnchorDate}
+                  onChange={(e) => setIntervalAnchorDate(formatBirthDateInput(e.target.value))}
+                  className="w-40"
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
       <label className="flex items-center gap-2 text-sm text-slate-200">
@@ -198,11 +291,30 @@ export function TodoForm({
           onChange={(e) => setRecurring(e.target.checked)}
           className="h-4 w-4 rounded border-slate-600 bg-surface2 accent-rose-500"
         />
-        Terugkerende taak — bij afronden verschijnt hij automatisch weer open op de volgende
-        gekozen dag
+        Terugkerende taak — bij afronden verschijnt hij automatisch weer open{" "}
+        {recurrenceType === "days" ? "op de volgende gekozen dag" : "op de volgende intervaldag"}
       </label>
+      <div>
+        <Label htmlFor="showUntil">Tonen tot en met (optioneel)</Label>
+        <Input
+          id="showUntil"
+          placeholder="DD-MM-JJJJ"
+          value={showUntil}
+          onChange={(e) => setShowUntil(formatBirthDateInput(e.target.value))}
+          className="w-40"
+        />
+        <p className="mt-1 text-xs text-slate-500">
+          Na deze datum verschijnt de taak niet meer op de Werklijst, ook niet als terugkerende taak.
+        </p>
+      </div>
       <div className="flex gap-2">
-        <Button type="submit" size="lg" loading={loading} disabled={!title || needsDay} className="self-start">
+        <Button
+          type="submit"
+          size="lg"
+          loading={loading}
+          disabled={!title || needsPattern}
+          className="self-start"
+        >
           {todoId ? "Opslaan" : "Toevoegen"}
         </Button>
         {onCancel && (
