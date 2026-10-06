@@ -20,6 +20,8 @@ const STATUS_OPTIONS: {
   icon: React.ComponentType<{ className?: string }>;
   badge: string;
   hover: string;
+  /** Fills "Wil je <medicatie> om <tijd> ___?" in the pre-registration safeguard dialog below. */
+  confirmAction: string;
 }[] = [
   {
     status: "TAKEN",
@@ -27,6 +29,7 @@ const STATUS_OPTIONS: {
     icon: CheckCircle2,
     badge: "bg-forest-500/15 text-forest-400",
     hover: "hover:border-forest-500/40 hover:bg-forest-500/5",
+    confirmAction: "afvinken als ingenomen",
   },
   {
     status: "LEAVE",
@@ -34,6 +37,7 @@ const STATUS_OPTIONS: {
     icon: Plane,
     badge: "bg-amber-500/15 text-amber-400",
     hover: "hover:border-amber-500/40 hover:bg-amber-500/5",
+    confirmAction: "registreren als verlof",
   },
   {
     status: "NOT_TAKEN",
@@ -41,6 +45,7 @@ const STATUS_OPTIONS: {
     icon: XCircle,
     badge: "bg-red-500/15 text-red-400",
     hover: "hover:border-red-500/40 hover:bg-red-500/5",
+    confirmAction: "registreren als niet ingenomen",
   },
 ];
 
@@ -48,16 +53,26 @@ export function MedicationCheckForm({
   medicationId,
   medicationName,
   clientName,
+  nextTime,
 }: {
   medicationId: string;
   medicationName?: string;
   clientName?: string;
+  /** The scheduled time this registration will fill — omitted for "indien nodig" medication, which has none. */
+  nextTime?: string;
 }) {
   const router = useRouter();
   const [comment, setComment] = React.useState("");
   const [showComment, setShowComment] = React.useState(false);
   const [loading, setLoading] = React.useState<MedicationCheckStatus | null>(null);
   const [showVmsModal, setShowVmsModal] = React.useState(false);
+  // A safeguard against a wrongful tap — Afvinken/Verlof/Niet ingenomen sit
+  // right next to each other and, unlike most of this app's actions, can't
+  // be undone by the person who registered it (only a beheerder can
+  // correct it afterward, via MedicationCheckList's admin modal). Holds the
+  // status a button would register, pending the confirm dialog below —
+  // handleCheck itself never changes.
+  const [confirming, setConfirming] = React.useState<MedicationCheckStatus | null>(null);
 
   async function handleCheck(status: MedicationCheckStatus) {
     setLoading(status);
@@ -109,6 +124,15 @@ export function MedicationCheckForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showVmsModal]);
 
+  React.useEffect(() => {
+    if (!confirming) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setConfirming(null);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [confirming]);
+
   return (
     <div className="flex flex-col gap-2">
       {showComment && (
@@ -125,7 +149,7 @@ export function MedicationCheckForm({
             key={status}
             type="button"
             disabled={loading !== null}
-            onClick={() => handleCheck(status)}
+            onClick={() => setConfirming(status)}
             className={cn(
               "flex items-center gap-3 rounded-xl border border-border bg-surface2/50 p-3.5 text-left transition-colors",
               "disabled:pointer-events-none disabled:opacity-50",
@@ -148,6 +172,61 @@ export function MedicationCheckForm({
         Let op: dit kan zelf niet ongedaan worden gemaakt. Per ongeluk de verkeerde knop geraakt? Voeg
         hieronder een commentaar toe — een beheerder kan de registratie daarna corrigeren.
       </p>
+
+      {confirming &&
+        (() => {
+          const option = STATUS_OPTIONS.find((o) => o.status === confirming)!;
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 animate-fade-in bg-black/70 backdrop-blur-sm"
+                onClick={() => setConfirming(null)}
+              />
+              <div
+                role="alertdialog"
+                aria-modal="true"
+                aria-labelledby="confirm-check-modal-title"
+                className="relative z-10 w-full max-w-sm animate-scale-in rounded-2xl border border-border bg-surface p-6 shadow-lift"
+              >
+                <span className={cn("flex h-12 w-12 items-center justify-center rounded-2xl", option.badge)}>
+                  <option.icon className="h-6 w-6" />
+                </span>
+                <h2 id="confirm-check-modal-title" className="mt-4 text-lg font-semibold text-slate-50">
+                  Weet je het zeker?
+                </h2>
+                <p className="mt-2 text-sm text-slate-400">
+                  Wil je{" "}
+                  <span className="font-medium text-slate-200">{medicationName ?? "deze medicatie"}</span>
+                  {nextTime ? (
+                    <>
+                      {" "}
+                      om <span className="font-medium text-slate-200">{nextTime}</span>
+                    </>
+                  ) : null}{" "}
+                  {option.confirmAction}?
+                </p>
+                <div className="mt-5 flex gap-2">
+                  <Button
+                    type="button"
+                    variant={confirming === "NOT_TAKEN" ? "danger" : "primary"}
+                    onClick={() => {
+                      const status = confirming;
+                      setConfirming(null);
+                      handleCheck(status);
+                    }}
+                    className="flex-1"
+                  >
+                    Ja, registreren
+                  </Button>
+                  <Button type="button" variant="ghost" onClick={() => setConfirming(null)}>
+                    Nee, terug
+                  </Button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
       {showVmsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

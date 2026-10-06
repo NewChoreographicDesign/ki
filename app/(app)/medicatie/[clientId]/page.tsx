@@ -136,6 +136,7 @@ export default async function ClientMedicationPage({
                       medicationId={med.id}
                       medicationName={med.name}
                       clientName={fullName(client)}
+                      nextTime={slots.find((s) => !s.check)?.time}
                     />
                   )}
                   <div className="border-t border-border pt-3">
