@@ -269,19 +269,33 @@ export function formatDaysOfWeek(days: number[]): string {
 /**
  * Parses Medication.times ("08:00,20:00") into a sorted, deduplicated list of
  * "HH:MM" strings. Shared by lib/medication-reminders.ts (which times are
- * still due) and the medicatie check flow (which times are already done
+ * still due), the medicatie check flow (which times are already done
  * today, and — since a check isn't linked to a specific slot — how many more
- * registrations are even allowed today).
+ * registrations are even allowed today), and the room-grouped overview
+ * (lib/medication-schedule.ts, sorted on this same HH:MM string) — the
+ * medication-manager form takes "Tijden" as free text, so a caregiver can
+ * type "8:00" without the leading zero; normalizing that here, in the one
+ * place every one of those reads this field through, keeps the stored
+ * value untouched while fixing the sort everywhere: unpadded, "8:00"
+ * sorts (as a plain string) after "14:00" and "20:00", scrambling both the
+ * slot order for that medication and the room overview's "next due" order.
  */
 export function parseMedicationTimes(value: string): string[] {
   return Array.from(
     new Set(
       value
         .split(",")
-        .map((t) => t.trim())
+        .map((t) => normalizeMedicationTime(t.trim()))
         .filter(Boolean)
     )
   ).sort();
+}
+
+/** Zero-pads a single-digit hour ("8:00" -> "08:00") so time strings sort chronologically; anything that isn't H:MM/HH:MM passes through unchanged rather than being silently dropped. */
+function normalizeMedicationTime(value: string): string {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value);
+  if (!match) return value;
+  return `${match[1].padStart(2, "0")}:${match[2]}`;
 }
 
 /**

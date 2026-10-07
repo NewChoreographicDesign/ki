@@ -197,6 +197,15 @@ describe("parseMedicationTimes", () => {
   it("returns an empty array for an empty string", () => {
     expect(parseMedicationTimes("")).toEqual([]);
   });
+
+  it("zero-pads a single-digit hour so it sorts chronologically, not lexicographically", () => {
+    // Unpadded, "8:00" would sort after "14:00" and "20:00" as a plain string.
+    expect(parseMedicationTimes("20:00,8:00,14:00")).toEqual(["08:00", "14:00", "20:00"]);
+  });
+
+  it("dedupes a padded and unpadded entry for the same time", () => {
+    expect(parseMedicationTimes("8:00,08:00")).toEqual(["08:00"]);
+  });
 });
 
 describe("isTodoDueToday", () => {
