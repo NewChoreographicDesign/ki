@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { fullName, formatDateTime, toDatetimeLocalValue } from "@/lib/utils";
+import { CalendarDays } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { AppointmentForm } from "./appointment-form";
 import { AppointmentList } from "./appointment-list";
 
@@ -38,7 +40,7 @@ export default async function AgendaPage() {
       <div>
         <h2 className="mb-3 text-lg font-semibold text-slate-100">Aankomend</h2>
         {appointments.length === 0 ? (
-          <p className="text-slate-500">Geen aankomende afspraken.</p>
+          <EmptyState icon={CalendarDays} title="Geen aankomende afspraken." />
         ) : (
           <AppointmentList
             clients={clientOptions}

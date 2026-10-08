@@ -89,3 +89,36 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return handleApiError(error);
   }
 }
+
+// Same permissive-but-audited model as PATCH above: no role gate, any
+// staff member can remove an appointment they realize is wrong (duplicate,
+// cancelled, created for the wrong day) — the audit trail is what keeps
+// this accountable rather than a confirmation dialog. The UI (see
+// app/(app)/agenda/appointment-list.tsx) offers an "Ongedaan maken" toast
+// instead of an are-you-sure prompt, by re-creating the same appointment
+// through the normal POST endpoint — this DELETE never needs its own undo
+// path.
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const session = await requireAuth();
+    const { id } = await params;
+
+    const existing = await db.appointment.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ error: "Afspraak niet gevonden" }, { status: 404 });
+    }
+
+    await db.appointment.delete({ where: { id } });
+
+    await logAudit({
+      userId: session.sub,
+      action: `appointment.deleted:"${existing.title}"`,
+      targetType: "Appointment",
+      targetId: id,
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
