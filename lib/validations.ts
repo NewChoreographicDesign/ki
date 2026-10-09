@@ -262,11 +262,29 @@ export const todoCompleteSchema = z.object({
   completionNote: z.string().trim().max(1000).optional().or(z.literal("")),
 });
 
+const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Gebruik een geldige datum");
+
+// "Herhaling" of an afspraak — see lib/appointment-recurrence.ts for how
+// each mode expands. Repeating modes need an end (until or count).
+export const appointmentRepeatSchema = z.discriminatedUnion("mode", [
+  z.object({ mode: z.literal("none") }),
+  z.object({
+    mode: z.enum(["daily", "weekly", "biweekly", "monthly"]),
+    weekdays: z.array(z.number().int().min(1).max(7)).max(7).optional(),
+    until: ymd.optional(),
+    count: z.number().int().min(2).max(120).optional(),
+  }),
+  z.object({ mode: z.literal("dates"), dates: z.array(ymd).min(1).max(120) }),
+]);
+
 export const appointmentSchema = z.object({
   title: z.string().trim().min(1).max(300),
   description: z.string().trim().max(2000).optional().or(z.literal("")),
   clientId: z.string().optional().or(z.literal("")),
   startAt: z.string().min(1), // ISO datetime-local string
+  endAt: z.string().optional().or(z.literal("")), // idem; empty = default duration
+  repeat: appointmentRepeatSchema.optional(), // create only
+  scope: z.enum(["this", "following", "all"]).optional(), // edit/delete of a series
 });
 
 export const protocolSchema = z

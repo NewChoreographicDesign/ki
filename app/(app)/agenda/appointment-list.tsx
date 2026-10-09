@@ -7,6 +7,7 @@ import { CalendarDays, Pencil, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AnimatedListItem } from "@/components/ui/animated-list-item";
+import { Modal } from "@/components/ui/modal";
 import { AppointmentForm } from "./appointment-form";
 
 export type AppointmentRow = {
@@ -17,6 +18,8 @@ export type AppointmentRow = {
   clientName: string | null;
   startAtDisplay: string;
   startAtLocal: string;
+  endAtLocal?: string | null;
+  seriesId?: string | null;
 };
 
 // Any staff member can edit a planned appointment (fix a wrong time, client,
@@ -37,22 +40,35 @@ export function AppointmentList({
   const [rows, setRows] = React.useState(appointments);
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [exitingIds, setExitingIds] = React.useState<Set<string>>(new Set());
+  const [scopePrompt, setScopePrompt] = React.useState<AppointmentRow | null>(null);
 
   React.useEffect(() => setRows(appointments), [appointments]);
 
-  async function handleDelete(a: AppointmentRow) {
+  // Part of a reeks: ask how much to remove first. Standalone: delete at once.
+  function requestDelete(a: AppointmentRow) {
+    if (a.seriesId) setScopePrompt(a);
+    else void handleDelete(a, "this");
+  }
+
+  async function handleDelete(a: AppointmentRow, scope: "this" | "following" | "all") {
+    setScopePrompt(null);
     try {
-      const res = await fetch(`/api/appointments/${a.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/appointments/${a.id}?scope=${scope}`, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         toast.error(data.error || "Verwijderen mislukt");
         return;
       }
-      toast.success("Afspraak verwijderd", {
-        duration: 5000,
-        action: { label: "Ongedaan maken", onClick: () => handleRestore(a) },
-      });
-      setExitingIds((prev) => new Set(prev).add(a.id));
+      if (scope === "this") {
+        toast.success("Afspraak verwijderd", {
+          duration: 5000,
+          action: { label: "Ongedaan maken", onClick: () => handleRestore(a) },
+        });
+        setExitingIds((prev) => new Set(prev).add(a.id));
+      } else {
+        toast.success(scope === "all" ? "Hele reeks verwijderd" : "Afspraak en volgende verwijderd");
+        router.refresh();
+      }
     } catch {
       toast.error("Verwijderen mislukt");
     }
@@ -68,7 +84,7 @@ export function AppointmentList({
       const res = await fetch("/api/appointments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: a.title, description: a.description, clientId: a.clientId, startAt: a.startAtLocal }),
+        body: JSON.stringify({ title: a.title, description: a.description, clientId: a.clientId, startAt: a.startAtLocal, endAt: a.endAtLocal ?? "" }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -114,7 +130,10 @@ export function AppointmentList({
                 </div>
                 <div className="flex flex-1 flex-col gap-0.5">
                   <span className="font-medium text-slate-100">{a.title}</span>
-                  <span className="text-sm text-slate-400">{a.startAtDisplay}</span>
+                  <span className="text-sm text-slate-400">
+                    {a.startAtDisplay}
+                    {a.seriesId && <span className="ml-2 rounded-full bg-surface2 px-2 py-0.5 text-[11px] text-slate-400">reeks</span>}
+                  </span>
                   {a.clientName && <span className="text-sm text-slate-400">{a.clientName}</span>}
                   {a.description && <span className="text-sm text-slate-500">{a.description}</span>}
                 </div>
@@ -124,7 +143,7 @@ export function AppointmentList({
                 <Button
                   size="icon"
                   variant="ghost"
-                  onClick={() => handleDelete(a)}
+                  onClick={() => requestDelete(a)}
                   aria-label="Afspraak verwijderen"
                   className="text-red-400 hover:text-red-300"
                 >
@@ -135,6 +154,20 @@ export function AppointmentList({
           )}
         </AnimatedListItem>
       ))}
+      <Modal open={scopePrompt !== null} onClose={() => setScopePrompt(null)} title="Afspraak verwijderen" className="sm:max-w-sm">
+        <p className="mb-4 text-sm text-slate-400">&ldquo;{scopePrompt?.title}&rdquo; is onderdeel van een reeks. Wat wil je verwijderen?</p>
+        <div className="flex flex-col gap-2">
+          <Button variant="outline" onClick={() => scopePrompt && handleDelete(scopePrompt, "this")}>
+            Alleen deze afspraak
+          </Button>
+          <Button variant="outline" onClick={() => scopePrompt && handleDelete(scopePrompt, "following")}>
+            Deze en alle volgende
+          </Button>
+          <Button variant="danger" onClick={() => scopePrompt && handleDelete(scopePrompt, "all")}>
+            Hele reeks
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

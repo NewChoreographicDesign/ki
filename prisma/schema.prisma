@@ -593,11 +593,20 @@ model Appointment {
   clientId      String?
   client        Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
   startAt       DateTime
+  // Optional end — null means "default duration" (60 min) wherever a
+  // length is needed (agenda grid, calendar feed).
+  endAt         DateTime?
+  // Occurrences of one repeated afspraak (or one "meerdere datums" batch)
+  // are individual rows sharing a seriesId, so each can be edited, moved,
+  // reminded and exported independently; edit/delete can still address the
+  // whole series or "this and following" via this id.
+  seriesId      String?
   reminderSent  Boolean  @default(false)
   createdById   String
   createdBy     User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
   createdAt     DateTime @default(now())
 
+  @@index([seriesId])
   @@index([startAt])
   @@index([reminderSent, startAt])
 }
