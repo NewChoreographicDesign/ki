@@ -144,15 +144,21 @@ export const handoverSchema = z.object({
   clientId: z.string().optional().or(z.literal("")),
 });
 
-export const createInterventionSchema = z.object({
-  // One row per client, created together — a single client picked is just
-  // an array of one. See Intervention.groupInterventionId in schema.prisma.
-  clientIds: z.array(z.string().min(1)).min(1).max(200),
-  description: z.string().trim().min(3).max(4000),
-  goal: z.string().trim().min(3).max(2000),
-  stepsTaken: z.string().trim().min(1).max(4000),
-  followUpNeeded: z.string().trim().min(1).max(2000),
-});
+export const createInterventionSchema = z
+  .object({
+    // Ignored when wholeGroup is true (the membership is implicit — see
+    // Intervention.wholeGroup in schema.prisma); required otherwise.
+    clientIds: z.array(z.string().min(1)).max(200).default([]),
+    wholeGroup: z.boolean().default(false),
+    description: z.string().trim().min(3).max(4000),
+    goal: z.string().trim().min(3).max(2000),
+    stepsTaken: z.string().trim().min(1).max(4000),
+    followUpNeeded: z.string().trim().min(1).max(2000),
+  })
+  .refine((data) => data.wholeGroup || data.clientIds.length > 0, {
+    message: "Kies minimaal één cliënt of de hele groep",
+    path: ["clientIds"],
+  });
 
 export const createInterventionNoteSchema = z.object({
   content: z.string().trim().min(1).max(4000),

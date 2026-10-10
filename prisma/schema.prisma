@@ -164,7 +164,7 @@ model Client {
   presences    Presence[]
   appointments Appointment[]
   handovers    Handover[]
-  interventions Intervention[]
+  interventionClients InterventionClient[]
   interventionPlans InterventionPlan[]
 
   @@index([active])
@@ -429,18 +429,20 @@ model Handover {
 // MedicationCheck's "irreversible audit log" comment.
 model Intervention {
   id          String             @id @default(cuid())
-  clientId    String
-  client      Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  // Set when this intervention was created together with others for
-  // several clients at once (a "groepsinterventie" — multiple residents
-  // or the whole group, picked in one go from the create form). Each
-  // client still gets its own independent row (own status, own notes,
-  // closed on its own schedule — different clients rarely need the exact
-  // same follow-up at the exact same time), but sharing this id lets the
-  // UI show them as one action and lets a future bulk-close operate on
-  // all of them together. Null for an intervention created for a single
-  // client the ordinary way.
-  groupInterventionId String?
+  // True when created for every active client at once (the "Hele groep"
+  // toggle on the create form) rather than a hand-picked list — shown as
+  // "Hele groep" instead of enumerating every resident, and stays
+  // accurate even as the roster changes later (there's no fixed snapshot
+  // of who was active).
+  wholeGroup  Boolean            @default(false)
+  // Which cliënten this intervention is about — one row for the ordinary
+  // single-client case, several when picked together (a "groepsinterventie"
+  // for a handful of residents, not the whole group). Empty when
+  // wholeGroup is true. One Intervention = one status/timeline/close,
+  // whichever clients it covers — deliberately NOT one row per client
+  // (that was tried and reverted: it made a single group-wide action show
+  // up as N duplicate cards instead of one).
+  clients     InterventionClient[]
   // What happened — the event or situation that prompted this intervention.
   description String
   // What this intervention is meant to achieve.
@@ -461,9 +463,20 @@ model Intervention {
 
   notes InterventionNote[]
 
-  @@index([clientId])
   @@index([status])
-  @@index([groupInterventionId])
+}
+
+// Join row for Intervention.clients — see that field's comment.
+model InterventionClient {
+  id             String       @id @default(cuid())
+  interventionId String
+  intervention   Intervention @relation(fields: [interventionId], references: [id], onDelete: Cascade)
+  clientId       String
+  client         Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([interventionId, clientId])
+  @@index([interventionId])
+  @@index([clientId])
 }
 
 // The 5 pillars of Verbindend Gezag / Nieuwe Autoriteit (Haim Omer) this

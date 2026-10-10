@@ -15,7 +15,7 @@ export default async function OverdrachtPage() {
     }),
     db.intervention.findMany({
       include: {
-        client: true,
+        clients: { include: { client: true } },
         createdBy: true,
         closedBy: true,
         notes: { include: { author: true }, orderBy: { createdAt: "asc" } },
@@ -62,9 +62,8 @@ export default async function OverdrachtPage() {
         }))}
         interventions={interventions.map((i) => ({
           id: i.id,
-          clientName: fullName(i.client),
-          room: i.client.room,
-          groupInterventionId: i.groupInterventionId,
+          wholeGroup: i.wholeGroup,
+          clients: i.clients.map((ic) => ({ id: ic.client.id, name: fullName(ic.client), room: ic.client.room })),
           description: i.description,
           goal: i.goal,
           stepsTaken: i.stepsTaken,

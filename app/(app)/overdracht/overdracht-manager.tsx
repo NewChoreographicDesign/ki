@@ -35,10 +35,10 @@ export type InterventionNoteRow = {
 
 export type InterventionRow = {
   id: string;
-  clientName: string;
-  room: string | null;
-  /** Set when created together with other interventions (several clients or "hele groep" picked at once). */
-  groupInterventionId: string | null;
+  /** True when this covers every active client, instead of a hand-picked list. */
+  wholeGroup: boolean;
+  /** Empty when wholeGroup is true — the membership is implicit. */
+  clients: { id: string; name: string; room: string | null }[];
   description: string;
   goal: string;
   stepsTaken: string;
@@ -76,17 +76,6 @@ export function OverdrachtManager({
   const grouped = React.useMemo(() => groupByRoom(handovers), [handovers]);
   const openInterventions = React.useMemo(() => interventions.filter((i) => i.status === "OPEN"), [interventions]);
   const activePlanCount = React.useMemo(() => plans.filter((p) => p.status === "ACTIEF").length, [plans]);
-  // How many clients share each groupInterventionId, so a card from a
-  // group-level intervention can show "onderdeel van N" instead of looking
-  // like an ordinary single-client one.
-  const groupSizes = React.useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const i of interventions) {
-      if (!i.groupInterventionId) continue;
-      counts.set(i.groupInterventionId, (counts.get(i.groupInterventionId) ?? 0) + 1);
-    }
-    return counts;
-  }, [interventions]);
 
   function refresh() {
     router.refresh();
@@ -104,12 +93,7 @@ export function OverdrachtManager({
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             {openInterventions.map((i) => (
-              <InterventionCard
-                key={i.id}
-                intervention={i}
-                groupSize={i.groupInterventionId ? groupSizes.get(i.groupInterventionId) : undefined}
-                onChanged={refresh}
-              />
+              <InterventionCard key={i.id} intervention={i} onChanged={refresh} />
             ))}
           </CardContent>
         </Card>
@@ -224,14 +208,7 @@ export function OverdrachtManager({
             {interventions.length === 0 ? (
               <p className="text-slate-500">Nog geen interventies geregistreerd.</p>
             ) : (
-              interventions.map((i) => (
-                <InterventionCard
-                  key={i.id}
-                  intervention={i}
-                  groupSize={i.groupInterventionId ? groupSizes.get(i.groupInterventionId) : undefined}
-                  onChanged={refresh}
-                />
-              ))
+              interventions.map((i) => <InterventionCard key={i.id} intervention={i} onChanged={refresh} />)
             )}
           </div>
         </>
@@ -477,14 +454,16 @@ function NewInterventionForm({
       const res = await fetch("/api/interventions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientIds: [...selectedIds], description, goal, stepsTaken, followUpNeeded }),
+        body: JSON.stringify(
+          allSelected ? { wholeGroup: true, description, goal, stepsTaken, followUpNeeded } : { clientIds: [...selectedIds], description, goal, stepsTaken, followUpNeeded }
+        ),
       });
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error || "Opslaan mislukt");
         return;
       }
-      toast.success(data.count > 1 ? `Interventie aangemaakt voor ${data.count} cliënten` : "Interventie aangemaakt");
+      toast.success(allSelected ? "Interventie aangemaakt voor de hele groep" : selectedIds.size > 1 ? `Interventie aangemaakt voor ${selectedIds.size} cliënten` : "Interventie aangemaakt");
       setDescription("");
       setGoal("");
       setStepsTaken("");
@@ -517,10 +496,8 @@ function NewInterventionForm({
             </Checkbox>
           ))}
         </div>
-        {selectedIds.size > 1 && (
-          <p className="px-1 text-xs text-slate-500">
-            Maakt {selectedIds.size} aparte interventies aan (één per cliënt) — elke cliënt krijgt zijn eigen status en kan los worden afgerond.
-          </p>
+        {!allSelected && selectedIds.size > 1 && (
+          <p className="px-1 text-xs text-slate-500">Wordt geregistreerd als één interventie voor {selectedIds.size} cliënten.</p>
         )}
       </fieldset>
       <div>
@@ -574,7 +551,7 @@ function NewInterventionForm({
           disabled={selectedIds.size === 0 || !description || !goal || !stepsTaken || !followUpNeeded}
           className="self-start"
         >
-          {selectedIds.size > 1 ? `Interventie aanmaken (${selectedIds.size} cliënten)` : "Interventie aanmaken"}
+          {allSelected ? "Interventie aanmaken voor hele groep" : selectedIds.size > 1 ? `Interventie aanmaken (${selectedIds.size} cliënten)` : "Interventie aanmaken"}
         </Button>
         <Button type="button" variant="ghost" onClick={onCancel}>
           Annuleren
@@ -587,16 +564,17 @@ function NewInterventionForm({
 // Shared "dropdown" row for an intervention — used both in the pinned
 // "openstaande interventies" banner and the full Interventies list, so
 // adding a follow-up or closing works identically in both places.
-function InterventionCard({
-  intervention: i,
-  groupSize,
-  onChanged,
-}: {
-  intervention: InterventionRow;
-  /** How many clients were part of the same group-level create, when this was one of them. */
-  groupSize?: number;
-  onChanged: () => void;
-}) {
+/** Compact header label: one client's "kamer · naam", "Hele groep", or a count for several. */
+function interventionSubjectLabel(i: InterventionRow): string {
+  if (i.wholeGroup) return "Hele groep";
+  if (i.clients.length === 1) {
+    const c = i.clients[0];
+    return c.room ? `${c.room} · ${c.name}` : c.name;
+  }
+  return `${i.clients.length} cliënten`;
+}
+
+function InterventionCard({ intervention: i, onChanged }: { intervention: InterventionRow; onChanged: () => void }) {
   const [open, setOpen] = React.useState(false);
   const [note, setNote] = React.useState("");
   const [savingNote, setSavingNote] = React.useState(false);
@@ -628,7 +606,7 @@ function InterventionCard({
   }
 
   async function handleClose() {
-    if (!window.confirm(`Interventie voor ${i.clientName} afronden? Dit kan niet ongedaan worden gemaakt.`)) {
+    if (!window.confirm(`Interventie voor ${interventionSubjectLabel(i)} afronden? Dit kan niet ongedaan worden gemaakt.`)) {
       return;
     }
     setClosing(true);
@@ -657,13 +635,11 @@ function InterventionCard({
       >
         <span className="flex min-w-0 flex-col gap-1">
           <span className="flex flex-wrap items-center gap-2">
-            <span className="font-medium text-slate-100">
-              {i.room ? `${i.room} · ${i.clientName}` : i.clientName}
-            </span>
+            <span className="font-medium text-slate-100">{interventionSubjectLabel(i)}</span>
             <Badge variant={isOpen ? "red" : "forest"}>{isOpen ? "Open" : "Afgerond"}</Badge>
-            {groupSize && groupSize > 1 && (
+            {(i.wholeGroup || i.clients.length > 1) && (
               <Badge variant="slate" className="flex items-center gap-1">
-                <Users className="h-3 w-3" /> Groepsinterventie ({groupSize})
+                <Users className="h-3 w-3" /> Groepsinterventie
               </Badge>
             )}
           </span>
@@ -683,6 +659,23 @@ function InterventionCard({
               <span>· Afgerond door {i.closedByName} op {formatDateTime(new Date(i.closedAt))}</span>
             )}
           </div>
+
+          {(i.wholeGroup || i.clients.length > 1) && (
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Betrokken cliënten</p>
+              {i.wholeGroup ? (
+                <p className="mt-1 text-sm text-slate-200">Hele groep (alle actieve cliënten)</p>
+              ) : (
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {i.clients.map((c) => (
+                    <span key={c.id} className="rounded-full bg-surface1 px-2.5 py-1 text-xs text-slate-300">
+                      {c.room ? `${c.room} · ${c.name}` : c.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Wat is er gebeurd?" value={i.description} />
