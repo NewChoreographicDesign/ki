@@ -64,6 +64,7 @@ export default async function OverdrachtPage() {
           id: i.id,
           clientName: fullName(i.client),
           room: i.client.room,
+          groupInterventionId: i.groupInterventionId,
           description: i.description,
           goal: i.goal,
           stepsTaken: i.stepsTaken,

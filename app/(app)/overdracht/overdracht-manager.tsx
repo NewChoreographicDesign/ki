@@ -3,13 +3,14 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, ChevronDown, Trash2, Clock, DoorOpen, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Plus, ChevronDown, Trash2, Clock, DoorOpen, AlertTriangle, CheckCircle2, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { formatDateTime, shiftLabel, shiftBadgeVariant } from "@/lib/utils";
 import { InterventionPlanSection, type InterventionPlanRow } from "./intervention-plan-panel";
 
@@ -36,6 +37,8 @@ export type InterventionRow = {
   id: string;
   clientName: string;
   room: string | null;
+  /** Set when created together with other interventions (several clients or "hele groep" picked at once). */
+  groupInterventionId: string | null;
   description: string;
   goal: string;
   stepsTaken: string;
@@ -73,6 +76,17 @@ export function OverdrachtManager({
   const grouped = React.useMemo(() => groupByRoom(handovers), [handovers]);
   const openInterventions = React.useMemo(() => interventions.filter((i) => i.status === "OPEN"), [interventions]);
   const activePlanCount = React.useMemo(() => plans.filter((p) => p.status === "ACTIEF").length, [plans]);
+  // How many clients share each groupInterventionId, so a card from a
+  // group-level intervention can show "onderdeel van N" instead of looking
+  // like an ordinary single-client one.
+  const groupSizes = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const i of interventions) {
+      if (!i.groupInterventionId) continue;
+      counts.set(i.groupInterventionId, (counts.get(i.groupInterventionId) ?? 0) + 1);
+    }
+    return counts;
+  }, [interventions]);
 
   function refresh() {
     router.refresh();
@@ -90,7 +104,12 @@ export function OverdrachtManager({
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             {openInterventions.map((i) => (
-              <InterventionCard key={i.id} intervention={i} onChanged={refresh} />
+              <InterventionCard
+                key={i.id}
+                intervention={i}
+                groupSize={i.groupInterventionId ? groupSizes.get(i.groupInterventionId) : undefined}
+                onChanged={refresh}
+              />
             ))}
           </CardContent>
         </Card>
@@ -205,7 +224,14 @@ export function OverdrachtManager({
             {interventions.length === 0 ? (
               <p className="text-slate-500">Nog geen interventies geregistreerd.</p>
             ) : (
-              interventions.map((i) => <InterventionCard key={i.id} intervention={i} onChanged={refresh} />)
+              interventions.map((i) => (
+                <InterventionCard
+                  key={i.id}
+                  intervention={i}
+                  groupSize={i.groupInterventionId ? groupSizes.get(i.groupInterventionId) : undefined}
+                  onChanged={refresh}
+                />
+              ))
             )}
           </div>
         </>
@@ -419,12 +445,30 @@ function NewInterventionForm({
   onSaved: () => void;
   onCancel: () => void;
 }) {
-  const [clientId, setClientId] = React.useState(clients[0]?.id ?? "");
+  // Defaults to just the first client (the common case: one incident, one
+  // resident) rather than none, so the form isn't blocked on a selection
+  // most of the time — "hele groep" or picking more is an opt-in widen.
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(() => (clients[0] ? new Set([clients[0].id]) : new Set()));
   const [description, setDescription] = React.useState("");
   const [goal, setGoal] = React.useState("");
   const [stepsTaken, setStepsTaken] = React.useState("");
   const [followUpNeeded, setFollowUpNeeded] = React.useState("");
   const [loading, setLoading] = React.useState(false);
+
+  const allSelected = clients.length > 0 && selectedIds.size === clients.length;
+
+  function toggleClient(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleWholeGroup(checked: boolean) {
+    setSelectedIds(checked ? new Set(clients.map((c) => c.id)) : new Set());
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -433,14 +477,14 @@ function NewInterventionForm({
       const res = await fetch("/api/interventions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientId, description, goal, stepsTaken, followUpNeeded }),
+        body: JSON.stringify({ clientIds: [...selectedIds], description, goal, stepsTaken, followUpNeeded }),
       });
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error || "Opslaan mislukt");
         return;
       }
-      toast.success("Interventie aangemaakt");
+      toast.success(data.count > 1 ? `Interventie aangemaakt voor ${data.count} cliënten` : "Interventie aangemaakt");
       setDescription("");
       setGoal("");
       setStepsTaken("");
@@ -459,16 +503,26 @@ function NewInterventionForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div>
-        <Label htmlFor="intervention-client">Cliënt</Label>
-        <Select id="intervention-client" value={clientId} onChange={(e) => setClientId(e.target.value)}>
+      <fieldset className="flex flex-col gap-3 rounded-xl border border-border bg-surface2/40 p-4">
+        <legend className="flex items-center gap-1.5 px-1 text-sm font-medium text-slate-300">
+          <Users className="h-4 w-4" /> Voor wie is deze interventie?
+        </legend>
+        <Checkbox checked={allSelected} onChange={toggleWholeGroup} className="text-sm font-medium text-slate-200">
+          Hele groep ({clients.length} cliënten)
+        </Checkbox>
+        <div className="flex max-h-56 flex-col gap-1 overflow-y-auto rounded-lg border border-border bg-surface1 p-2">
           {clients.map((c) => (
-            <option key={c.id} value={c.id}>
+            <Checkbox key={c.id} checked={selectedIds.has(c.id)} onChange={() => toggleClient(c.id)} className="rounded-lg px-2 py-1.5 text-sm text-slate-200 hover:bg-surface2">
               {c.room ? `${c.room} · ${c.name}` : c.name}
-            </option>
+            </Checkbox>
           ))}
-        </Select>
-      </div>
+        </div>
+        {selectedIds.size > 1 && (
+          <p className="px-1 text-xs text-slate-500">
+            Maakt {selectedIds.size} aparte interventies aan (één per cliënt) — elke cliënt krijgt zijn eigen status en kan los worden afgerond.
+          </p>
+        )}
+      </fieldset>
       <div>
         <Label htmlFor="intervention-description">Wat is er gebeurd?</Label>
         <Textarea
@@ -517,10 +571,10 @@ function NewInterventionForm({
         <Button
           type="submit"
           loading={loading}
-          disabled={!description || !goal || !stepsTaken || !followUpNeeded}
+          disabled={selectedIds.size === 0 || !description || !goal || !stepsTaken || !followUpNeeded}
           className="self-start"
         >
-          Interventie aanmaken
+          {selectedIds.size > 1 ? `Interventie aanmaken (${selectedIds.size} cliënten)` : "Interventie aanmaken"}
         </Button>
         <Button type="button" variant="ghost" onClick={onCancel}>
           Annuleren
@@ -533,7 +587,16 @@ function NewInterventionForm({
 // Shared "dropdown" row for an intervention — used both in the pinned
 // "openstaande interventies" banner and the full Interventies list, so
 // adding a follow-up or closing works identically in both places.
-function InterventionCard({ intervention: i, onChanged }: { intervention: InterventionRow; onChanged: () => void }) {
+function InterventionCard({
+  intervention: i,
+  groupSize,
+  onChanged,
+}: {
+  intervention: InterventionRow;
+  /** How many clients were part of the same group-level create, when this was one of them. */
+  groupSize?: number;
+  onChanged: () => void;
+}) {
   const [open, setOpen] = React.useState(false);
   const [note, setNote] = React.useState("");
   const [savingNote, setSavingNote] = React.useState(false);
@@ -598,6 +661,11 @@ function InterventionCard({ intervention: i, onChanged }: { intervention: Interv
               {i.room ? `${i.room} · ${i.clientName}` : i.clientName}
             </span>
             <Badge variant={isOpen ? "red" : "forest"}>{isOpen ? "Open" : "Afgerond"}</Badge>
+            {groupSize && groupSize > 1 && (
+              <Badge variant="slate" className="flex items-center gap-1">
+                <Users className="h-3 w-3" /> Groepsinterventie ({groupSize})
+              </Badge>
+            )}
           </span>
           <span className="truncate text-sm text-slate-400">{i.goal}</span>
         </span>

@@ -145,7 +145,9 @@ export const handoverSchema = z.object({
 });
 
 export const createInterventionSchema = z.object({
-  clientId: z.string().min(1),
+  // One row per client, created together — a single client picked is just
+  // an array of one. See Intervention.groupInterventionId in schema.prisma.
+  clientIds: z.array(z.string().min(1)).min(1).max(200),
   description: z.string().trim().min(3).max(4000),
   goal: z.string().trim().min(3).max(2000),
   stepsTaken: z.string().trim().min(1).max(4000),

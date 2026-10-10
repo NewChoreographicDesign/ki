@@ -431,6 +431,16 @@ model Intervention {
   id          String             @id @default(cuid())
   clientId    String
   client      Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  // Set when this intervention was created together with others for
+  // several clients at once (a "groepsinterventie" — multiple residents
+  // or the whole group, picked in one go from the create form). Each
+  // client still gets its own independent row (own status, own notes,
+  // closed on its own schedule — different clients rarely need the exact
+  // same follow-up at the exact same time), but sharing this id lets the
+  // UI show them as one action and lets a future bulk-close operate on
+  // all of them together. Null for an intervention created for a single
+  // client the ordinary way.
+  groupInterventionId String?
   // What happened — the event or situation that prompted this intervention.
   description String
   // What this intervention is meant to achieve.
@@ -453,6 +463,7 @@ model Intervention {
 
   @@index([clientId])
   @@index([status])
+  @@index([groupInterventionId])
 }
 
 // The 5 pillars of Verbindend Gezag / Nieuwe Autoriteit (Haim Omer) this
