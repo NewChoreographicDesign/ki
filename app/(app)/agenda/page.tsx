@@ -58,6 +58,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
                     description: a.description,
                     clientId: a.clientId,
                     clientName: a.client ? fullName(a.client) : null,
+                    createdByName: a.createdBy.name,
                     startAtDisplay: formatDateTime(a.startAt),
                     startAtLocal: toDatetimeLocalValue(a.startAt),
                     endAtLocal: a.endAt ? toDatetimeLocalValue(a.endAt) : null,

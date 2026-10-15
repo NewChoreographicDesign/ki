@@ -16,6 +16,7 @@ export type AppointmentRow = {
   description: string | null;
   clientId: string | null;
   clientName: string | null;
+  createdByName: string;
   startAtDisplay: string;
   startAtLocal: string;
   endAtLocal?: string | null;
@@ -135,6 +136,7 @@ export function AppointmentList({
                     {a.seriesId && <span className="ml-2 rounded-full bg-surface2 px-2 py-0.5 text-[11px] text-slate-400">reeks</span>}
                   </span>
                   {a.clientName && <span className="text-sm text-slate-400">{a.clientName}</span>}
+                  <span className="text-xs text-slate-500">Toegevoegd door {a.createdByName}</span>
                   {a.description && <span className="text-sm text-slate-500">{a.description}</span>}
                 </div>
                 <Button size="icon" variant="ghost" onClick={() => setEditingId(a.id)} aria-label="Afspraak bewerken">

@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     const rows = await db.appointment.findMany({
       // An afspraak that started before `from` but runs into it still shows.
       where: { startAt: { gte: new Date(from.getTime() - 86_400_000), lt: to } },
-      include: { client: { select: { id: true, firstName: true, lastName: true, room: true } } },
+      include: { client: { select: { id: true, firstName: true, lastName: true, room: true } }, createdBy: { select: { name: true } } },
       orderBy: { startAt: "asc" },
     });
     const appointments = rows
@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
         description: a.description,
         clientId: a.clientId,
         clientName: a.client ? fullName(a.client) : null,
+        createdByName: a.createdBy.name,
         startAt: a.startAt.toISOString(),
         endAt: a.endAt ? a.endAt.toISOString() : null,
         seriesId: a.seriesId,

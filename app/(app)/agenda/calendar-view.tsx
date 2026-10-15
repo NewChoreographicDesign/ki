@@ -15,6 +15,7 @@ type ApiAppointment = {
   description: string | null;
   clientId: string | null;
   clientName: string | null;
+  createdByName: string;
   startAt: string;
   endAt: string | null;
   seriesId: string | null;
@@ -444,6 +445,7 @@ export function CalendarView({ clients }: { clients: { id: string; name: string 
                   {selected.endAt ? ` – ${fmtHM(minutesOf(new Date(selected.endAt)))}` : ""}
                 </p>
                 {selected.clientName && <p className="text-sm text-slate-300">{selected.clientName}</p>}
+                <p className="text-xs text-slate-500">Toegevoegd door {selected.createdByName}</p>
                 {selected.seriesId && (
                   <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
                     <Repeat className="h-3 w-3" /> Onderdeel van een reeks
