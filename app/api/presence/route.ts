@@ -1,36 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
-import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { handleApiError } from "@/lib/api";
-import { startOfToday } from "@/lib/utils";
+import { presenceChangeSchema } from "@/lib/validations";
+import { loadPresenceBoard, PresenceConflictError, submitPresenceChange } from "@/lib/presence";
+import { summarizePresence } from "@/lib/presence-shared";
 
-const toggleSchema = z.object({
-  clientId: z.string().min(1),
-  present: z.boolean(),
-  comment: z.string().trim().max(1000).optional().or(z.literal("")),
-});
+// Live snapshot for the board (it polls while the tab is visible). Always the
+// freshest state, never cached: a stale "aanwezig" is worse than no data.
+export async function GET() {
+  try {
+    await requireAuth();
+    const entries = await loadPresenceBoard();
+    return NextResponse.json({ entries, summary: summarizePresence(entries), serverTime: new Date().toISOString() }, { headers: { "cache-control": "no-store" } });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
 
+// One change. A stale edit (somebody else changed this client since the
+// editor loaded it) answers 409 with the current state instead of silently
+// overwriting; the client may resend with force.
 export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth();
-    const body = await request.json();
-    const { clientId, present, comment } = toggleSchema.parse(body);
+    const input = presenceChangeSchema.parse(await request.json());
 
-    const client = await db.client.findUnique({ where: { id: clientId } });
-    if (!client) {
-      return NextResponse.json({ error: "Cliënt niet gevonden" }, { status: 404 });
+    try {
+      const { entry } = await submitPresenceChange(session, {
+        clientId: input.clientId,
+        status: input.status,
+        expectedReturnAt: input.expectedReturnAt ? new Date(input.expectedReturnAt) : null,
+        comment: input.comment,
+        since: input.since,
+        force: input.force,
+      });
+      return NextResponse.json({ ok: true, entry });
+    } catch (error) {
+      if (error instanceof PresenceConflictError) {
+        return NextResponse.json({ error: `${error.current.changedByName ?? "Een collega"} heeft dit zojuist gewijzigd`, conflict: true, current: error.current }, { status: 409 });
+      }
+      throw error;
     }
-
-    const date = startOfToday();
-
-    const presence = await db.presence.upsert({
-      where: { clientId_date: { clientId, date } },
-      update: { present, comment: comment || null, userId: session.sub },
-      create: { clientId, date, present, comment: comment || null, userId: session.sub },
-    });
-
-    return NextResponse.json({ ok: true, presence });
   } catch (error) {
     return handleApiError(error);
   }

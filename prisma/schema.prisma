@@ -72,6 +72,7 @@ model User {
   reports          Report[]
   medicationChecks MedicationCheck[]
   presences        Presence[]
+  presenceEvents   PresenceEvent[]
   handovers            Handover[]         @relation("HandoverAuthor")
   handoversResolved    Handover[]         @relation("HandoverResolvedBy")
   handoversEdited      Handover[]         @relation("HandoverEditedBy")
@@ -170,6 +171,7 @@ model Client {
   medications  Medication[]
   weekPlans    WeekPlan[]
   presences    Presence[]
+  presenceEvents PresenceEvent[]
   appointments Appointment[]
   handovers    Handover[]
   interventionClients InterventionClient[]
@@ -501,12 +503,46 @@ model Presence {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   date      DateTime
   present   Boolean
+  // Why (or whether) a client is in the house. Only AANWEZIG counts as
+  // present — `present` above is kept in sync with it for any old code
+  // still reading that flag. VERMIST is the one status that raises an
+  // alert to the whole team: an unplanned absence nobody can account for.
+  status    PresenceStatus @default(AANWEZIG)
+  // When an absent client is expected back; drives the "te laat" signal.
+  expectedReturnAt DateTime?
   comment   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([clientId, date])
   @@index([date])
+}
+
+enum PresenceStatus {
+  AANWEZIG
+  LOGEREN // logeerweekend / bij familie of naasten
+  DAGBESTEDING // dagbesteding, school, werk
+  ZIEKENHUIS // ziekenhuis / medische afspraak buiten de deur
+  VERLOF // vakantie of verlof
+  ANDERS // andere geplande afwezigheid
+  VERMIST // onverwacht afwezig, niet te bereiken of niet teruggekeerd
+}
+
+// Append-only trail of every presence change: who set what, when, and the
+// expected return. Powers the history sheet. Never edited, only deleted
+// together with the client.
+model PresenceEvent {
+  id               String         @id @default(cuid())
+  clientId         String
+  client           Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status           PresenceStatus
+  expectedReturnAt DateTime?
+  comment          String?
+  createdAt        DateTime       @default(now())
+
+  @@index([clientId, createdAt])
 }
 
 // Handover notes are written per room (client) — or with clientId left empty

@@ -4,7 +4,8 @@ import {
   reportSchema,
   medicationSchema,
   medicationCheckSchema,
-  presenceSchema,
+  presenceChangeSchema,
+  presenceBulkSchema,
   todoSchema,
   clientSchema,
   settingSchema,
@@ -123,14 +124,30 @@ describe("medicationCheckSchema", () => {
   });
 });
 
-describe("presenceSchema", () => {
-  it("accepts a valid presence entry", () => {
-    const result = presenceSchema.safeParse({
+describe("presenceChangeSchema", () => {
+  it("accepts a valid presence change", () => {
+    const result = presenceChangeSchema.safeParse({
       clientId: "abc",
-      date: "01-01-2026",
-      present: true,
+      status: "AANWEZIG",
     });
     expect(result.success).toBe(true);
+  });
+
+  it("rejects an unknown status", () => {
+    const result = presenceChangeSchema.safeParse({ clientId: "abc", status: "ONBEKEND" });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("presenceBulkSchema", () => {
+  it("accepts a valid bulk change", () => {
+    const result = presenceBulkSchema.safeParse({ clientIds: ["abc", "def"], status: "AANWEZIG" });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects VERMIST in bulk", () => {
+    const result = presenceBulkSchema.safeParse({ clientIds: ["abc"], status: "VERMIST" });
+    expect(result.success).toBe(false);
   });
 });
 

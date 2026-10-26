@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { SETTING_KEYS } from "@/lib/utils";
 import { HANDOVER_CATEGORIES, HANDOVER_MAX_CONTENT, HANDOVER_PRIORITIES } from "@/lib/handover-shared";
+import { PRESENCE_BULK_MAX, PRESENCE_MAX_COMMENT, PRESENCE_STATUSES } from "@/lib/presence-shared";
 
 const ddmmyyyy = /^\d{2}-\d{2}-\d{4}$/;
 const timeOfDay = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -137,11 +138,28 @@ export const medicationCheckResetSchema = z.object({
   birthDate: z.string().regex(ddmmyyyy, "Gebruik het formaat DD-MM-JJJJ"),
 });
 
-export const presenceSchema = z.object({
+const presenceReturnAt = z.string().datetime({ offset: true }).nullable().optional();
+const presenceComment = z.string().trim().max(PRESENCE_MAX_COMMENT).optional().default("");
+
+// One presence change. `since` is the version the editor saw (conflict
+// detection), `force` overrides a conflict.
+export const presenceChangeSchema = z.object({
   clientId: z.string().min(1),
-  date: z.string().regex(ddmmyyyy),
-  present: z.boolean(),
-  comment: z.string().trim().max(1000).optional().or(z.literal("")),
+  status: z.enum(PRESENCE_STATUSES),
+  expectedReturnAt: presenceReturnAt,
+  comment: presenceComment,
+  since: z.string().max(40).nullable().optional(),
+  force: z.boolean().optional(),
+});
+
+// Several clients at once (e.g. a group leaving for dagbesteding). VERMIST is
+// refused here on purpose: reporting someone missing is always a single,
+// deliberate action.
+export const presenceBulkSchema = z.object({
+  clientIds: z.array(z.string().min(1)).min(1).max(PRESENCE_BULK_MAX),
+  status: z.enum(PRESENCE_STATUSES).refine((s) => s !== "VERMIST", { message: "Vermist meld je per cliënt" }),
+  expectedReturnAt: presenceReturnAt,
+  comment: presenceComment,
 });
 
 export const handoverSchema = z.object({
