@@ -103,6 +103,9 @@ export const medicationSchema = z
     times: z.string().trim().max(200).optional().or(z.literal("")),
     asNeeded: z.boolean().optional(),
     active: z.boolean().optional(),
+    // ATC code (optional) — only input the interaction checker
+    // (lib/medication-interactions.ts) matches against.
+    atcCode: z.string().trim().max(20).optional().or(z.literal("")),
   })
   .refine((data) => data.asNeeded || !!data.times, {
     message: "Kies tijden of \"Indien nodig\"",

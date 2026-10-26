@@ -7,6 +7,7 @@ import { getSession } from "@/lib/auth";
 import { fullName, mostRecentMondayStart, startOfToday, parseMedicationTimes, formatTime } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { MedicationInteractionPanel } from "@/components/medication-interaction-panel";
 import { MedicationCheckForm } from "./medication-check-form";
 import { MedicationCheckList, type MedicationCheckRow } from "./medication-check-list";
 
@@ -62,6 +63,8 @@ export default async function ClientMedicationPage({
         <h1 className="text-2xl font-semibold text-slate-50">{fullName(client)}</h1>
         <p className="mt-1 text-slate-400">Medicatieoverzicht</p>
       </div>
+
+      {client.medications.length >= 2 && <MedicationInteractionPanel clientId={clientId} canAck={canManage} />}
 
       {client.medications.length === 0 ? (
         <p className="text-slate-500">Geen actieve medicatie voor deze cliënt.</p>

@@ -19,6 +19,7 @@ export type MedicationRow = {
   times: string;
   asNeeded: boolean;
   active: boolean;
+  atcCode: string | null;
   clientName: string;
 };
 
@@ -36,6 +37,7 @@ export function MedicationManager({
   const [instructions, setInstructions] = React.useState("");
   const [times, setTimes] = React.useState("");
   const [asNeeded, setAsNeeded] = React.useState(false);
+  const [atcCode, setAtcCode] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
 
@@ -46,7 +48,7 @@ export function MedicationManager({
       const res = await fetch("/api/backend/medications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientId, name, dosage, instructions, times, asNeeded }),
+        body: JSON.stringify({ clientId, name, dosage, instructions, times, asNeeded, atcCode }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -59,6 +61,7 @@ export function MedicationManager({
       setInstructions("");
       setTimes("");
       setAsNeeded(false);
+      setAtcCode("");
       router.refresh();
     } catch {
       toast.error("Er is iets misgegaan");
@@ -148,9 +151,21 @@ export function MedicationManager({
               />
               Indien nodig — geen vaste tijden, geen meldingen
             </label>
-            <div>
-              <Label htmlFor="instructions">Instructies (optioneel)</Label>
-              <Input id="instructions" value={instructions} onChange={(e) => setInstructions(e.target.value)} />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="instructions">Instructies (optioneel)</Label>
+                <Input id="instructions" value={instructions} onChange={(e) => setInstructions(e.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor="atcCode">ATC-code (optioneel)</Label>
+                <Input
+                  id="atcCode"
+                  value={atcCode}
+                  onChange={(e) => setAtcCode(e.target.value.toUpperCase())}
+                  placeholder="Bijv. N02BE01"
+                />
+                <p className="mt-1 text-xs text-slate-500">Nodig voor de interactiecontrole — laat leeg als onbekend.</p>
+              </div>
             </div>
             <Button
               type="submit"
@@ -234,6 +249,7 @@ function MedicationEditRow({
   const [instructions, setInstructions] = React.useState(medication.instructions ?? "");
   const [times, setTimes] = React.useState(medication.times);
   const [asNeeded, setAsNeeded] = React.useState(medication.asNeeded);
+  const [atcCode, setAtcCode] = React.useState(medication.atcCode ?? "");
   const [loading, setLoading] = React.useState(false);
 
   async function handleSave() {
@@ -242,7 +258,7 @@ function MedicationEditRow({
       const res = await fetch(`/api/backend/medications/${medication.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, dosage, instructions, times, asNeeded }),
+        body: JSON.stringify({ name, dosage, instructions, times, asNeeded, atcCode }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -291,13 +307,24 @@ function MedicationEditRow({
           />
           Indien nodig — geen vaste tijden, geen meldingen
         </label>
-        <div>
-          <Label htmlFor={`instructions-${medication.id}`}>Instructies (optioneel)</Label>
-          <Input
-            id={`instructions-${medication.id}`}
-            value={instructions}
-            onChange={(e) => setInstructions(e.target.value)}
-          />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <Label htmlFor={`instructions-${medication.id}`}>Instructies (optioneel)</Label>
+            <Input
+              id={`instructions-${medication.id}`}
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor={`atcCode-${medication.id}`}>ATC-code (optioneel)</Label>
+            <Input
+              id={`atcCode-${medication.id}`}
+              value={atcCode}
+              onChange={(e) => setAtcCode(e.target.value.toUpperCase())}
+              placeholder="Bijv. N02BE01"
+            />
+          </div>
         </div>
         <div className="flex gap-2">
           <Button loading={loading} disabled={!name || !dosage || (!asNeeded && !times)} onClick={handleSave}>

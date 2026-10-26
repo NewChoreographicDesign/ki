@@ -84,6 +84,7 @@ model User {
   appointmentsCreated  Appointment[]      @relation("AppointmentCreatedBy")
   appointmentsAssigned Appointment[]      @relation("AppointmentAssignee")
   appointmentEvents    AppointmentEvent[]
+  interactionAcks  InteractionAck[]
   shifts           Shift[]
   weekPlans        WeekPlan[]
   documents        Document[]
@@ -174,6 +175,7 @@ model Client {
   interventionClients InterventionClient[]
   interventionPlans InterventionPlan[]
   todos        Todo[]       @relation("TodoClient")
+  interactionAcks InteractionAck[]
 
   @@index([active])
 }
@@ -261,6 +263,10 @@ model Medication {
   // of times a day.
   asNeeded      Boolean  @default(false)
   active        Boolean  @default(true)
+  // ATC code (optional, admin-entered) — the only thing the interaction
+  // checker (lib/medication-interactions.ts) matches against. Left empty,
+  // a medication is simply invisible to that check; nothing else uses it.
+  atcCode       String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -273,6 +279,58 @@ enum MedicationCheckStatus {
   TAKEN // Afgevinkt: ingenomen zoals voorgeschreven.
   LEAVE // Verlof: cliënt afwezig, geen inname aan de orde.
   NOT_TAKEN // Niet ingenomen: aanwezig maar bewust/onbewust niet ingenomen.
+}
+
+// Interaction/duplicate-therapy rules from a licensed extract an admin
+// imports (see app/api/backend/medication-interactions/import/route.ts).
+// This app holds no interaction knowledge of its own — with no rows here,
+// the check simply has nothing to find. Global, not per-client: one shared
+// reference table, like the rest of a pharmaceutical dataset would be.
+model DrugInteraction {
+  id       String  @id @default(cuid())
+  atcA     String
+  atcB     String
+  severity Int
+  label    String?
+  text     String
+  source   String
+
+  @@index([atcA])
+  @@index([atcB])
+}
+
+// One row: which extract is currently loaded. Importing again replaces
+// both this and every DrugInteraction row (see importInteractions).
+model InteractionDataset {
+  id          String   @id @default(cuid())
+  source      String
+  version     String
+  rowCount    Int
+  maxSeverity Int
+  // From which severity rank onward a finding needs an explicit review
+  // before it's considered handled (see requiresAck).
+  ackFromRank Int
+  importedAt  DateTime @default(now())
+}
+
+// "Reviewed": who looked at one interacting/duplicate pair for one client,
+// when, and why — valid only until either medication in the pair changes
+// (see fingerprint/ackStateFor in lib/medication-interactions.ts).
+model InteractionAck {
+  id            String   @id @default(cuid())
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  kind          String // INTERACTION | DUPLICATE
+  medicationA   String
+  medicationB   String
+  fingerprint   String
+  severity      Int?
+  reason        String
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+
+  @@index([clientId])
 }
 
 // Irreversible audit log: no update/delete allowed at the API layer.

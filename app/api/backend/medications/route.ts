@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
         instructions: data.instructions || null,
         times: data.asNeeded ? "" : data.times || "",
         asNeeded: data.asNeeded ?? false,
+        atcCode: data.atcCode || null,
       },
     });
 

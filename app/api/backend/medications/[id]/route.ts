@@ -13,6 +13,7 @@ const patchSchema = z.object({
   instructions: z.string().trim().max(1000).optional().or(z.literal("")),
   times: z.string().trim().max(200).optional().or(z.literal("")),
   asNeeded: z.boolean().optional(),
+  atcCode: z.string().trim().max(20).optional().or(z.literal("")),
 });
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -26,6 +27,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       data: {
         ...data,
         instructions: data.instructions === "" ? null : data.instructions,
+        atcCode: data.atcCode === "" ? null : data.atcCode,
         // A full edit-form save always sends asNeeded explicitly — force
         // times to "" in that case regardless of what the client sent, so
         // a stale/leftover times value can never sneak back onto a PRN
