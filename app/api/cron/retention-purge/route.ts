@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { isAuthorizedCronRequest } from "@/lib/cron";
+import { handoverPurgeWhere } from "@/lib/handover";
 
 // Purges old AuditLog rows, plus Handover notes that have already expired.
 // Deliberately does NOT touch actual care records (Report, MedicationCheck,
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
   const cutoff = new Date(Date.now() - RETENTION_MS);
   const [{ count: auditDeleted }, { count: handoversDeleted }] = await Promise.all([
     db.auditLog.deleteMany({ where: { createdAt: { lt: cutoff } } }),
-    db.handover.deleteMany({ where: { expiresAt: { lt: new Date() } } }),
+    db.handover.deleteMany({ where: handoverPurgeWhere() }),
   ]);
 
   return NextResponse.json({ ok: true, deleted: auditDeleted, handoversDeleted });

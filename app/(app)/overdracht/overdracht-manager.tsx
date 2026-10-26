@@ -2,181 +2,155 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { Plus, ChevronDown, Trash2, Clock, DoorOpen, AlertTriangle, CheckCircle2, Users } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertTriangle, ListChecks, Plus, StickyNote, ClipboardList, Workflow } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { formatDateTime, shiftLabel, shiftBadgeVariant } from "@/lib/utils";
-import { InterventionPlanSection, type InterventionPlanRow } from "./intervention-plan-panel";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { isOpenAction, isUnread, type HandoverDigest, type HandoverNote } from "@/lib/handover-shared";
+import { type InterventionPlanRow } from "./intervention-plan-panel";
+import { ClientPlanCard, InterventionCard, NewInterventionForm, type InterventionRow } from "./interventions-panel";
+import { HandoverBoard } from "./handover-board";
+import { HandoverComposer, type ComposerClient } from "./handover-composer";
+import { HandoverDigestPanel } from "./handover-digest";
 
-export type HandoverRow = {
-  id: string;
-  content: string;
-  shift: "MORNING" | "EVENING" | "NIGHT";
-  userName: string;
-  createdAt: string;
-  expiresAt: string;
-  clientName: string | null;
-  /** Client's room, "Geen kamer" if the client has none, or null when this is a general note. */
-  room: string | null;
-};
+export type { InterventionRow };
 
-export type InterventionNoteRow = {
-  id: string;
-  content: string;
-  authorName: string;
-  createdAt: string;
-};
-
-export type InterventionRow = {
-  id: string;
-  /** True when this covers every active client, instead of a hand-picked list. */
-  wholeGroup: boolean;
-  /** Empty when wholeGroup is true — the membership is implicit. */
-  clients: { id: string; name: string; room: string | null }[];
-  description: string;
-  goal: string;
-  stepsTaken: string;
-  followUpNeeded: string;
-  status: "OPEN" | "AFGEROND";
-  createdByName: string;
-  createdAt: string;
-  closedByName: string | null;
-  closedAt: string | null;
-  notes: InterventionNoteRow[];
-};
-
-const ALGEMEEN = "Algemeen";
-
-type View = "overdracht" | "interventies" | "plannen";
+type View = "notities" | "overzicht" | "interventies" | "plannen";
+const VIEWS: View[] = ["notities", "overzicht", "interventies", "plannen"];
 
 export function OverdrachtManager({
-  handovers,
+  notes,
+  digest,
   interventions,
   plans,
   clients,
-  canDelete,
+  viewerId,
+  canPrint,
 }: {
-  handovers: HandoverRow[];
+  notes: HandoverNote[];
+  digest: HandoverDigest;
   interventions: InterventionRow[];
   plans: InterventionPlanRow[];
-  clients: { id: string; name: string; room: string | null }[];
-  canDelete: boolean;
+  clients: ComposerClient[];
+  viewerId: string;
+  canPrint: boolean;
 }) {
   const router = useRouter();
-  const [view, setView] = React.useState<View>("overdracht");
-  const [formOpen, setFormOpen] = React.useState(false);
+  const [view, setView] = React.useState<View>("notities");
+  const [composerOpen, setComposerOpen] = React.useState(false);
+  const [editing, setEditing] = React.useState<HandoverNote | null>(null);
   const [interventionFormOpen, setInterventionFormOpen] = React.useState(false);
 
-  const grouped = React.useMemo(() => groupByRoom(handovers), [handovers]);
+  // The active tab lives in the URL hash so a refresh or a shared link lands in the same place.
+  React.useEffect(() => {
+    const fromHash = window.location.hash.replace("#", "") as View;
+    if (VIEWS.includes(fromHash)) setView(fromHash);
+  }, []);
+  function selectView(next: View) {
+    setView(next);
+    window.history.replaceState(null, "", `#${next}`);
+  }
+
+  const unread = React.useMemo(() => notes.filter((n) => isUnread(n, viewerId)).length, [notes, viewerId]);
+  const openActions = React.useMemo(() => notes.filter(isOpenAction).length, [notes]);
   const openInterventions = React.useMemo(() => interventions.filter((i) => i.status === "OPEN"), [interventions]);
   const activePlanCount = React.useMemo(() => plans.filter((p) => p.status === "ACTIEF").length, [plans]);
 
-  function refresh() {
-    router.refresh();
-  }
+  const refresh = React.useCallback(() => router.refresh(), [router]);
+  const openComposer = React.useCallback(() => {
+    setEditing(null);
+    setComposerOpen(true);
+  }, []);
+
+  const tabs: { key: View; label: string; count?: number; dot?: boolean; icon: typeof StickyNote }[] = [
+    { key: "notities", label: "Notities", count: notes.length, dot: unread > 0, icon: StickyNote },
+    { key: "overzicht", label: "Dienstoverzicht", icon: ListChecks },
+    { key: "interventies", label: "Interventies", count: interventions.length, icon: ClipboardList },
+    { key: "plannen", label: "Interventieplan", count: activePlanCount, icon: Workflow },
+  ];
 
   return (
-    <div className="flex flex-col gap-6">
-      {openInterventions.length > 0 && (
-        <Card className="border-rose-500/30">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <AlertTriangle className="h-4.5 w-4.5 text-rose-400" />
-              Openstaande interventies ({openInterventions.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            {openInterventions.map((i) => (
-              <InterventionCard key={i.id} intervention={i} onChanged={refresh} />
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="flex gap-2 border-b border-border">
-        <button
-          type="button"
-          onClick={() => setView("overdracht")}
-          className={`px-1 pb-3 text-sm font-medium transition-colors ${
-            view === "overdracht" ? "border-b-2 border-rose-400 text-slate-100" : "text-slate-500 hover:text-slate-300"
-          }`}
-        >
-          Overdracht
-        </button>
-        <button
-          type="button"
-          onClick={() => setView("interventies")}
-          className={`px-1 pb-3 text-sm font-medium transition-colors ${
-            view === "interventies" ? "border-b-2 border-rose-400 text-slate-100" : "text-slate-500 hover:text-slate-300"
-          }`}
-        >
-          Interventies ({interventions.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setView("plannen")}
-          className={`px-1 pb-3 text-sm font-medium transition-colors ${
-            view === "plannen" ? "border-b-2 border-rose-400 text-slate-100" : "text-slate-500 hover:text-slate-300"
-          }`}
-        >
-          Interventieplan ({activePlanCount})
-        </button>
+    <div className="flex flex-col gap-5">
+      <div className="flex items-center justify-between gap-3">
+        <div role="tablist" aria-label="Overdracht" className="-mx-4 flex flex-1 gap-1 overflow-x-auto border-b border-border px-4 sm:mx-0 sm:px-0">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              role="tab"
+              aria-selected={view === t.key}
+              onClick={() => selectView(t.key)}
+              className={cn(
+                "relative flex h-11 shrink-0 items-center gap-2 border-b-2 px-3 text-sm font-medium transition-colors",
+                view === t.key ? "border-rose-400 text-slate-100" : "border-transparent text-slate-500 hover:text-slate-300"
+              )}
+            >
+              <t.icon className="h-4 w-4" />
+              {t.label}
+              {t.count !== undefined && <span className="text-xs tabular-nums text-slate-500">{t.count}</span>}
+              {t.dot && (
+                <span className="absolute right-1 top-2 flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400/60 motion-reduce:hidden" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-rose-400" />
+                  <span className="sr-only">{unread} ongelezen</span>
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+        {view === "notities" && (
+          <Button size="sm" onClick={openComposer} className="hidden shrink-0 sm:inline-flex">
+            <Plus className="h-4 w-4" /> Nieuwe overdracht
+          </Button>
+        )}
       </div>
 
-      {view === "overdracht" && (
-        <>
-          <div>
-            {!formOpen && (
-              <div className="mb-3 flex justify-end">
-                <Button size="sm" variant="outline" onClick={() => setFormOpen(true)}>
-                  <Plus className="h-4 w-4" /> Nieuwe overdracht
-                </Button>
-              </div>
-            )}
-            {formOpen && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Nieuwe overdracht</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <NewHandoverForm
-                    clients={clients}
-                    onSaved={() => {
-                      setFormOpen(false);
-                      refresh();
-                    }}
-                    onCancel={() => setFormOpen(false)}
-                  />
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-3">
-            {grouped.rooms.length === 0 && grouped.algemeen.length === 0 ? (
-              <p className="text-slate-500">Geen actieve overdrachtnotities.</p>
-            ) : (
-              <>
-                {grouped.rooms.map(({ room, items }) => (
-                  <RoomSection key={room} title={room} items={items} canDelete={canDelete} router={router} />
-                ))}
-                {grouped.algemeen.length > 0 && (
-                  <RoomSection title={ALGEMEEN} items={grouped.algemeen} canDelete={canDelete} router={router} />
-                )}
-              </>
-            )}
-          </div>
-        </>
+      {(openActions > 0 || openInterventions.length > 0) && view !== "interventies" && (
+        <div className="flex flex-wrap gap-2 text-sm">
+          {openActions > 0 && view !== "notities" && (
+            <button type="button" onClick={() => selectView("notities")} className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-500/10 px-3.5 py-1.5 text-amber-300">
+              <AlertTriangle className="h-4 w-4" /> {openActions} open actie{openActions === 1 ? "" : "s"} in de notities
+            </button>
+          )}
+          {openInterventions.length > 0 && (
+            <button type="button" onClick={() => selectView("interventies")} className="inline-flex items-center gap-2 rounded-full border border-rose-500/30 bg-rose-500/10 px-3.5 py-1.5 text-rose-300">
+              <AlertTriangle className="h-4 w-4" /> {openInterventions.length} openstaande interventie{openInterventions.length === 1 ? "" : "s"}
+            </button>
+          )}
+        </div>
       )}
+
+      {view === "notities" && (
+        <HandoverBoard
+          notes={notes}
+          viewerId={viewerId}
+          onCompose={openComposer}
+          onEdit={(n) => {
+            setEditing(n);
+            setComposerOpen(true);
+          }}
+        />
+      )}
+
+      {view === "overzicht" && <HandoverDigestPanel digest={digest} canPrint={canPrint} />}
 
       {view === "interventies" && (
         <>
+          {openInterventions.length > 0 && (
+            <Card className="border-rose-500/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <AlertTriangle className="h-4.5 w-4.5 text-rose-400" />
+                  Openstaande interventies ({openInterventions.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                {openInterventions.map((i) => (
+                  <InterventionCard key={i.id} intervention={i} onChanged={refresh} />
+                ))}
+              </CardContent>
+            </Card>
+          )}
           <div>
             {!interventionFormOpen && (
               <div className="mb-3 flex justify-end">
@@ -203,12 +177,11 @@ export function OverdrachtManager({
               </Card>
             )}
           </div>
-
           <div className="flex flex-col gap-3">
             {interventions.length === 0 ? (
               <p className="text-slate-500">Nog geen interventies geregistreerd.</p>
             ) : (
-              interventions.map((i) => <InterventionCard key={i.id} intervention={i} onChanged={refresh} />)
+              interventions.filter((i) => i.status !== "OPEN").map((i) => <InterventionCard key={i.id} intervention={i} onChanged={refresh} />)
             )}
           </div>
         </>
@@ -217,581 +190,29 @@ export function OverdrachtManager({
       {view === "plannen" && (
         <div className="flex flex-col gap-3">
           <p className="text-sm text-slate-400">
-            Een interventieplan is een team-traject: een vooraf gepland doel, uitgewerkt per pijler van
-            Verbindend Gezag — los van losse interventies.
+            Een interventieplan is een team-traject: een vooraf gepland doel, uitgewerkt per pijler van Verbindend Gezag — los van losse interventies.
           </p>
           {clients.length === 0 ? (
             <p className="text-slate-500">Geen actieve cliënten gevonden.</p>
           ) : (
-            clients.map((c) => (
-              <ClientPlanCard
-                key={c.id}
-                client={c}
-                plans={plans.filter((p) => p.clientId === c.id)}
-                onChanged={refresh}
-              />
-            ))
+            clients.map((c) => <ClientPlanCard key={c.id} client={c} plans={plans.filter((p) => p.clientId === c.id)} onChanged={refresh} />)
           )}
         </div>
       )}
-    </div>
-  );
-}
 
-// Same grouping convention as protocollen: real rooms first (alphabetically)
-// then "Geen kamer"; general (no client) notes get their own Algemeen section.
-function groupByRoom(handovers: HandoverRow[]) {
-  const byRoom = new Map<string, HandoverRow[]>();
-  const algemeen: HandoverRow[] = [];
-  for (const h of handovers) {
-    if (h.room === null) {
-      algemeen.push(h);
-      continue;
-    }
-    const list = byRoom.get(h.room);
-    if (list) list.push(h);
-    else byRoom.set(h.room, [h]);
-  }
-  const rank = (room: string) => (room === "Geen kamer" ? 1 : 0);
-  const rooms = Array.from(byRoom.entries())
-    .map(([room, items]) => ({ room, items }))
-    .sort((a, b) => rank(a.room) - rank(b.room) || a.room.localeCompare(b.room));
-  return { rooms, algemeen };
-}
-
-function RoomSection({
-  title,
-  items,
-  canDelete,
-  router,
-}: {
-  title: string;
-  items: HandoverRow[];
-  canDelete: boolean;
-  router: ReturnType<typeof useRouter>;
-}) {
-  const [open, setOpen] = React.useState(false);
-
-  async function handleDelete(id: string) {
-    if (!window.confirm("Deze overdracht verwijderen? Dit kan niet ongedaan worden gemaakt.")) {
-      return;
-    }
-    try {
-      const res = await fetch(`/api/handovers/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error();
-      toast.success("Overdracht verwijderd");
-      router.refresh();
-    } catch {
-      toast.error("Verwijderen mislukt");
-    }
-  }
-
-  return (
-    <Card>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 bg-brand-gradient-soft p-5 text-left ring-1 ring-inset ring-rose-400/20 transition-colors hover:bg-rose-500/10"
-      >
-        <span className="flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/15 text-rose-400">
-            <DoorOpen className="h-5 w-5" />
-          </span>
-          <span className="flex flex-col">
-            <span className="font-semibold text-slate-100">{title}</span>
-            <span className="text-xs text-slate-500">
-              {items.length} overdracht{items.length === 1 ? "" : "en"}
-            </span>
-          </span>
-        </span>
-        <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && (
-        <CardContent className="flex flex-col gap-3 pt-3">
-          {items.map((h) => (
-            <div
-              key={h.id}
-              className="flex flex-col gap-2 rounded-xl border border-border bg-surface2/50 p-4 transition-colors hover:border-rose-500/30"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
-                  <Badge variant={shiftBadgeVariant(h.shift)}>{shiftLabel(h.shift)}</Badge>
-                  {h.clientName && <span className="text-slate-300">{h.clientName}</span>}
-                  <span>{h.userName}</span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5" />
-                    {formatDateTime(new Date(h.createdAt))}
-                  </span>
-                  <span className="text-slate-600">vervalt {formatDateTime(new Date(h.expiresAt))}</span>
-                </div>
-                {canDelete && (
-                  <Button size="icon" variant="ghost" onClick={() => handleDelete(h.id)} aria-label="Verwijderen">
-                    <Trash2 className="h-5 w-5 text-red-400" />
-                  </Button>
-                )}
-              </div>
-              <p className="whitespace-pre-wrap text-slate-200">{h.content}</p>
-            </div>
-          ))}
-        </CardContent>
-      )}
-    </Card>
-  );
-}
-
-function NewHandoverForm({
-  clients,
-  onSaved,
-  onCancel,
-}: {
-  clients: { id: string; name: string; room: string | null }[];
-  onSaved: () => void;
-  onCancel: () => void;
-}) {
-  const [content, setContent] = React.useState("");
-  const [clientId, setClientId] = React.useState("");
-  const [loading, setLoading] = React.useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const res = await fetch("/api/handovers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, clientId }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || "Opslaan mislukt");
-        return;
-      }
-      toast.success("Overdracht opgeslagen");
-      setContent("");
-      setClientId("");
-      onSaved();
-    } catch {
-      toast.error("Er is iets misgegaan");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div>
-        <Label htmlFor="client">Kamer / cliënt</Label>
-        <Select id="client" value={clientId} onChange={(e) => setClientId(e.target.value)}>
-          <option value="">Algemeen</option>
-          {clients.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.room ? `${c.room} · ${c.name}` : c.name}
-            </option>
-          ))}
-        </Select>
-      </div>
-      <div>
-        <Label htmlFor="content">Overdracht</Label>
-        <Textarea
-          id="content"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Wat moet de volgende dienst weten?"
-          className="min-h-[120px]"
-          required
-        />
-      </div>
-      <div className="flex gap-2">
-        <Button type="submit" loading={loading} disabled={!content} className="self-start">
-          Opslaan
-        </Button>
-        <Button type="button" variant="ghost" onClick={onCancel}>
-          Annuleren
-        </Button>
-      </div>
-    </form>
-  );
-}
-
-function NewInterventionForm({
-  clients,
-  onSaved,
-  onCancel,
-}: {
-  clients: { id: string; name: string; room: string | null }[];
-  onSaved: () => void;
-  onCancel: () => void;
-}) {
-  // Defaults to just the first client (the common case: one incident, one
-  // resident) rather than none, so the form isn't blocked on a selection
-  // most of the time — "hele groep" or picking more is an opt-in widen.
-  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(() => (clients[0] ? new Set([clients[0].id]) : new Set()));
-  const [description, setDescription] = React.useState("");
-  const [goal, setGoal] = React.useState("");
-  const [stepsTaken, setStepsTaken] = React.useState("");
-  const [followUpNeeded, setFollowUpNeeded] = React.useState("");
-  const [loading, setLoading] = React.useState(false);
-
-  const allSelected = clients.length > 0 && selectedIds.size === clients.length;
-
-  function toggleClient(id: string) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  function toggleWholeGroup(checked: boolean) {
-    setSelectedIds(checked ? new Set(clients.map((c) => c.id)) : new Set());
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const res = await fetch("/api/interventions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          allSelected ? { wholeGroup: true, description, goal, stepsTaken, followUpNeeded } : { clientIds: [...selectedIds], description, goal, stepsTaken, followUpNeeded }
-        ),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || "Opslaan mislukt");
-        return;
-      }
-      toast.success(allSelected ? "Interventie aangemaakt voor de hele groep" : selectedIds.size > 1 ? `Interventie aangemaakt voor ${selectedIds.size} cliënten` : "Interventie aangemaakt");
-      setDescription("");
-      setGoal("");
-      setStepsTaken("");
-      setFollowUpNeeded("");
-      onSaved();
-    } catch {
-      toast.error("Er is iets misgegaan");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  if (clients.length === 0) {
-    return <p className="text-slate-500">Geen actieve cliënten gevonden.</p>;
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <fieldset className="flex flex-col gap-3 rounded-xl border border-border bg-surface2/40 p-4">
-        <legend className="flex items-center gap-1.5 px-1 text-sm font-medium text-slate-300">
-          <Users className="h-4 w-4" /> Voor wie is deze interventie?
-        </legend>
-        <Checkbox checked={allSelected} onChange={toggleWholeGroup} className="text-sm font-medium text-slate-200">
-          Hele groep ({clients.length} cliënten)
-        </Checkbox>
-        <div className="flex max-h-56 flex-col gap-1 overflow-y-auto rounded-lg border border-border bg-surface1 p-2">
-          {clients.map((c) => (
-            <Checkbox key={c.id} checked={selectedIds.has(c.id)} onChange={() => toggleClient(c.id)} className="rounded-lg px-2 py-1.5 text-sm text-slate-200 hover:bg-surface2">
-              {c.room ? `${c.room} · ${c.name}` : c.name}
-            </Checkbox>
-          ))}
-        </div>
-        {!allSelected && selectedIds.size > 1 && (
-          <p className="px-1 text-xs text-slate-500">Wordt geregistreerd als één interventie voor {selectedIds.size} cliënten.</p>
-        )}
-      </fieldset>
-      <div>
-        <Label htmlFor="intervention-description">Wat is er gebeurd?</Label>
-        <Textarea
-          id="intervention-description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Beschrijf de situatie of aanleiding"
-          className="min-h-[90px]"
-          required
-        />
-      </div>
-      <div>
-        <Label htmlFor="intervention-goal">Doel van de interventie</Label>
-        <Textarea
-          id="intervention-goal"
-          value={goal}
-          onChange={(e) => setGoal(e.target.value)}
-          placeholder="Wat willen we bereiken?"
-          className="min-h-[70px]"
-          required
-        />
-      </div>
-      <div>
-        <Label htmlFor="intervention-steps">Genomen stappen</Label>
-        <Textarea
-          id="intervention-steps"
-          value={stepsTaken}
-          onChange={(e) => setStepsTaken(e.target.value)}
-          placeholder="Wat is er tot nu toe al gedaan?"
-          className="min-h-[70px]"
-          required
-        />
-      </div>
-      <div>
-        <Label htmlFor="intervention-followup">Benodigde vervolgstappen</Label>
-        <Textarea
-          id="intervention-followup"
-          value={followUpNeeded}
-          onChange={(e) => setFollowUpNeeded(e.target.value)}
-          placeholder="Wat moet er nog gebeuren?"
-          className="min-h-[70px]"
-          required
-        />
-      </div>
-      <div className="flex gap-2">
-        <Button
-          type="submit"
-          loading={loading}
-          disabled={selectedIds.size === 0 || !description || !goal || !stepsTaken || !followUpNeeded}
-          className="self-start"
+      {/* Thumb-reachable primary action on phones, where the header button is hidden. */}
+      {view === "notities" && (
+        <button
+          type="button"
+          onClick={openComposer}
+          aria-label="Nieuwe overdracht"
+          className="fixed bottom-24 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-brand-gradient text-white shadow-lift transition-transform active:scale-95 sm:hidden"
         >
-          {allSelected ? "Interventie aanmaken voor hele groep" : selectedIds.size > 1 ? `Interventie aanmaken (${selectedIds.size} cliënten)` : "Interventie aanmaken"}
-        </Button>
-        <Button type="button" variant="ghost" onClick={onCancel}>
-          Annuleren
-        </Button>
-      </div>
-    </form>
-  );
-}
-
-// Shared "dropdown" row for an intervention — used both in the pinned
-// "openstaande interventies" banner and the full Interventies list, so
-// adding a follow-up or closing works identically in both places.
-/** Compact header label: one client's "kamer · naam", "Hele groep", or a count for several. */
-function interventionSubjectLabel(i: InterventionRow): string {
-  if (i.wholeGroup) return "Hele groep";
-  if (i.clients.length === 1) {
-    const c = i.clients[0];
-    return c.room ? `${c.room} · ${c.name}` : c.name;
-  }
-  return `${i.clients.length} cliënten`;
-}
-
-function InterventionCard({ intervention: i, onChanged }: { intervention: InterventionRow; onChanged: () => void }) {
-  const [open, setOpen] = React.useState(false);
-  const [note, setNote] = React.useState("");
-  const [savingNote, setSavingNote] = React.useState(false);
-  const [closing, setClosing] = React.useState(false);
-  const isOpen = i.status === "OPEN";
-
-  async function handleAddNote(e: React.FormEvent) {
-    e.preventDefault();
-    setSavingNote(true);
-    try {
-      const res = await fetch(`/api/interventions/${i.id}/notes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: note }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || "Opslaan mislukt");
-        return;
-      }
-      toast.success("Vervolgnotitie toegevoegd");
-      setNote("");
-      onChanged();
-    } catch {
-      toast.error("Er is iets misgegaan");
-    } finally {
-      setSavingNote(false);
-    }
-  }
-
-  async function handleClose() {
-    if (!window.confirm(`Interventie voor ${interventionSubjectLabel(i)} afronden? Dit kan niet ongedaan worden gemaakt.`)) {
-      return;
-    }
-    setClosing(true);
-    try {
-      const res = await fetch(`/api/interventions/${i.id}/close`, { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || "Afronden mislukt");
-        return;
-      }
-      toast.success("Interventie afgerond");
-      onChanged();
-    } catch {
-      toast.error("Er is iets misgegaan");
-    } finally {
-      setClosing(false);
-    }
-  }
-
-  return (
-    <div className="overflow-hidden rounded-xl border border-border bg-surface2/50">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-surface2"
-      >
-        <span className="flex min-w-0 flex-col gap-1">
-          <span className="flex flex-wrap items-center gap-2">
-            <span className="font-medium text-slate-100">{interventionSubjectLabel(i)}</span>
-            <Badge variant={isOpen ? "red" : "forest"}>{isOpen ? "Open" : "Afgerond"}</Badge>
-            {(i.wholeGroup || i.clients.length > 1) && (
-              <Badge variant="slate" className="flex items-center gap-1">
-                <Users className="h-3 w-3" /> Groepsinterventie
-              </Badge>
-            )}
-          </span>
-          <span className="truncate text-sm text-slate-400">{i.goal}</span>
-        </span>
-        <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && (
-        <div className="flex flex-col gap-4 border-t border-border p-4">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-            <span>Aangemaakt door {i.createdByName}</span>
-            <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />
-              {formatDateTime(new Date(i.createdAt))}
-            </span>
-            {!isOpen && i.closedByName && i.closedAt && (
-              <span>· Afgerond door {i.closedByName} op {formatDateTime(new Date(i.closedAt))}</span>
-            )}
-          </div>
-
-          {(i.wholeGroup || i.clients.length > 1) && (
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Betrokken cliënten</p>
-              {i.wholeGroup ? (
-                <p className="mt-1 text-sm text-slate-200">Hele groep (alle actieve cliënten)</p>
-              ) : (
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {i.clients.map((c) => (
-                    <span key={c.id} className="rounded-full bg-surface1 px-2.5 py-1 text-xs text-slate-300">
-                      {c.room ? `${c.room} · ${c.name}` : c.name}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="Wat is er gebeurd?" value={i.description} />
-            <Field label="Doel" value={i.goal} />
-            <Field label="Genomen stappen" value={i.stepsTaken} />
-            <Field label="Benodigde vervolgstappen" value={i.followUpNeeded} />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-              Vervolgnotities ({i.notes.length})
-            </p>
-            {i.notes.length === 0 ? (
-              <p className="text-sm text-slate-500">Nog geen vervolgnotities.</p>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {i.notes.map((n) => (
-                  <div key={n.id} className="rounded-lg border border-border bg-surface1 p-3 text-sm">
-                    <div className="mb-1 flex items-center gap-2 text-xs text-slate-500">
-                      <span>{n.authorName}</span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {formatDateTime(new Date(n.createdAt))}
-                      </span>
-                    </div>
-                    <p className="whitespace-pre-wrap text-slate-200">{n.content}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {isOpen && (
-            <div className="flex flex-col gap-3 border-t border-border pt-3">
-              <form onSubmit={handleAddNote} className="flex flex-col gap-2">
-                <Label htmlFor={`note-${i.id}`}>Vervolgnotitie toevoegen</Label>
-                <Textarea
-                  id={`note-${i.id}`}
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Wat is er sindsdien gedaan?"
-                  className="min-h-[70px]"
-                  required
-                />
-                <div className="flex gap-2">
-                  <Button type="submit" size="sm" variant="outline" loading={savingNote} disabled={!note}>
-                    Notitie toevoegen
-                  </Button>
-                  <Button type="button" size="sm" variant="ghost" loading={closing} onClick={handleClose}>
-                    <CheckCircle2 className="h-4 w-4 text-forest-400" /> Interventie afronden
-                  </Button>
-                </div>
-              </form>
-            </div>
-          )}
-        </div>
+          <Plus className="h-6 w-6" />
+        </button>
       )}
-    </div>
-  );
-}
 
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 whitespace-pre-wrap text-sm text-slate-200">{value}</p>
-    </div>
-  );
-}
-
-// One row per client in the Interventieplan tab — collapsed by default,
-// same visual language as InterventionCard, but keyed to the client
-// directly rather than to any particular Intervention (see
-// InterventionPlanSection's own comment for why).
-function ClientPlanCard({
-  client,
-  plans,
-  onChanged,
-}: {
-  client: { id: string; name: string; room: string | null };
-  plans: InterventionPlanRow[];
-  onChanged: () => void;
-}) {
-  const [open, setOpen] = React.useState(false);
-  const activePlan = plans.find((p) => p.status === "ACTIEF");
-  const archivedCount = plans.filter((p) => p.status !== "ACTIEF").length;
-
-  return (
-    <div className="overflow-hidden rounded-xl border border-border bg-surface2/50">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-surface2"
-      >
-        <span className="flex min-w-0 flex-col gap-1">
-          <span className="flex flex-wrap items-center gap-2">
-            <span className="font-medium text-slate-100">
-              {client.room ? `${client.room} · ${client.name}` : client.name}
-            </span>
-            {activePlan ? (
-              <Badge variant="forest">Actief — versie {activePlan.version}</Badge>
-            ) : archivedCount > 0 ? (
-              <Badge variant="slate">Gearchiveerd ({archivedCount})</Badge>
-            ) : (
-              <Badge variant="slate">Geen plan</Badge>
-            )}
-          </span>
-          {activePlan && <span className="truncate text-sm text-slate-400">{activePlan.goal}</span>}
-        </span>
-        <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && (
-        <div className="border-t border-border p-4">
-          <InterventionPlanSection clientId={client.id} plans={plans} onChanged={onChanged} />
-        </div>
-      )}
+      <HandoverComposer open={composerOpen} onClose={() => setComposerOpen(false)} onSaved={refresh} clients={clients} editing={editing} />
     </div>
   );
 }

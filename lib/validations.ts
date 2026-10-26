@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { SETTING_KEYS } from "@/lib/utils";
+import { HANDOVER_CATEGORIES, HANDOVER_MAX_CONTENT, HANDOVER_PRIORITIES } from "@/lib/handover-shared";
 
 const ddmmyyyy = /^\d{2}-\d{2}-\d{4}$/;
 const timeOfDay = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -140,8 +141,30 @@ export const presenceSchema = z.object({
 });
 
 export const handoverSchema = z.object({
-  content: z.string().trim().min(3).max(5000),
+  content: z.string().trim().min(3).max(HANDOVER_MAX_CONTENT),
   clientId: z.string().optional().or(z.literal("")),
+  category: z.enum(HANDOVER_CATEGORIES).default("ALGEMEEN"),
+  priority: z.enum(HANDOVER_PRIORITIES).default("INFO"),
+  needsAction: z.boolean().default(false),
+});
+
+export const handoverUpdateSchema = z
+  .object({
+    content: z.string().trim().min(3).max(HANDOVER_MAX_CONTENT),
+    category: z.enum(HANDOVER_CATEGORIES),
+    priority: z.enum(HANDOVER_PRIORITIES),
+    needsAction: z.boolean(),
+  })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, { message: "Niets om te wijzigen" });
+
+export const handoverResolveSchema = z.object({
+  resolved: z.boolean(),
+  note: z.string().trim().max(500).optional(),
+});
+
+export const handoverAckAllSchema = z.object({
+  ids: z.array(z.string()).max(500).optional(),
 });
 
 export const createInterventionSchema = z

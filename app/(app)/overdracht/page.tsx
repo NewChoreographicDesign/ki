@@ -1,18 +1,21 @@
+import { redirect } from "next/navigation";
 import { Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { fullName, parseDaysOfWeek } from "@/lib/utils";
 import { getSession } from "@/lib/auth";
+import { loadHandoverNotes } from "@/lib/handover";
+import { collectHandoverDigest } from "@/lib/handover-digest";
 import { OverdrachtManager } from "./overdracht-manager";
 
 export const dynamic = "force-dynamic";
 
 export default async function OverdrachtPage() {
-  const [handovers, interventions, plans, clients, session] = await Promise.all([
-    db.handover.findMany({
-      where: { expiresAt: { gt: new Date() } },
-      include: { user: true, client: true },
-      orderBy: { createdAt: "desc" },
-    }),
+  const session = await getSession();
+  if (!session) redirect("/login");
+
+  const now = new Date();
+  const [notes, interventions, plans, clients] = await Promise.all([
+    loadHandoverNotes({ userId: session.sub, role: session.role }, now),
     db.intervention.findMany({
       include: {
         clients: { include: { client: true } },
@@ -24,9 +27,6 @@ export default async function OverdrachtPage() {
       // age), newest-created within each group.
       orderBy: [{ status: "asc" }, { createdAt: "desc" }],
     }),
-    // Plans are their own tab, scoped to a client directly — not nested
-    // under Intervention (see InterventionPlan's own schema.prisma
-    // comment for why) — so this is a separate top-level query.
     db.interventionPlan.findMany({
       include: {
         tasks: { include: { completedBy: true }, orderBy: { createdAt: "asc" } },
@@ -37,29 +37,22 @@ export default async function OverdrachtPage() {
       orderBy: { version: "desc" },
     }),
     db.client.findMany({ where: { active: true }, orderBy: { firstName: "asc" } }),
-    getSession(),
   ]);
+
+  const digest = await collectHandoverDigest(notes, now);
+  const unread = notes.filter((n) => !n.readByMe && n.authorId !== session.sub).length;
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-50">Overdracht</h1>
-        <p className="mt-1 text-slate-400">
-          Per kamer gegroepeerd, plus interventies per cliënt. Overdrachtnotities vervallen
-          automatisch 7 dagen na aanmaak — interventies blijven staan tot ze worden afgerond.
-        </p>
+        <p className="mt-1 text-slate-400">{unread > 0 ? `${unread} ongelezen notitie${unread === 1 ? "" : "s"}` : "je bent bij"}</p>
       </div>
       <OverdrachtManager
-        handovers={handovers.map((h) => ({
-          id: h.id,
-          content: h.content,
-          shift: h.shift,
-          userName: h.user.name,
-          createdAt: h.createdAt.toISOString(),
-          expiresAt: h.expiresAt.toISOString(),
-          clientName: h.client ? fullName(h.client) : null,
-          room: h.client ? h.client.room || "Geen kamer" : null,
-        }))}
+        notes={notes}
+        digest={digest}
+        viewerId={session.sub}
+        canPrint={session.role !== Role.INVALLER}
         interventions={interventions.map((i) => ({
           id: i.id,
           wholeGroup: i.wholeGroup,
@@ -124,7 +117,6 @@ export default async function OverdrachtPage() {
           })),
         }))}
         clients={clients.map((c) => ({ id: c.id, name: fullName(c), room: c.room }))}
-        canDelete={session?.role === Role.ADMIN}
       />
     </div>
   );

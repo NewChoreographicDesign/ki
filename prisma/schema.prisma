@@ -72,7 +72,10 @@ model User {
   reports          Report[]
   medicationChecks MedicationCheck[]
   presences        Presence[]
-  handovers        Handover[]
+  handovers            Handover[]         @relation("HandoverAuthor")
+  handoversResolved    Handover[]         @relation("HandoverResolvedBy")
+  handoversEdited      Handover[]         @relation("HandoverEditedBy")
+  handoverAcks         HandoverAck[]
   todosCreated     Todo[]             @relation("TodoCreatedBy")
   todosCompleted   Todo[]             @relation("TodoCompletedBy")
   todosAssigned    Todo[]             @relation("TodoAssignedTo")
@@ -399,12 +402,12 @@ model Presence {
 
 // Handover notes are written per room (client) — or with clientId left empty
 // for a general, not-room-specific note — and auto-expire 7 days after
-// creation (see app/api/handovers/route.ts). An admin can also delete one
-// outright before that.
+// creation (see app/api/handovers/route.ts). The author (within 24h) or an
+// admin can edit or delete one; see lib/handover-shared.ts#canEditHandover.
 model Handover {
   id        String    @id @default(cuid())
   userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User      @relation("HandoverAuthor", fields: [userId], references: [id], onDelete: Cascade)
   clientId  String?
   client    Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
   shift     ShiftType
@@ -412,8 +415,55 @@ model Handover {
   createdAt DateTime  @default(now())
   expiresAt DateTime
 
+  category HandoverCategory @default(ALGEMEEN)
+  priority HandoverPriority @default(INFO)
+
+  needsAction    Boolean   @default(false)
+  resolvedAt     DateTime?
+  resolvedById   String?
+  resolvedBy     User?     @relation("HandoverResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
+  resolutionNote String?
+
+  editedAt   DateTime?
+  editedById String?
+  editedBy   User?     @relation("HandoverEditedBy", fields: [editedById], references: [id], onDelete: SetNull)
+
+  acks HandoverAck[]
+
   @@index([expiresAt])
   @@index([clientId])
+  @@index([createdAt])
+}
+
+enum HandoverCategory {
+  ALGEMEEN
+  GEDRAG
+  GEZONDHEID
+  MEDICATIE
+  VEILIGHEID
+  SOCIAAL
+  PRAKTISCH
+}
+
+enum HandoverPriority {
+  INFO
+  AANDACHT
+  URGENT
+}
+
+// "Gelezen" receipt: one row per (note, medewerker). Deleted together with
+// the note (cascade) and reset when the note is materially edited, so a
+// changed note shows up as unread again.
+model HandoverAck {
+  id         String   @id @default(cuid())
+  handoverId String
+  handover   Handover @relation(fields: [handoverId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([handoverId, userId])
+  @@index([userId])
 }
 
 // A tracked intervention for one client — distinct from a Handover note:
