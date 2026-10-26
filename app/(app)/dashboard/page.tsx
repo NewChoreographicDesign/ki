@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { startOfToday, todayDayOfWeek, formatTime, fullName, cn } from "@/lib/utils";
 import { RecentHandovers } from "./recent-handovers";
 import { MyTasks } from "./my-tasks";
-import { serializeTodo } from "../todos/todo-types";
+import { TODO_INCLUDE, toTodoData } from "@/lib/todos";
 
 export const dynamic = "force-dynamic";
 
@@ -130,12 +130,12 @@ export default async function DashboardPage() {
     // resolves to an empty list in the type-only case where session is null.
     db.todo.findMany({
       where: { assignedToId: session?.sub ?? "__none__", completed: false },
-      include: { createdBy: true, completedBy: true, assignedTo: true },
+      include: TODO_INCLUDE,
       orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
     }),
     db.todo.findMany({
       where: { assignedToId: session?.sub ?? "__none__", completed: true },
-      include: { createdBy: true, completedBy: true, assignedTo: true },
+      include: TODO_INCLUDE,
       orderBy: { completedAt: "desc" },
       take: 5,
     }),
@@ -218,8 +218,9 @@ export default async function DashboardPage() {
       {session && (
         <MyTasks
           userId={session.sub}
-          initialOpen={myOpenTodos.map(serializeTodo)}
-          initialCompleted={myCompletedTodos.map(serializeTodo)}
+          serverNow={Date.now()}
+          initialOpen={myOpenTodos.map(toTodoData)}
+          initialCompleted={myCompletedTodos.map(toTodoData)}
           rooms={rooms}
         />
       )}

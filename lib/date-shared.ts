@@ -41,6 +41,12 @@ export function minutesOfTime(time: string | null): number | null {
 const WEEKDAY_NAMES = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"];
 const MONTH_SHORT = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
 
+/** "12 mrt" */
+export function formatDayShort(iso: string): string {
+  const [, m, d] = iso.split("-");
+  return `${Number(d)} ${MONTH_SHORT[Number(m) - 1]}`;
+}
+
 /** "vandaag" / "morgen" / "vrijdag" / "12 mrt" — for chips and headings. */
 export function relativeDayLabel(iso: string, todayISO: string): string {
   const diff = diffDaysISO(iso, todayISO);

@@ -4,6 +4,7 @@ import { HANDOVER_CATEGORIES, HANDOVER_MAX_CONTENT, HANDOVER_PRIORITIES } from "
 
 const ddmmyyyy = /^\d{2}-\d{2}-\d{4}$/;
 const timeOfDay = /^([01]\d|2[0-3]):[0-5]\d$/;
+const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Gebruik een geldige datum");
 
 // 2 ("om de dag") through 6 — see Todo.intervalDays's own schema.prisma comment.
 const intervalDaysField = z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6)]);
@@ -256,22 +257,31 @@ export const interventionPlanEvaluationSchema = z.discriminatedUnion("decision",
   }),
 ]);
 
+// Werklijst date fields use native <input type="date"> ("yyyy-mm-dd", the
+// `ymd` pattern) rather than the DD-MM-JJJJ text fields elsewhere in this
+// file — same convention as the agenda's date pickers. Only this schema's
+// own fields changed; interventionPlanTaskSchema above is untouched and
+// still speaks ddmmyyyy to app/api/intervention-plans/route.ts.
 export const todoSchema = z
   .object({
     title: z.string().trim().min(1).max(300),
     description: z.string().trim().max(2000).optional().or(z.literal("")),
     priority: z.enum(["NONE", "LOW", "MEDIUM", "HIGH"]),
+    category: z.enum(["ZORG", "MEDICATIE", "HUISHOUDING", "ADMINISTRATIE", "AFSPRAAK", "OVERIG"]).nullable().optional(),
+    clientId: z.string().nullable().optional(),
     daysOfWeek: z.array(z.number().int().min(0).max(6)).max(7).optional(),
     // Alternative to daysOfWeek — a task is never saved with both (see the
     // refine below and Todo.intervalDays's schema.prisma comment).
     intervalDays: intervalDaysField.optional(),
-    intervalAnchorDate: z.string().regex(ddmmyyyy, "Gebruik het formaat DD-MM-JJJJ").optional().or(z.literal("")),
+    intervalAnchorDate: ymd.optional().or(z.literal("")),
     // Only ever set automatically from an InterventionPlan's own
     // evaluationDate (see app/api/intervention-plans/route.ts) — not part
     // of the plain Werklijst form, but still accepted here so editing an
     // already-linked task through the normal PATCH /api/todos/[id] keeps
     // it intact instead of silently clearing it.
-    showUntil: z.string().regex(ddmmyyyy, "Gebruik het formaat DD-MM-JJJJ").optional().or(z.literal("")),
+    showUntil: ymd.optional().or(z.literal("")),
+    // One-off deadline — mutually exclusive with recurring (see lib/todos.ts#scheduleFields).
+    dueDate: ymd.optional().or(z.literal("")),
     time: z.string().regex(timeOfDay, "Gebruik het formaat UU:MM").optional().or(z.literal("")),
     recurring: z.boolean().optional(),
     // Personal to-do (see app/api/todos/route.ts for who may set this to
@@ -279,6 +289,14 @@ export const todoSchema = z
     // of a shared team task on the Werklijst.
     assignedToId: z.string().optional().or(z.literal("")),
     room: z.string().trim().max(100).optional().or(z.literal("")),
+    checklist: z
+      .array(z.object({ id: z.string().optional(), text: z.string().trim().min(1).max(200), done: z.boolean().optional() }))
+      .max(30)
+      .optional(),
+    // Optimistic-concurrency token (see lib/todos.ts#todoContentVersion) and
+    // the explicit override to save anyway over a colleague's newer edit.
+    since: z.string().nullable().optional(),
+    force: z.boolean().optional(),
   })
   .refine((data) => !data.intervalDays || !!data.intervalAnchorDate, {
     message: "Kies een startdag voor het interval",
@@ -293,7 +311,29 @@ export const todoCompleteSchema = z.object({
   completionNote: z.string().trim().max(1000).optional().or(z.literal("")),
 });
 
-const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Gebruik een geldige datum");
+export const todoClaimSchema = z.object({
+  action: z.enum(["claim", "release"]),
+  force: z.boolean().optional(),
+});
+
+export const todoSnoozeSchema = z.object({
+  until: z.string().nullable(),
+});
+
+export const todoChecklistSchema = z.object({
+  itemId: z.string().min(1),
+  done: z.boolean(),
+});
+
+export const todoCommentSchema = z.object({
+  comment: z.string().trim().min(1).max(1000),
+});
+
+export const todoBulkSchema = z.object({
+  action: z.enum(["complete", "snooze"]),
+  ids: z.array(z.string().min(1)).min(1).max(100),
+  until: z.string().optional(),
+});
 
 // "Herhaling" of an afspraak — see lib/appointment-recurrence.ts for how
 // each mode expands. Repeating modes need an end (until or count).

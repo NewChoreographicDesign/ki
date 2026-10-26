@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSession, canAccessPersonalTodoAssignment } from "@/lib/auth";
-import { serializeTodo } from "../todos/todo-types";
+import { TODO_INCLUDE, toTodoData } from "@/lib/todos";
 import { PersonalTodosManager } from "./personal-todos-manager";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +24,7 @@ export default async function PersoonlijkeTakenPage() {
     }),
     db.todo.findMany({
       where: { assignedToId: { not: null } },
-      include: { createdBy: true, completedBy: true, assignedTo: true },
+      include: TODO_INCLUDE,
       orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
     }),
     db.client.findMany({
@@ -44,7 +44,7 @@ export default async function PersoonlijkeTakenPage() {
           hun taken te bekijken of een nieuwe toe te voegen.
         </p>
       </div>
-      <PersonalTodosManager users={users} initialTodos={todos.map(serializeTodo)} rooms={rooms} />
+      <PersonalTodosManager users={users} initialTodos={todos.map(toTodoData)} rooms={rooms} viewerId={session.sub} serverNow={Date.now()} />
     </div>
   );
 }

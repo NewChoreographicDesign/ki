@@ -1,36 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { toast } from "sonner";
-import { CheckCircle2, Clock, Pencil, Trash2, Flag, Minus, DoorOpen } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { formatDateTime, PRIORITY_LABELS } from "@/lib/utils";
-import { serializeTodo, type TodoData } from "./todo-types";
-import { TodoForm } from "./todo-form";
+import { BellOff, CalendarDays, CheckCircle2, Circle, Clock, DoorOpen, Flag, ListChecks, Moon, Repeat, Trash2, User, UserCheck } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { SwipeRow, type SwipeAction } from "@/components/ui/swipe-row";
+import { cn, formatDateTime } from "@/lib/utils";
+import { checklistProgress, isLate, TODO_CATEGORY_META, todoBucket, type TodoData } from "@/lib/todos-shared";
+import { CATEGORY_CHIP, CATEGORY_ICON, DUE_TONE_CLASS, dueChip, formatMoment } from "./todo-ui";
+import { useTodoEnv } from "./todo-env";
+import { useTodoActions, type TodoCallbacks } from "./use-todo-actions";
+import { TodoDetail } from "./todo-detail";
 
-// Days/time and repeat details live only in the edit form now — the compact
-// list just needs an at-a-glance urgency signal, so priority renders as a
-// colored icon instead of a text badge. Days-recurring info is unaffected;
-// it's simply no longer shown here.
-const PRIORITY_ICON: Record<TodoData["priority"], { icon: React.ComponentType<{ className?: string }>; className: string }> = {
-  NONE: { icon: Minus, className: "text-slate-500" },
-  LOW: { icon: Flag, className: "text-rose-400" },
-  MEDIUM: { icon: Flag, className: "text-amber-400" },
-  HIGH: { icon: Flag, className: "text-red-400" },
-};
+const chip = "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium";
 
-function PriorityIcon({ priority }: { priority: TodoData["priority"] }) {
-  const { icon: Icon, className } = PRIORITY_ICON[priority];
+function Chip({ className, title, children }: { className?: string; title?: string; children: React.ReactNode }) {
   return (
-    <span
-      title={`Prioriteit: ${PRIORITY_LABELS[priority]}`}
-      aria-label={`Prioriteit: ${PRIORITY_LABELS[priority]}`}
-      className="inline-flex shrink-0"
-    >
-      <Icon className={`h-4 w-4 ${className}`} />
+    <span title={title} className={cn(chip, className)}>
+      {children}
     </span>
   );
 }
@@ -41,158 +28,208 @@ export function TodoItem({
   showRoom = false,
   rooms = [],
   onComplete,
+  onUncomplete,
   onUpdate,
   onDelete,
+  selectable = false,
+  selected = false,
+  onToggleSelect,
 }: {
   todo: TodoData;
-  /** Admin-only: shows edit/delete controls. */
+  /** May edit / delete this task (the parent decides; the server enforces it). */
   canManage?: boolean;
-  /** Forwarded to the edit form's TodoForm — only meaningful for personal to-do's. */
+  /** Forwarded to the edit form — only meaningful for personal to-do's. */
   showRoom?: boolean;
   rooms?: string[];
-  onComplete?: (todo: TodoData) => void;
-  onUpdate?: (todo: TodoData) => void;
-  onDelete?: (id: string) => void;
-}) {
-  const [showComment, setShowComment] = React.useState(false);
-  const [editing, setEditing] = React.useState(false);
-  const [note, setNote] = React.useState("");
-  const [loading, setLoading] = React.useState(false);
-  const [deleting, setDeleting] = React.useState(false);
+  /** Bulk-select mode (Werklijst, supervisors): swaps the normal actions for a checkbox. */
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
+} & TodoCallbacks) {
+  const { viewerId, nowMs } = useTodoEnv();
+  const now = nowMs || Date.now();
+  const [detailOpen, setDetailOpen] = React.useState(false);
+  const [optimisticDone, setOptimisticDone] = React.useState(false);
+  const actions = useTodoActions(todo, { onComplete, onUncomplete, onUpdate, onDelete });
 
-  async function handleComplete() {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/todos/${todo.id}/complete`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ completionNote: note }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error();
-      toast.success("Taak afgerond");
-      onComplete?.(serializeTodo(data.todo));
-    } catch {
-      toast.error("Afronden mislukt");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const progress = checklistProgress(todo.checklist);
+  const late = isLate(todo, now);
+  const due = dueChip(todo, now);
+  const bucket = todoBucket(todo, now);
+  const shared = !todo.assignedToId;
+  const claimedByMe = todo.claimedById !== null && todo.claimedById === viewerId;
+  const claimedByOther = todo.claimedById !== null && !claimedByMe;
+  const done = todo.completed || optimisticDone;
+  const CategoryIcon = todo.category ? CATEGORY_ICON[todo.category] : null;
 
-  async function handleDelete() {
-    if (!window.confirm(`"${todo.title}" verwijderen? Dit kan niet ongedaan worden gemaakt.`)) {
+  async function toggleDone() {
+    if (selectable || actions.busy) return;
+    if (todo.completed) {
+      if (onUncomplete) await actions.reopen();
       return;
     }
-    setDeleting(true);
-    try {
-      const res = await fetch(`/api/todos/${todo.id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error();
-      toast.success("Taak verwijderd");
-      onDelete?.(todo.id);
-    } catch {
-      toast.error("Verwijderen mislukt");
-      setDeleting(false);
-    }
+    setOptimisticDone(true); // instant feedback; rolled back if the server says no
+    const ok = await actions.complete();
+    if (!ok) setOptimisticDone(false);
   }
 
-  if (editing) {
-    return (
-      <Card>
-        <CardContent className="p-5">
-          <TodoForm
-            todoId={todo.id}
-            initial={todo}
-            showRoom={showRoom}
-            rooms={rooms}
-            onSaved={(updated) => {
-              setEditing(false);
-              onUpdate?.(updated);
-            }}
-            onCancel={() => setEditing(false)}
-          />
-        </CardContent>
-      </Card>
-    );
+  const swipeActions: SwipeAction[] = [];
+  if (!selectable && !todo.completed) {
+    swipeActions.push({ label: "Voltooien", icon: CheckCircle2, onTrigger: () => void toggleDone() });
+    swipeActions.push({ label: "Morgen", icon: Moon, onTrigger: () => void actions.snooze("tomorrow") });
   }
+  if (!selectable && canManage) swipeActions.push({ label: "Verwijderen", icon: Trash2, onTrigger: () => void actions.remove(), variant: "danger" });
 
-  return (
-    <Card>
-      <CardContent className="flex flex-col gap-2 p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            {todo.time && (
-              <span className="flex items-center gap-1 text-sm font-semibold tabular-nums text-slate-200">
-                <Clock className="h-3.5 w-3.5 text-slate-400" />
-                {todo.time}
+  const accent = late ? "border-l-red-500" : claimedByMe ? "border-l-forest-500" : todo.priority === "HIGH" ? "border-l-rose-400" : "border-l-transparent";
+
+  const card = (
+    <Card className={cn("animate-fade-in-up border-l-4 transition-colors", accent, done && "opacity-80")}>
+      <div className="flex items-start gap-1 p-2 sm:p-3">
+        {selectable ? (
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center">
+            <Checkbox checked={selected} onChange={() => onToggleSelect?.()} aria-label={`"${todo.title}" selecteren`} />
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={toggleDone}
+            disabled={todo.completed && !onUncomplete}
+            aria-label={todo.completed ? `"${todo.title}" heropenen` : `"${todo.title}" afronden`}
+            className="group flex h-11 w-11 shrink-0 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/60 disabled:cursor-default"
+          >
+            {done ? (
+              <CheckCircle2 className="h-7 w-7 text-forest-400" />
+            ) : (
+              <Circle className={cn("h-7 w-7 transition-colors group-hover:text-forest-400", late ? "text-red-400" : "text-slate-500")} />
+            )}
+          </button>
+        )}
+
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5 py-1.5 pr-1">
+          <button
+            type="button"
+            onClick={() => (selectable ? onToggleSelect?.() : setDetailOpen(true))}
+            className="flex min-w-0 flex-col gap-1.5 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/60"
+          >
+            <span className="flex flex-wrap items-baseline gap-x-2">
+              {todo.time && (
+                <span className={cn("inline-flex items-center gap-1 text-sm font-semibold tabular-nums", late ? "text-red-300" : "text-slate-200")}>
+                  <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+                  {todo.time}
+                </span>
+              )}
+              <span className={cn("min-w-0 break-words font-medium", done ? "text-slate-500 line-through" : "text-slate-100")}>{todo.title}</span>
+            </span>
+
+            <span className="flex flex-wrap items-center gap-1.5">
+              {due && <Chip className={DUE_TONE_CLASS[due.tone]}>{due.text}</Chip>}
+              {todo.category && CategoryIcon && (
+                <Chip className={CATEGORY_CHIP[todo.category]}>
+                  <CategoryIcon className="h-3 w-3" /> {TODO_CATEGORY_META[todo.category].label}
+                </Chip>
+              )}
+              {todo.clientName && (
+                <Chip className="bg-slate-500/15 text-slate-300" title="Over deze cliënt">
+                  <User className="h-3 w-3" /> {todo.clientName}
+                </Chip>
+              )}
+              {progress.total > 0 && (
+                <Chip className={progress.done === progress.total ? "bg-forest-500/15 text-forest-300" : "bg-slate-500/15 text-slate-300"} title="Stappen afgevinkt">
+                  <ListChecks className="h-3 w-3" /> {progress.done}/{progress.total}
+                </Chip>
+              )}
+              {todo.priority === "HIGH" && (
+                <Chip className="bg-rose-500/15 text-rose-300">
+                  <Flag className="h-3 w-3" /> Hoog
+                </Chip>
+              )}
+              {todo.priority === "LOW" && (
+                <Chip className="bg-slate-500/15 text-slate-400">
+                  <Flag className="h-3 w-3" /> Laag
+                </Chip>
+              )}
+              {(todo.recurring || todo.intervalDays || (todo.daysOfWeek.length > 0 && !todo.completed)) && (
+                <Chip className="bg-slate-500/15 text-slate-400" title="Terugkerende of vaste-dagentaak">
+                  <Repeat className="h-3 w-3" />
+                </Chip>
+              )}
+              {bucket === "snoozed" && todo.snoozedUntil && (
+                <Chip className="bg-slate-500/15 text-slate-300">
+                  <BellOff className="h-3 w-3" /> tot {formatMoment(todo.snoozedUntil, now)}
+                </Chip>
+              )}
+              {todo.claimedByName && !todo.completed && (
+                <Chip className={claimedByMe ? "bg-forest-500/15 text-forest-300" : "bg-slate-500/15 text-slate-300"}>
+                  <UserCheck className="h-3 w-3" /> {claimedByMe ? "Jij pakt dit op" : `${todo.claimedByName.split(" ")[0]} pakt dit op`}
+                </Chip>
+              )}
+              {todo.assignedToId && (
+                <Chip className="bg-slate-500/15 text-slate-300">
+                  <DoorOpen className="h-3 w-3" /> {todo.room || "Algemeen"}
+                </Chip>
+              )}
+              {todo.dueDate && todo.completed && (
+                <Chip className="bg-slate-500/15 text-slate-400">
+                  <CalendarDays className="h-3 w-3" /> uiterlijk {todo.dueDate.slice(8, 10)}-{todo.dueDate.slice(5, 7)}
+                </Chip>
+              )}
+            </span>
+
+            {todo.completed && (
+              <span className="text-xs text-forest-400">
+                Afgerond door {todo.completedByName} &middot; {todo.completedAt && formatDateTime(new Date(todo.completedAt))}
+                {todo.completionNote ? ` — ${todo.completionNote}` : ""}
               </span>
             )}
-            <span className={todo.completed ? "text-slate-500 line-through" : "font-medium text-slate-100"}>
-              {todo.title}
-            </span>
-            <PriorityIcon priority={todo.priority} />
-            {todo.assignedToId && (
-              <Badge variant="slate" className="flex items-center gap-1">
-                <DoorOpen className="h-3 w-3" />
-                {todo.room || "Algemeen"}
-              </Badge>
-            )}
-          </div>
-          <div className="flex gap-2">
-            {!todo.completed && !showComment && (
-              <>
-                <Button size="sm" variant="secondary" loading={loading} onClick={handleComplete}>
-                  {!loading && <CheckCircle2 className="h-4 w-4" />} Afronden
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setShowComment(true)}>
-                  + commentaar
-                </Button>
-              </>
-            )}
-            {canManage && (
-              <>
-                <Button size="sm" variant="ghost" onClick={() => setEditing(true)} aria-label="Bewerken">
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  loading={deleting}
-                  onClick={handleDelete}
-                  aria-label="Verwijderen"
-                  className="text-red-400 hover:text-red-300"
-                >
-                  {!deleting && <Trash2 className="h-4 w-4" />}
-                </Button>
-              </>
-            )}
-          </div>
+          </button>
         </div>
-        {todo.description && <p className="text-sm text-slate-400">{todo.description}</p>}
-        {!todo.completed && showComment && (
-          <div className="flex flex-col gap-2">
-            <Textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Commentaar bij afronden..."
-              className="min-h-[70px]"
-            />
-            <Button size="sm" variant="secondary" loading={loading} onClick={handleComplete} className="self-start">
-              Afronden met commentaar
-            </Button>
+
+        {!selectable && !todo.completed && shared && !claimedByOther && (
+          <div className="shrink-0 self-start pt-1">
+            {claimedByMe ? (
+              <button
+                type="button"
+                onClick={() => void actions.release()}
+                disabled={actions.busy === "release"}
+                aria-label="Niet meer oppakken"
+                title="Vrijgeven"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-forest-500/15 text-forest-300 transition-colors hover:bg-forest-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-400/60"
+              >
+                <UserCheck className="h-5 w-5" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void actions.claim()}
+                disabled={actions.busy === "claim"}
+                aria-label={`"${todo.title}" oppakken`}
+                title="Ik pak dit op"
+                className="flex h-10 items-center justify-center gap-1.5 rounded-full px-2.5 text-xs font-medium text-slate-400 transition-colors hover:bg-surface2 hover:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/60 sm:border sm:border-border sm:px-3"
+              >
+                <UserCheck className="h-5 w-5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Oppakken</span>
+              </button>
+            )}
           </div>
         )}
-        <div className="text-xs text-slate-500">
-          Aangemaakt door {todo.createdByName} &middot; {formatDateTime(new Date(todo.createdAt))}
-        </div>
-        {todo.completed && (
-          <div className="text-xs text-forest-400">
-            Afgerond door {todo.completedByName} &middot;{" "}
-            {todo.completedAt && formatDateTime(new Date(todo.completedAt))}
-            {todo.completionNote ? ` — ${todo.completionNote}` : ""}
-            {todo.recurring ? " · verschijnt automatisch weer open op de volgende geplande dag" : ""}
-          </div>
-        )}
-      </CardContent>
+      </div>
     </Card>
+  );
+
+  return (
+    <>
+      {swipeActions.length > 0 ? <SwipeRow actions={swipeActions}>{card}</SwipeRow> : card}
+      {detailOpen && (
+        <TodoDetail
+          todo={todo}
+          canManage={canManage}
+          showRoom={showRoom}
+          rooms={rooms}
+          actions={actions}
+          onClose={() => setDetailOpen(false)}
+          onUpdate={(t) => onUpdate?.(t)}
+          canReopen={Boolean(onUncomplete)}
+        />
+      )}
+    </>
   );
 }

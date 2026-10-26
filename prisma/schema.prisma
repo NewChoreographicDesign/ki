@@ -79,6 +79,8 @@ model User {
   todosCreated     Todo[]             @relation("TodoCreatedBy")
   todosCompleted   Todo[]             @relation("TodoCompletedBy")
   todosAssigned    Todo[]             @relation("TodoAssignedTo")
+  todosClaimed     Todo[]             @relation("TodoClaimedBy")
+  todoEvents       TodoEvent[]
   appointmentsCreated  Appointment[]      @relation("AppointmentCreatedBy")
   appointmentsAssigned Appointment[]      @relation("AppointmentAssignee")
   appointmentEvents    AppointmentEvent[]
@@ -171,6 +173,7 @@ model Client {
   handovers    Handover[]
   interventionClients InterventionClient[]
   interventionPlans InterventionPlan[]
+  todos        Todo[]       @relation("TodoClient")
 
   @@index([active])
 }
@@ -375,6 +378,25 @@ model Todo {
   // ordinary Werklijst task not tied to a plan.
   interventionPlanId String?
   interventionPlan   InterventionPlan? @relation(fields: [interventionPlanId], references: [id], onDelete: SetNull)
+  // One-off deadline (calendar date, UTC midnight like intervalAnchorDate).
+  // Mutually exclusive with `recurring`: a task is either "on this date" or
+  // "on these days". Past + still open = "te laat".
+  dueDate         DateTime?
+  category        TodoCategory?
+  // The client this task is about (optional). SetNull so deleting a client
+  // never deletes its task history.
+  clientId        String?
+  client          Client?   @relation("TodoClient", fields: [clientId], references: [id], onDelete: SetNull)
+  // "Ik pak dit op": who is working on a shared task right now.
+  claimedById     String?
+  claimedBy       User?     @relation("TodoClaimedBy", fields: [claimedById], references: [id], onDelete: SetNull)
+  claimedAt       DateTime?
+  // Hidden from the Werklijst's active views until this moment.
+  snoozedUntil    DateTime?
+  // Plain JSON array of { id, text, done } — ki doesn't seal any other
+  // Todo field, so this stays unsealed too (see lib/todos.ts).
+  checklist       String?
+  events          TodoEvent[]
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -382,6 +404,35 @@ model Todo {
   @@index([recurring, completed, regenerated])
   @@index([assignedToId, completed])
   @@index([interventionPlanId])
+  @@index([clientId])
+  @@index([completed, dueDate])
+}
+
+enum TodoCategory {
+  ZORG
+  MEDICATIE
+  HUISHOUDING
+  ADMINISTRATIE
+  AFSPRAAK
+  OVERIG
+}
+
+// Activity log for one taak — created/edited/completed/reopened/claimed/
+// released/snoozed, plus free-text comments colleagues leave for each
+// other. Purely additive: nothing else reads or writes this table yet, so
+// it carries no migration risk for existing Todo rows.
+model TodoEvent {
+  id        String   @id @default(cuid())
+  todoId    String
+  todo      Todo     @relation(fields: [todoId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // CREATED | EDITED | COMPLETED | REOPENED | CLAIMED | RELEASED | SNOOZED | UNSNOOZED | COMMENT
+  type      String
+  comment   String?
+  createdAt DateTime @default(now())
+
+  @@index([todoId, createdAt])
 }
 
 model Presence {

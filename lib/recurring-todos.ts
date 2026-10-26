@@ -60,6 +60,11 @@ export async function regenerateRecurringTodos(): Promise<{ regenerated: number 
           createdById: todo.createdById,
           assignedToId: todo.assignedToId,
           room: todo.room,
+          // The next occurrence is about the same thing: same category,
+          // same cliënt. Claim/snooze/checklist ticks are per-occurrence
+          // state, deliberately NOT carried over to the fresh copy.
+          category: todo.category,
+          clientId: todo.clientId,
         },
       }),
       db.todo.update({ where: { id: todo.id }, data: { regenerated: true } }),

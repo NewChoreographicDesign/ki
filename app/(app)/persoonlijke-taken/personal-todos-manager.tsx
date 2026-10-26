@@ -9,16 +9,21 @@ import { Label } from "@/components/ui/label";
 import { TodoForm } from "../todos/todo-form";
 import { TodoItem } from "../todos/todo-item";
 import { sortByTime } from "../todos/todo-board";
-import type { TodoData } from "../todos/todo-types";
+import { TodoEnvProvider } from "../todos/todo-env";
+import type { TodoData } from "@/lib/todos-shared";
 
 export function PersonalTodosManager({
   users,
   initialTodos,
   rooms,
+  viewerId,
+  serverNow,
 }: {
   users: { id: string; name: string }[];
   initialTodos: TodoData[];
   rooms: string[];
+  viewerId: string;
+  serverNow: number;
 }) {
   const [todos, setTodos] = React.useState(initialTodos);
   const [selectedUserId, setSelectedUserId] = React.useState(users[0]?.id ?? "");
@@ -44,6 +49,7 @@ export function PersonalTodosManager({
   const completed = forUser.filter((t) => t.completed).slice(0, 10);
 
   return (
+    <TodoEnvProvider serverNow={serverNow} viewerId={viewerId} canSupervise>
     <div className="flex flex-col gap-6">
       <Card>
         <CardContent className="flex flex-col gap-2 p-5 sm:max-w-xs">
@@ -124,5 +130,6 @@ export function PersonalTodosManager({
         </div>
       )}
     </div>
+    </TodoEnvProvider>
   );
 }

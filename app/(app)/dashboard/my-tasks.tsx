@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { TodoForm } from "../todos/todo-form";
 import { TodoItem } from "../todos/todo-item";
 import { sortByTime } from "../todos/todo-board";
-import type { TodoData } from "../todos/todo-types";
+import { TodoEnvProvider } from "../todos/todo-env";
+import type { TodoData } from "@/lib/todos-shared";
 
 /**
  * A personal to-do list for the logged-in medewerker — separate from the
@@ -22,11 +23,13 @@ export function MyTasks({
   initialCompleted,
   userId,
   rooms,
+  serverNow,
 }: {
   initialOpen: TodoData[];
   initialCompleted: TodoData[];
   userId: string;
   rooms: string[];
+  serverNow: number;
 }) {
   const [open, setOpen] = React.useState(() => [...initialOpen].sort(sortByTime));
   const [completed, setCompleted] = React.useState(initialCompleted);
@@ -53,6 +56,7 @@ export function MyTasks({
   }
 
   return (
+    <TodoEnvProvider serverNow={serverNow} viewerId={userId} canSupervise>
     <Card>
       <button
         type="button"
@@ -127,5 +131,6 @@ export function MyTasks({
         </CardContent>
       )}
     </Card>
+    </TodoEnvProvider>
   );
 }
