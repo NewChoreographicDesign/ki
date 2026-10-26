@@ -76,7 +76,9 @@ model User {
   todosCreated     Todo[]             @relation("TodoCreatedBy")
   todosCompleted   Todo[]             @relation("TodoCompletedBy")
   todosAssigned    Todo[]             @relation("TodoAssignedTo")
-  appointments     Appointment[]
+  appointmentsCreated  Appointment[]      @relation("AppointmentCreatedBy")
+  appointmentsAssigned Appointment[]      @relation("AppointmentAssignee")
+  appointmentEvents    AppointmentEvent[]
   shifts           Shift[]
   weekPlans        WeekPlan[]
   documents        Document[]
@@ -614,12 +616,31 @@ model Appointment {
   id            String   @id @default(cuid())
   title         String
   description   String?
+  // Plain-text location (where the afspraak is), separate from the
+  // description — shown in the agenda grid/list without opening the card.
+  location      String?
+  // App-level enum (AGENDA_CATEGORIES in lib/agenda-shared.ts), not a
+  // Prisma enum, so adding a category never needs a migration.
+  category      String?
   clientId      String?
   client        Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  // Who goes along — distinct from createdBy (who made the afspraak).
+  // Nullable: "nog niemand gaat mee" is a normal, common state.
+  assigneeId    String?
+  assignee      User?    @relation("AppointmentAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   startAt       DateTime
   // Optional end — null means "default duration" (60 min) wherever a
   // length is needed (agenda grid, calendar feed).
   endAt         DateTime?
+  allDay        Boolean  @default(false)
+  status        String   @default("PLANNED") // PLANNED | DONE | CANCELLED
+  // Free text recorded on finishing (what was discussed/found) or
+  // cancelling (why) — shown back in the detail sheet under "Uitslag" /
+  // "Reden van annuleren".
+  outcome       String?
+  // Minutes before startAt to remind; null = the app's own default
+  // (see lib/appointment-reminders.ts). 0 = no reminder.
+  remindMinutes Int?
   // Occurrences of one repeated afspraak (or one "meerdere datums" batch)
   // are individual rows sharing a seriesId, so each can be edited, moved,
   // reminded and exported independently; edit/delete can still address the
@@ -627,12 +648,32 @@ model Appointment {
   seriesId      String?
   reminderSent  Boolean  @default(false)
   createdById   String
-  createdBy     User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdBy     User     @relation("AppointmentCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
   createdAt     DateTime @default(now())
+  events        AppointmentEvent[]
 
   @@index([seriesId])
   @@index([startAt])
   @@index([reminderSent, startAt])
+  @@index([assigneeId])
+}
+
+// Activity log for one afspraak — who created/edited/moved/assigned/
+// finished/cancelled/reopened it, plus free-text comments colleagues leave
+// for each other. Purely additive: nothing else reads or writes this table
+// yet, so it carries no migration risk for existing Appointment rows.
+model AppointmentEvent {
+  id            String      @id @default(cuid())
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // CREATED | EDITED | MOVED | ASSIGNED | UNASSIGNED | COMPLETED | CANCELLED | REOPENED | COMMENT
+  type          String
+  comment       String?
+  createdAt     DateTime    @default(now())
+
+  @@index([appointmentId, createdAt])
 }
 
 // Auto-started on login (morning 07:00-15:00 / evening 14:00-23:00 window).

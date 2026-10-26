@@ -66,6 +66,24 @@
   --color-forest-600: 74 113 84;
 }
 
+/* Agenda chip text (lib/agenda-colors.ts) — the bg/border/dot there stay
+   fixed hues in both themes (a translucent wash reads fine over either
+   ground), but text drawn on that wash must flip: dark, saturated ink in
+   light mode (readable on the pale tint), light pastel in dark mode
+   (readable on the dark tint). */
+:root {
+  --agenda-text-rose: #7c2d12;
+  --agenda-text-forest: #14532d;
+  --agenda-text-gold: #78350f;
+  --agenda-text-slate: #334155;
+}
+.dark {
+  --agenda-text-rose: #fed7aa;
+  --agenda-text-forest: #bbf7d0;
+  --agenda-text-gold: #fde68a;
+  --agenda-text-slate: #e2e8f0;
+}
+
 body {
   @apply bg-background text-slate-100 antialiased;
   -webkit-tap-highlight-color: transparent;

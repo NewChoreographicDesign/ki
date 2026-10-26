@@ -1,27 +1,50 @@
 // Stable per-client colours for the agenda calendar — the same cliënt is
 // the same colour on every device and every visit (hash of the id, no
 // stored state), like the coloured calendars in Outlook/Google.
+//
+// Restricted to this app's own colour families (rose/forest/gold/slate —
+// see app/globals.css) rather than a 10-hue rainbow, so the agenda reads as
+// part of this app's muted, warm-paper look instead of introducing hues it
+// never uses anywhere else.
+//
+// `text` is a CSS variable (app/globals.css), not a literal hex: dark mode
+// needs the pale version of each hue (readable on the dark translucent
+// wash) and light mode needs a deep, saturated version of the SAME hue
+// (readable on the light translucent wash) — a single hex here would only
+// ever be right in one theme. `bg`/`border`/`dot` stay plain hex: a
+// translucent wash and a small accent dot read fine as the same colour in
+// either theme.
 export type AgendaColor = { name: string; bg: string; border: string; text: string; dot: string };
 
 const PALETTE: AgendaColor[] = [
-  { name: "rose", bg: "rgba(244,63,94,0.18)", border: "#fb7185", text: "#fecdd3", dot: "#fb7185" },
-  { name: "sky", bg: "rgba(14,165,233,0.18)", border: "#38bdf8", text: "#bae6fd", dot: "#38bdf8" },
-  { name: "emerald", bg: "rgba(16,185,129,0.18)", border: "#34d399", text: "#a7f3d0", dot: "#34d399" },
-  { name: "amber", bg: "rgba(245,158,11,0.18)", border: "#fbbf24", text: "#fde68a", dot: "#fbbf24" },
-  { name: "violet", bg: "rgba(139,92,246,0.20)", border: "#a78bfa", text: "#ddd6fe", dot: "#a78bfa" },
-  { name: "teal", bg: "rgba(20,184,166,0.18)", border: "#2dd4bf", text: "#99f6e4", dot: "#2dd4bf" },
-  { name: "orange", bg: "rgba(249,115,22,0.18)", border: "#fb923c", text: "#fed7aa", dot: "#fb923c" },
-  { name: "fuchsia", bg: "rgba(217,70,239,0.18)", border: "#e879f9", text: "#f5d0fe", dot: "#e879f9" },
-  { name: "lime", bg: "rgba(132,204,22,0.18)", border: "#a3e635", text: "#d9f99d", dot: "#a3e635" },
-  { name: "indigo", bg: "rgba(99,102,241,0.20)", border: "#818cf8", text: "#c7d2fe", dot: "#818cf8" },
+  { name: "rose", bg: "rgba(193,81,46,0.18)", border: "#c1512e", text: "var(--agenda-text-rose)", dot: "#c1512e" },
+  { name: "forest", bg: "rgba(92,138,103,0.20)", border: "#5c8a67", text: "var(--agenda-text-forest)", dot: "#5c8a67" },
+  { name: "gold", bg: "rgba(201,154,63,0.20)", border: "#c99a3f", text: "var(--agenda-text-gold)", dot: "#c99a3f" },
+  { name: "slate", bg: "rgba(148,163,184,0.18)", border: "#94a3b8", text: "var(--agenda-text-slate)", dot: "#94a3b8" },
 ];
 
 /** Afspraken without a cliënt (teamoverleg, controle, …) share one neutral colour. */
-export const NEUTRAL_COLOR: AgendaColor = { name: "slate", bg: "rgba(148,163,184,0.16)", border: "#94a3b8", text: "#e2e8f0", dot: "#94a3b8" };
+export const NEUTRAL_COLOR: AgendaColor = PALETTE[3];
 
 export function colorForClient(clientId: string | null): AgendaColor {
   if (!clientId) return NEUTRAL_COLOR;
   let hash = 0;
   for (let i = 0; i < clientId.length; i++) hash = (hash * 31 + clientId.charCodeAt(i)) >>> 0;
   return PALETTE[hash % PALETTE.length];
+}
+
+/** Colour per category for the "kleur op categorie" mode (same palette family as the client colours). */
+const CATEGORY_COLOR: Record<string, string> = {
+  MEDISCH: "rose",
+  PARAMEDISCH: "forest",
+  FAMILIE: "gold",
+  ACTIVITEIT: "forest",
+  OVERLEG: "slate",
+  VERVOER: "gold",
+  OVERIG: "slate",
+};
+
+export function colorForCategory(category: string | null): AgendaColor {
+  const name = category ? CATEGORY_COLOR[category] : "slate";
+  return PALETTE.find((c) => c.name === name) ?? NEUTRAL_COLOR;
 }

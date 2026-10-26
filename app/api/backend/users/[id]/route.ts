@@ -96,7 +96,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
       where: { id },
       select: {
         _count: {
-          select: { reports: true, medicationChecks: true, presences: true, todosCreated: true, appointments: true, shifts: true },
+          select: { reports: true, medicationChecks: true, presences: true, todosCreated: true, appointmentsCreated: true, shifts: true },
         },
       },
     });

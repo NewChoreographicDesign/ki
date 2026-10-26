@@ -288,11 +288,39 @@ export const appointmentRepeatSchema = z.discriminatedUnion("mode", [
 export const appointmentSchema = z.object({
   title: z.string().trim().min(1).max(300),
   description: z.string().trim().max(2000).optional().or(z.literal("")),
+  location: z.string().trim().max(200).optional().or(z.literal("")),
+  category: z.enum(["MEDISCH", "PARAMEDISCH", "FAMILIE", "ACTIVITEIT", "OVERLEG", "VERVOER", "OVERIG"]).optional().or(z.literal("")),
   clientId: z.string().optional().or(z.literal("")),
+  assigneeId: z.string().optional().or(z.literal("")), // create only
   startAt: z.string().min(1), // ISO datetime-local string
   endAt: z.string().optional().or(z.literal("")), // idem; empty = default duration
+  allDay: z.boolean().optional(),
+  remindMinutes: z.number().int().min(0).max(43_200).nullable().optional(),
   repeat: appointmentRepeatSchema.optional(), // create only
   scope: z.enum(["this", "following", "all"]).optional(), // edit/delete of a series
+  version: z.string().optional(), // edit only — stale-write guard
+  force: z.boolean().optional(), // edit only — overwrite despite a stale version
+});
+
+export const appointmentAssignSchema = z.object({
+  userId: z.string().nullable(),
+  takeover: z.boolean().optional(),
+});
+
+export const appointmentCommentSchema = z.object({
+  comment: z.string().trim().min(1).max(1000),
+});
+
+export const appointmentMoveSchema = z.object({
+  startAt: z.string().min(1),
+  endAt: z.string().optional().or(z.literal("")),
+  allDay: z.boolean().optional(),
+});
+
+export const appointmentStatusSchema = z.object({
+  status: z.enum(["PLANNED", "DONE", "CANCELLED"]),
+  note: z.string().trim().max(1000).optional().or(z.literal("")),
+  scope: z.enum(["this", "following", "all"]).optional(),
 });
 
 export const protocolSchema = z
