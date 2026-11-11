@@ -330,6 +330,28 @@ export function fullName(client: { firstName: string; lastName: string }): strin
   return `${client.firstName} ${client.lastName}`;
 }
 
+/**
+ * Natural room-number order ("Kamer 2" between "Kamer 1" and "Kamer 3", not
+ * after "Kamer 10") — a plain string sort puts "10" before "2". Splits each
+ * room label into its leading digits (compared numerically) and the rest
+ * (compared as text), so "12a" still sorts after "12" and before "13". No
+ * room (null/empty) always sorts last — deactivating and reactivating a
+ * room must put it back exactly where it was, never at the bottom.
+ */
+export function compareRooms(a: string | null, b: string | null): number {
+  if (a === b) return 0;
+  if (a === null || a === "") return 1;
+  if (b === null || b === "") return -1;
+  const ma = a.match(/^(\d+)(.*)$/);
+  const mb = b.match(/^(\d+)(.*)$/);
+  if (ma && mb) {
+    const diff = Number(ma[1]) - Number(mb[1]);
+    if (diff !== 0) return diff;
+    return ma[2].localeCompare(mb[2]);
+  }
+  return a.localeCompare(b);
+}
+
 // --- Shift logic -----------------------------------------------------------
 // Morning shift: 07:00-15:00. Evening shift: 15:00-23:00. Night shift:
 // 23:00-07:00 (spans midnight). All wall-clock times below are

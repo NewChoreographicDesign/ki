@@ -51,6 +51,17 @@ export default async function ClientMedicationPage({
 
   if (!client) notFound();
 
+  // Morning-to-night order: by first scheduled time, "indien nodig"
+  // (no fixed schedule) last, alphabetical among themselves — same
+  // ordering convention as the per-room overview (lib/medication-schedule.ts).
+  const medications = client.medications.slice().sort((a, b) => {
+    if (a.asNeeded !== b.asNeeded) return a.asNeeded ? 1 : -1;
+    if (a.asNeeded) return a.name.localeCompare(b.name);
+    const [aTime] = parseMedicationTimes(a.times);
+    const [bTime] = parseMedicationTimes(b.times);
+    return (aTime ?? "99:99").localeCompare(bTime ?? "99:99");
+  });
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -70,7 +81,7 @@ export default async function ClientMedicationPage({
         <p className="text-slate-500">Geen actieve medicatie voor deze cliënt.</p>
       ) : (
         <div className="flex flex-col gap-4">
-          {client.medications.map((med) => {
+          {medications.map((med) => {
             const todaysChecksAsc = med.checks.filter((c) => c.checkedAt >= todayStart).slice().reverse();
             // "Indien nodig" has no fixed schedule to gate against — it can
             // be given any number of times a day, so the form never hides

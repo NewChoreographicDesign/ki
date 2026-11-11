@@ -1,4 +1,4 @@
-import { parseMedicationTimes, formatTime, fullName } from "@/lib/utils";
+import { parseMedicationTimes, formatTime, fullName, compareRooms } from "@/lib/utils";
 
 export type MedicationOverviewCheck = {
   id: string;
@@ -116,5 +116,5 @@ export function groupMedicationOverviewByRoom(
         .sort((a, b) => a.medicationName.localeCompare(b.medicationName));
       return { room, scheduled, asNeeded };
     })
-    .sort((a, b) => rank(a.room) - rank(b.room) || a.room.localeCompare(b.room));
+    .sort((a, b) => rank(a.room) - rank(b.room) || compareRooms(a.room === "Geen kamer" ? null : a.room, b.room === "Geen kamer" ? null : b.room));
 }

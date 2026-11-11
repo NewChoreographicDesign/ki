@@ -13,7 +13,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { startOfToday, todayDayOfWeek, formatTime, fullName, cn } from "@/lib/utils";
+import { startOfToday, todayDayOfWeek, formatTime, fullName, cn, compareRooms } from "@/lib/utils";
 import { RecentHandovers } from "./recent-handovers";
 import { MyTasks } from "./my-tasks";
 import { TODO_INCLUDE, toTodoData } from "@/lib/todos";
@@ -146,7 +146,7 @@ export default async function DashboardPage() {
       orderBy: { room: "asc" },
     }),
   ]);
-  const rooms = roomRows.map((c) => c.room!).sort((a, b) => a.localeCompare(b));
+  const rooms = roomRows.map((c) => c.room!).sort(compareRooms);
 
   // One entry per room — the most recent note in it — rather than every
   // handover, so a room that's had several updates doesn't crowd out rooms
