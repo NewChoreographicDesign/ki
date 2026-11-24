@@ -82,6 +82,7 @@ model User {
   todosAssigned    Todo[]             @relation("TodoAssignedTo")
   todosClaimed     Todo[]             @relation("TodoClaimedBy")
   todoEvents       TodoEvent[]
+  allowancesCreated    Allowance[]
   appointmentsCreated  Appointment[]      @relation("AppointmentCreatedBy")
   appointmentsAssigned Appointment[]      @relation("AppointmentAssignee")
   appointmentEvents    AppointmentEvent[]
@@ -178,6 +179,7 @@ model Client {
   interventionPlans InterventionPlan[]
   todos        Todo[]       @relation("TodoClient")
   interactionAcks InteractionAck[]
+  allowances   Allowance[]
 
   @@index([active])
 }
@@ -493,6 +495,80 @@ model TodoEvent {
   createdAt DateTime @default(now())
 
   @@index([todoId, createdAt])
+}
+
+enum AllowanceType {
+  PHONE
+  SCREEN
+  VISIT
+  OUTSIDE
+  WIFI
+  KITCHEN
+  ERRAND
+  ROOM
+  OTHER
+}
+
+enum AllowanceMode {
+  // Counts down from allottedMs, only while actually in use — pauses when
+  // the item is handed back, resumes exactly where it left off. See
+  // lib/allowances-shared.ts#effectiveAllowanceState.
+  DURATION
+  // Runs until the clock reaches endsAt, regardless of use — no pause.
+  UNTIL
+}
+
+enum AllowanceStatus {
+  // Pre-staged for later today — becomes RUNNING on its own once startAt
+  // arrives, or via the "Start nu" action.
+  SCHEDULED
+  RUNNING
+  // DURATION mode only: handed back early, remaining time preserved.
+  PAUSED
+  COMPLETED
+}
+
+// A time-boxed permission for a client — phone, bezoek, buiten, and other
+// activities the care team grants for a set duration or until a clock time.
+// Deliberately has NO "EXPIRED" stored status: whether a RUNNING allowance
+// has run out is always derived from allottedMs/endsAt + now (see
+// lib/allowances-shared.ts#effectiveAllowanceState) rather than written by a
+// cron — a RUNNING row that ran out an hour ago still reads correctly on the
+// next request.
+model Allowance {
+  id       String @id @default(cuid())
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  type   AllowanceType
+  mode   AllowanceMode
+  status AllowanceStatus @default(SCHEDULED)
+
+  // DURATION mode: total time allotted, extendable with the "+15 min"
+  // action. UNTIL mode: null, the clock-time deadline is endsAt instead.
+  allottedMs Int?
+  // UNTIL mode: the deadline. DURATION mode: null.
+  endsAt     DateTime?
+  // When this becomes RUNNING on its own, for an allowance staged ahead of
+  // time. Null means it already started (set at creation) or already ran.
+  startAt    DateTime?
+
+  // DURATION mode: time used across every RUNNING session so far, NOT
+  // counting the session in progress — see sessionStartedAt.
+  usedMs           Int       @default(0)
+  // Set while status is RUNNING; null otherwise (including while PAUSED).
+  sessionStartedAt DateTime?
+
+  note String?
+
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  completedAt DateTime?
+
+  @@index([clientId])
+  @@index([status])
 }
 
 model Presence {

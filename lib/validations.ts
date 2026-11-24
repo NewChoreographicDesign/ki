@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { SETTING_KEYS } from "@/lib/utils";
+import { ALLOWANCE_MAX_MINUTES, ALLOWANCE_MIN_MINUTES, ALLOWANCE_MODES, ALLOWANCE_NOTE_MAX, ALLOWANCE_TYPES } from "@/lib/allowances-shared";
 import { HANDOVER_CATEGORIES, HANDOVER_MAX_CONTENT, HANDOVER_PRIORITIES } from "@/lib/handover-shared";
 import { PRESENCE_BULK_MAX, PRESENCE_MAX_COMMENT, PRESENCE_STATUSES } from "@/lib/presence-shared";
 
@@ -472,3 +473,18 @@ export const weekPlanSchema = z.object({
   activity: z.string().trim().min(1).max(300),
   notes: z.string().trim().max(1000).optional().or(z.literal("")),
 });
+
+export const allowanceCreateSchema = z
+  .object({
+    clientId: z.string().min(1),
+    type: z.enum(ALLOWANCE_TYPES),
+    mode: z.enum(ALLOWANCE_MODES),
+    allottedMinutes: z.number().int().min(ALLOWANCE_MIN_MINUTES).max(ALLOWANCE_MAX_MINUTES).optional(),
+    endsAt: z.string().min(10).max(40).optional(),
+    startAt: z.string().min(10).max(40).optional(),
+    note: z.string().trim().max(ALLOWANCE_NOTE_MAX).optional().or(z.literal("")),
+  })
+  .refine((data) => data.mode !== "DURATION" || typeof data.allottedMinutes === "number", { message: "Duur is verplicht bij een timer", path: ["allottedMinutes"] })
+  .refine((data) => data.mode !== "UNTIL" || typeof data.endsAt === "string", { message: "Tijdstip is verplicht", path: ["endsAt"] });
+
+export const allowanceActionSchema = z.object({ action: z.enum(["start", "pause", "resume", "complete", "extend"]) });

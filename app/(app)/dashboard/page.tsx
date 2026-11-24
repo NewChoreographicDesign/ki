@@ -17,6 +17,8 @@ import { startOfToday, todayDayOfWeek, formatTime, fullName, cn, compareRooms } 
 import { RecentHandovers } from "./recent-handovers";
 import { MyTasks } from "./my-tasks";
 import { TODO_INCLUDE, toTodoData } from "@/lib/todos";
+import { loadAllowanceBoard } from "@/lib/allowances";
+import { AllowanceOverviewWidget } from "./allowance-overview-widget";
 
 export const dynamic = "force-dynamic";
 
@@ -115,9 +117,10 @@ const QUICK_ACTIONS = [
 
 export default async function DashboardPage() {
   const session = await getSession();
-  const [stats, roomsToday, rawHandovers, myOpenTodos, myCompletedTodos, roomRows] = await Promise.all([
+  const [stats, roomsToday, allowanceBoard, rawHandovers, myOpenTodos, myCompletedTodos, roomRows] = await Promise.all([
     getStats(),
     getTodayByRoom(),
+    loadAllowanceBoard(),
     db.handover.findMany({
       include: { user: true, client: true },
       orderBy: { createdAt: "desc" },
@@ -209,6 +212,8 @@ export default async function DashboardPage() {
           </div>
         )}
       </div>
+
+      <AllowanceOverviewWidget initialActive={allowanceBoard.active} serverNow={Date.now()} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatCard icon={UserCheck} label="Nu aanwezig" value={stats.presentNow} delay={0} />
